@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
 
 gsap.registerPlugin(ScrollTrigger);
 
 interface MainFeat { title: string; description: string; items: string[]; tag: string; }
 interface AddFeat  { title: string; description: string; }
+type FeatureVisualRow = Record<string, string | boolean>;
 
 /* ── Hardcoded visual/icon data (not editable) ── */
 const mainIconPaths = [
@@ -94,7 +97,7 @@ const DEFAULT_ADD_FEATS: AddFeat[] = [
   { title: 'Smart Alerts',            description: 'Get notified about important SEO changes the moment they happen.' },
 ];
 
-function FeatureVisual({ feature, idx }: { feature: { tag: string; visual: Record<string, string>[] }; idx: number }) {
+function FeatureVisual({ feature, idx }: { feature: { tag: string; visual: FeatureVisualRow[] }; idx: number }) {
   const isRank     = idx === 1;
   const isAudit    = idx === 2;
   const isBacklink = idx === 3;
@@ -156,6 +159,7 @@ function FeatureVisual({ feature, idx }: { feature: { tag: string; visual: Recor
 }
 
 export function Features() {
+  useSEOMeta('features', { title: 'Features — Serpely AI SEO Platform', description: 'Explore Serpely\'s full feature set: AI rank tracking, GEO monitoring, technical audits, and more.' });
   const pageRef = useRef<HTMLDivElement>(null);
 
   /* ── Editable state with defaults ── */
@@ -201,6 +205,26 @@ export function Features() {
       if (typeof d.ctaSecHref    === 'string') setCtaSecHref(d.ctaSecHref);
     }).catch(() => {});
   }, []);
+
+  /* ── Schema ── */
+  useEffect(() => {
+    injectSchema('schema-features', {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Serpely',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: 'https://serpely.com',
+      description: 'Agentic SEO platform for the AI-first web. Daily rank tracking, technical audits, GEO Scoring, AI Citation Monitoring, and autonomous SEO workflows.',
+      featureList: [...mainFeats.map(f => f.title), ...addFeats.map(f => f.title)].join(', '),
+      offers: [
+        { '@type': 'Offer', name: 'Starter', price: '0', priceCurrency: 'USD', description: '100 keywords, 1 website, weekly rank tracking, GEO Score read-only. No credit card required.' },
+        { '@type': 'Offer', name: 'Professional', price: '49', priceCurrency: 'USD', description: '1,000 keywords, 5 websites, daily rank tracking, full GEO dashboard, AI Citation Monitor, API access. 14-day free trial.' },
+        { '@type': 'Offer', name: 'Business', price: '99', priceCurrency: 'USD', description: 'Unlimited keywords and websites, real-time tracking, continuous audits, white-label reports, dedicated account manager. 14-day free trial.' },
+      ],
+    });
+    return () => removeSchema('schema-features');
+  }, [mainFeats, addFeats]);
 
   /* ── GSAP animations ── */
   useEffect(() => {

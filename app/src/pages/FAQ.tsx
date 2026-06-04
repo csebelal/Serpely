@@ -1,10 +1,34 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
 
 export function FAQ() {
+  useSEOMeta('faq', { title: 'FAQ — Serpely', description: 'Frequently asked questions about Serpely, AI SEO, and GEO monitoring.' });
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [openIndex, setOpenIndex] = useState<string | null>(null);
+
+  useEffect(() => {
+    const allQAs = [
+      { question: 'What is Agentic SEO?', answer: "Agentic SEO uses AI-driven workflows to continuously monitor rankings, prioritize optimizations, and report performance without manual context switching." },
+      { question: 'What is Generative Engine Optimization (GEO)?', answer: 'Generative Engine Optimization improves visibility across AI-powered search engines and generative search results beyond traditional rankings.' },
+      { question: 'How is Serpely different from Ahrefs or Semrush?', answer: 'Unlike traditional SEO tools that focus mainly on data, Serpely connects rank tracking, auditing, content optimization, and reporting into a continuous workflow powered by AI agents.' },
+      { question: 'Does Serpely include technical SEO monitoring?', answer: 'Yes. Continuous audits cover Core Web Vitals, crawl errors, indexing issues, and on-page SEO optimization factors.' },
+      { question: 'Can agencies manage multiple clients in Serpely?', answer: 'Multi-client workspaces allow agencies to isolate domains, generate white-label SEO reports, and track performance across all client accounts.' },
+      { question: 'Does the platform integrate with Google Analytics and Search Console?', answer: 'Yes. Integration with GA and GSC centralizes traffic data, keyword impressions, click-through rates, and search visibility insights.' },
+    ];
+    injectSchema('schema-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: allQAs.map(qa => ({
+        '@type': 'Question',
+        name: qa.question,
+        acceptedAnswer: { '@type': 'Answer', text: qa.answer },
+      })),
+    });
+    return () => removeSchema('schema-faq');
+  }, []);
 
   const faqs = [
     {

@@ -16,12 +16,15 @@ export const login = (email: string, password: string) =>
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
   api.post('/api/auth/change-password', { currentPassword, newPassword });
+export const setMyPassword = (password: string) =>
+  api.put('/api/auth/me/password', { password });
 
 export interface AdminUserData { _id: string; email: string; createdAt: string; }
 export interface LoginLogData { _id: string; email: string; ip: string; userAgent: string; success: boolean; timestamp: string; }
 export const getAdminUsers = () => api.get<AdminUserData[]>('/api/auth/users');
 export const createAdminUser = (email: string, password: string) => api.post<AdminUserData>('/api/auth/users', { email, password });
 export const deleteAdminUser = (id: string) => api.delete(`/api/auth/users/${id}`);
+export const setAdminUserPassword = (id: string, password: string) => api.put(`/api/auth/users/${id}/password`, { password });
 export const getLoginLogs = () => api.get<LoginLogData[]>('/api/auth/logs');
 
 // ── Sections ──────────────────────────────────────────────────────────────────
@@ -258,7 +261,7 @@ export const deleteChangelogEntry = (id: string) => api.delete(`/api/changelog/$
 // ── SEO ───────────────────────────────────────────────────────────────────────
 export interface SEOPageData {
   _id?: string; pageKey: string; metaTitle: string; metaDescription: string;
-  ogImage?: string; canonicalUrl?: string; noIndex: boolean; updatedAt?: string;
+  ogImage?: string; canonicalUrl?: string; noIndex: boolean; customSchema?: string; updatedAt?: string;
 }
 export const getAllSEO = () => api.get<SEOPageData[]>('/api/seo');
 export const getSEOByKey = (key: string) => api.get<SEOPageData>(`/api/seo/${key}`);

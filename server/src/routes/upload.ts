@@ -33,9 +33,18 @@ const diskStorage = multer.diskStorage({
   },
 });
 
+const ALLOWED_MIME = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'image/svg+xml', 'image/avif',
+]);
+
 const upload = multer({
   storage: cloudinaryConfigured ? memStorage : diskStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME.has(file.mimetype)) cb(null, true);
+    else cb(new Error('File type not allowed. Images only.'));
+  },
 });
 
 // POST /api/upload
@@ -61,7 +70,7 @@ router.post('/', verifyJWT, upload.single('file'), async (req: AuthRequest, res:
     } else {
       // Local storage — file already written by multer diskStorage
       const filename = (req.file as Express.Multer.File & { filename: string }).filename;
-      const origin = `${req.protocol}://${req.get('host')}`;
+      const origin = process.env.UPLOAD_BASE_URL || `${req.protocol}://${req.get('host')}`;
       url = `${origin}/uploads/${filename}`;
       publicId = `local/${filename}`;
     }
@@ -98,8 +107,12 @@ router.delete('/', verifyJWT, async (req: AuthRequest, res: Response) => {
     if (cloudinaryConfigured && !publicId.startsWith('local/')) {
       await cloudinary.uploader.destroy(publicId);
     } else {
-      const filename = publicId.replace('local/', '');
+      const filename = path.basename(publicId.replace('local/', ''));
       const filePath = path.join(UPLOADS_DIR, filename);
+      if (!filePath.startsWith(UPLOADS_DIR + path.sep) && filePath !== UPLOADS_DIR) {
+        res.status(400).json({ error: 'Invalid file path' });
+        return;
+      }
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
     await MediaFile.findOneAndDelete({ publicId });

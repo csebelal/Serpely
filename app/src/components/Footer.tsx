@@ -10,8 +10,27 @@ const cols = {
 };
 
 const colHrefs: Record<string, string> = {
+  // Product
   Features: '/features', 'Product Tour': '/product-tour', Integrations: '/integrations',
-  'About Us': '/about', Blog: '/blog', Contact: '/contact', FAQ: '/faq',
+  'Rank Tracker': '/features', 'GEO Monitoring': '/features',
+  'Technical Audit': '/features', 'White-Label': '/features',
+  Changelog: '/changelog',
+  // Company
+  'About Us': '/about', Blog: '/blog', Contact: '/contact',
+  'Privacy Policy': '#', 'Terms of Service': '#', Careers: '#', 'Affiliate Program': '#',
+  // Resources
+  FAQ: '/faq', 'SEO Blog': '/blog',
+  'GEO Guide': '#', 'API Docs': '#', 'Help Center': '#',
+  Feedback: '#', 'Technical Docs': '#', 'Serpely Brand Kit': '#',
+  // Compare
+  'Serpely vs Semrush': '/compare/semrush',
+  'Serpely vs Ahrefs': '/compare/ahrefs',
+  'Serpely vs Nightwatch': '/compare/nightwatch',
+  'Serpely vs Rankability': '/compare/rankability',
+  'Serpely vs SE Ranking': '/compare/se-ranking',
+  'Serpely vs Surfer SEO': '/compare/surfer-seo',
+  'Serpely vs SERPStat': '/compare/serpstat',
+  'Serpely vs Moz': '/compare/moz',
 };
 
 export function Footer() {

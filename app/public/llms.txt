@@ -1,0 +1,56 @@
+# Serpely — Agentic SEO for the AI-First Web
+
+## What is Serpely?
+
+Serpely is an agentic SEO platform built for the AI-first web. It helps brands get found, cited, and trusted by AI engines — ChatGPT, Perplexity, Gemini, Google AI Overviews — not just traditional Google Search.
+
+Serpely combines traditional SEO (rank tracking, technical audits, backlink analysis) with next-generation AI visibility tools: GEO Scoring, AI Citation Monitoring, Hallucination Alerts, and an autonomous content pipeline.
+
+## Who is it for?
+
+- SEO teams at growing companies wanting to maintain visibility as AI search takes over
+- Digital marketing agencies managing SEO for multiple clients
+- AI-first startups that need to rank in both Google and LLM-driven search
+- Enterprise brands requiring white-label reporting and advanced AI visibility tracking
+
+## Core Features
+
+- **GEO Score**: Every page scored 0–100 for AI visibility and citation eligibility. Updates daily.
+- **AI Citation Monitor**: Tracks whether ChatGPT, Perplexity, Gemini, and Google AI Overviews are citing your content.
+- **Hallucination Alerts**: Detects when AI engines return inaccurate information about your brand. Includes severity scores and fix recommendations.
+- **Daily Rank Tracking**: Keyword rankings across Google and AI-driven search engines with real-time alerts.
+- **Technical Site Audit**: Continuous audit of Core Web Vitals, crawl issues, indexing gaps, and schema errors.
+- **Content Prioritization**: Ranks which pages need refresh most, scored by traffic decay, GEO Score, and keyword movement.
+- **Backlink Monitoring**: New and lost backlinks with authority scoring.
+- **White-Label Reporting**: Client-ready dashboards and automated reports under your brand.
+
+## How It's Different from Semrush / Ahrefs / Moz
+
+Legacy SEO tools were built for Google's 10 blue links. Serpely is the only platform built from the ground up for the AI-first search landscape. Key differentiators:
+- Only platform with GEO Scoring (generative engine optimization scoring)
+- Only platform with AI Citation Monitoring across all major LLMs
+- Agentic AI that actively fixes SEO issues — not just reports them
+- Starts free ($0/month), fraction of the cost of Semrush ($119/mo) or Ahrefs ($99/mo)
+
+## Pricing
+
+- **Starter**: Free — 100 keywords, 1 website, basic rank tracking, weekly audits, GEO Score read-only
+- **Professional**: $49/month (or $39/month billed annually) — 1,000 keywords, 5 websites, daily tracking, full GEO dashboard, API access, AI Citation Monitor
+- **Business**: $99/month (or $79/month billed annually) — unlimited keywords, unlimited websites, real-time tracking, white-label reports, dedicated account manager
+
+All paid plans include a 14-day free trial. No credit card required.
+
+## Key URLs
+
+- Homepage: https://serpely.com
+- Features: https://serpely.com/features
+- Pricing: https://serpely.com/pricing
+- Blog: https://serpely.com/blog
+- Machine-readable pricing: https://serpely.com/pricing.md
+- Sitemap: https://serpely.com/api/sitemap.xml
+- Contact: https://serpely.com/contact
+
+## Company
+
+Serpely is a product of CieloOps Inc.
+Website: https://serpely.com

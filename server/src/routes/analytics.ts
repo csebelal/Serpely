@@ -1,11 +1,19 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import PageView from '../models/PageView';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+const trackLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // POST /api/analytics/track (public)
-router.post('/track', async (req: Request, res: Response) => {
+router.post('/track', trackLimiter, async (req: Request, res: Response) => {
   try {
     const { path, referrer } = req.body as { path: string; referrer?: string };
     if (!path) { res.status(400).json({ error: 'path required' }); return; }

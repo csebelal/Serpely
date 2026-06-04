@@ -5,14 +5,14 @@ import { getAllPosts, getAllTestimonials, getPricing, getSettings, getAnalyticsS
 interface Stats { posts: number; testimonials: number; plans: number; siteName: string; unreadContacts: number; totalSubscribers: number; }
 
 const QUICK_LINKS = [
-  { to: '/admin/home-editor', label: 'Home Page', desc: 'Headlines, CTAs, sections' },
-  { to: '/admin/blog', label: 'Blog Posts', desc: 'Create & manage content' },
-  { to: '/admin/pricing', label: 'Pricing', desc: 'Plans & features' },
-  { to: '/admin/contact', label: 'Contact Inbox', desc: 'Form submissions' },
-  { to: '/admin/subscribers', label: 'Subscribers', desc: 'Newsletter list' },
-  { to: '/admin/seo', label: 'SEO', desc: 'Per-page meta & OG' },
-  { to: '/admin/changelog', label: 'Changelog', desc: 'What\'s new' },
-  { to: '/admin/audit', label: 'Audit Log', desc: 'Admin activity' },
+  { to: '/sp-super-admin/home-editor', label: 'Home Page', desc: 'Headlines, CTAs, sections' },
+  { to: '/sp-super-admin/blog', label: 'Blog Posts', desc: 'Create & manage content' },
+  { to: '/sp-super-admin/pricing', label: 'Pricing', desc: 'Plans & features' },
+  { to: '/sp-super-admin/contact', label: 'Contact Inbox', desc: 'Form submissions' },
+  { to: '/sp-super-admin/subscribers', label: 'Subscribers', desc: 'Newsletter list' },
+  { to: '/sp-super-admin/seo', label: 'SEO', desc: 'Per-page meta & OG' },
+  { to: '/sp-super-admin/changelog', label: 'Changelog', desc: 'What\'s new' },
+  { to: '/sp-super-admin/audit', label: 'Audit Log', desc: 'Admin activity' },
 ];
 
 export function Dashboard() {
@@ -90,7 +90,7 @@ export function Dashboard() {
         <div style={{ background: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>Recent Activity</p>
-            <Link to="/admin/audit" style={{ fontSize: 12, color: '#00C27A', textDecoration: 'none', fontWeight: 600 }}>View all</Link>
+            <Link to="/sp-super-admin/audit" style={{ fontSize: 12, color: '#00C27A', textDecoration: 'none', fontWeight: 600 }}>View all</Link>
           </div>
           {recentAudit.length ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

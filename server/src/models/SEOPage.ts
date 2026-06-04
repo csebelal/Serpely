@@ -7,6 +7,7 @@ export interface ISEOPage extends Document {
   ogImage: string;
   canonicalUrl: string;
   noIndex: boolean;
+  customSchema: string;
   updatedAt: Date;
 }
 
@@ -17,6 +18,7 @@ const SEOPageSchema = new Schema<ISEOPage>({
   ogImage:         { type: String, default: '' },
   canonicalUrl:    { type: String, default: '' },
   noIndex:         { type: Boolean, default: false },
+  customSchema:    { type: String, default: '' },
   updatedAt:       { type: Date, default: Date.now },
 });
 

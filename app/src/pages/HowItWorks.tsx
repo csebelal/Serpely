@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -47,7 +49,25 @@ const featureList = [
 ];
 
 export function HowItWorks() {
+  useSEOMeta('how-it-works', { title: 'How It Works — Serpely', description: 'See how Serpely\'s agentic SEO workflows track, audit, and improve your AI search visibility.' });
   const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    injectSchema('schema-how-it-works', {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: 'How to Use Serpely — Agentic SEO in 4 Steps',
+      description: "How Serpely's AI-powered platform transforms your SEO workflow from manual effort to automated growth.",
+      totalTime: 'PT5M',
+      step: steps.map(s => ({
+        '@type': 'HowToStep',
+        position: parseInt(s.num),
+        name: s.title,
+        text: s.description,
+      })),
+    });
+    return () => removeSchema('schema-how-it-works');
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {

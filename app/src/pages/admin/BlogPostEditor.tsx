@@ -63,7 +63,7 @@ export function BlogPostEditor() {
         setForm({ ...r.data, publishedAt: r.data.publishedAt ? r.data.publishedAt.slice(0, 10) : '' });
         editor.commands.setContent(r.data.body || '');
         setAutoSlug(false);
-      }).catch(() => navigate('/admin/blog'));
+      }).catch(() => navigate('/sp-super-admin/blog'));
     }
   }, [id, isNew, editor]);
 
@@ -82,7 +82,7 @@ export function BlogPostEditor() {
       } else {
         await updatePost(id!, payload);
       }
-      navigate('/admin/blog');
+      navigate('/sp-super-admin/blog');
     } catch {
       setSaveError('Save failed. Check your connection and try again.');
       setSaving(false);
@@ -128,7 +128,7 @@ export function BlogPostEditor() {
             Published
           </label>
           {saveError && <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{saveError}</span>}
-          <button onClick={() => navigate('/admin/blog')} style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#64748b', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={() => navigate('/sp-super-admin/blog')} style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#64748b', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
           <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
             {saving ? 'Saving…' : isNew ? 'Create Post' : 'Update Post'}
           </button>

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import AdminUser from '../models/AdminUser';
 import LoginLog from '../models/LoginLog';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
@@ -29,6 +30,11 @@ router.post('/login', async (req: Request, res: Response) => {
       res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
+    if (!user.passwordHash) {
+      console.error('Login error: passwordHash missing for', email);
+      res.status(500).json({ error: 'Account configuration error. Contact admin.' });
+      return;
+    }
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       await LoginLog.create({ email, ip, userAgent, success: false });
@@ -36,9 +42,25 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
     await LoginLog.create({ email, ip, userAgent, success: true });
-    const token = jwt.sign({ id: user._id, email: user.email, role: (user as any).role || 'admin' }, process.env.JWT_SECRET as string, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id, email: user.email, role: (user as any).role || 'admin' }, process.env.JWT_SECRET as string, { expiresIn: '24h' });
     res.json({ token, email: user.email });
   } catch (err) {
+    console.error('Login route error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/auth/me/password  (set own password — no old password required)
+router.put('/me/password', verifyJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const { password } = req.body as { password: string };
+    if (!password || password.length < 6) { res.status(400).json({ error: 'Password must be at least 6 characters' }); return; }
+    const user = await AdminUser.findById(req.adminId);
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    user.passwordHash = await bcrypt.hash(password, 10);
+    await user.save();
+    res.json({ success: true });
+  } catch {
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -81,6 +103,21 @@ router.post('/users', verifyJWT, async (req: AuthRequest, res: Response) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await AdminUser.create({ email: email.toLowerCase(), passwordHash });
     res.json({ _id: user._id, email: user.email, createdAt: user.createdAt });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/auth/users/:id/password  (auth — reset any user's password)
+router.put('/users/:id/password', verifyJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const { password } = req.body as { password: string };
+    if (!password || password.length < 6) { res.status(400).json({ error: 'Password must be at least 6 characters' }); return; }
+    const user = await AdminUser.findById(req.params.id);
+    if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+    user.passwordHash = await bcrypt.hash(password, 10);
+    await user.save();
+    res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });
   }

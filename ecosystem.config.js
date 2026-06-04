@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'serpely-api',
       script: './server/dist/index.js',
-      cwd: '/var/www/serpely',
+      cwd: '/var/www/Serpely',
       instances: 1,
       autorestart: true,
       restart_delay: 3000,

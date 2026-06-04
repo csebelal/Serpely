@@ -72,11 +72,25 @@ router.delete('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
+function csvEscape(value: string): string {
+  const str = String(value ?? '');
+  const safe = str.replace(/^[=+\-@\t]/, "'$&");
+  if (safe.includes(',') || safe.includes('"') || safe.includes('\n')) {
+    return `"${safe.replace(/"/g, '""')}"`;
+  }
+  return safe;
+}
+
 // GET /api/subscribers/export (auth)
 router.get('/export', verifyJWT, async (_req: AuthRequest, res: Response) => {
   try {
     const subscribers = await Subscriber.find({ active: true }).sort({ createdAt: -1 });
-    const rows = ['email,source,createdAt', ...subscribers.map(s => `${s.email},${s.source},${s.createdAt.toISOString()}`)];
+    const rows = [
+      'email,source,createdAt',
+      ...subscribers.map(s =>
+        [csvEscape(s.email), csvEscape(s.source || ''), csvEscape(s.createdAt.toISOString())].join(',')
+      ),
+    ];
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="subscribers.csv"');
     res.send(rows.join('\n'));

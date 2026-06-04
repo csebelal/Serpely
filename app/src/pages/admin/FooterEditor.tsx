@@ -62,7 +62,7 @@ export function FooterEditor() {
   const logoField = (label: string, field: string) => (
     <div style={{ marginBottom: 14 }}>
       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-      {(form as Record<string, unknown>)[field] && <img src={(form as Record<string, string>)[field]} alt={label} style={{ height: 28, maxWidth: 120, objectFit: 'contain', display: 'block', marginBottom: 6, background: field.includes('dark') ? '#0f172a' : 'transparent', padding: 4, borderRadius: 4 }} />}
+      {typeof (form as Record<string, unknown>)[field] === 'string' && <img src={(form as Record<string, string>)[field]} alt={label} style={{ height: 28, maxWidth: 120, objectFit: 'contain', display: 'block', marginBottom: 6, background: field.includes('dark') ? '#0f172a' : 'transparent', padding: 4, borderRadius: 4 }} />}
       <input type="file" accept="image/*" onChange={e => e.target.files && handleLogoUpload(field, e.target.files[0])} style={{ fontSize: 12, color: '#64748b' }} />
       {uploading === field && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 6 }}>Uploading…</span>}
     </div>

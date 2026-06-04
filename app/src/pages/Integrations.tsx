@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getSection } from '@/lib/api';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
 
 // ── Syntax highlighter ─────────────────────────────────────────────────────
 type TT = 'comment'|'string'|'keyword'|'number'|'fn'|'prop'|'ident'|'op'|'punc'|'ws'|'other';
@@ -187,6 +189,7 @@ const defaultIntegrations: IntegrationCategory[] = [
 ];
 
 export function Integrations() {
+  useSEOMeta('integrations', { title: 'Integrations — Serpely', description: 'Connect Serpely with Google Search Console, GA4, DataForSEO, and more.' });
   const [searchQuery,setSearchQuery]       = useState('');
   const [activeCategory,setActiveCategory] = useState('All');
   const {displayed,done}                   = useTypewriter(CODE,22);
@@ -213,6 +216,25 @@ export function Integrations() {
       if(typeof d.apiButtonHref==='string')  setApiButtonHref(d.apiButtonHref);
     }).catch(()=>{});
   },[]);
+
+  useEffect(()=>{
+    const allItems = integrations.flatMap(cat => cat.items);
+    injectSchema('schema-integrations', {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: 'Serpely Integrations — Connect Your SEO Stack',
+      description: 'Serpely integrates with Google Analytics, Google Search Console, WordPress, Shopify, Slack, and more to unify your SEO workflow.',
+      url: 'https://serpely.com/integrations',
+      numberOfItems: allItems.length,
+      itemListElement: allItems.map((item, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: item.name,
+        description: item.description,
+      })),
+    });
+    return () => removeSchema('schema-integrations');
+  },[integrations]);
 
   const totalCount     = integrations.reduce((s,c)=>s+c.items.length,0);
   const connectedCount = integrations.reduce((s,c)=>s+c.items.filter(i=>i.connected).length,0);

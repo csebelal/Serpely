@@ -1,14 +1,7 @@
 ﻿import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Calendar, Clock, User, Share2, Twitter, Linkedin, Facebook } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { getPost, getPosts, type BlogPostData as ApiPost } from '@/lib/api';
-
-declare global {
-  interface Window {
-    tailwind: { config: object };
-  }
-}
+import { injectSchema, removeSchema } from '@/lib/schema';
 
 function extractHeadings(html: string): { level: 2 | 3; text: string; id: string }[] {
   return Array.from(html.matchAll(/<h([23])[^>]*?>([\s\S]*?)<\/h[23]>/gi)).map(([, level, inner]) => {
@@ -46,52 +39,78 @@ export function BlogPost() {
     setRelatedPosts([]);
     getPost(slug)
       .then(r => {
-        setData(r.data);
+        const post = r.data;
+        setData(post);
+
+        // Inject meta tags for this blog post
+        document.title = `${post.title} — Serpely Blog`;
+        const setMeta = (name: string, content: string, prop = false) => {
+          const attr = prop ? 'property' : 'name';
+          const sel = prop ? `meta[property="${name}"]` : `meta[name="${name}"]`;
+          let el = document.querySelector<HTMLMetaElement>(sel);
+          if (!el) { el = document.createElement('meta'); el.setAttribute(attr, name); document.head.appendChild(el); }
+          el.content = content;
+        };
+        const excerpt = post.excerpt || post.body?.replace(/<[^>]+>/g, '').slice(0, 160) || '';
+        setMeta('description', excerpt);
+        setMeta('og:title', post.title, true);
+        setMeta('og:description', excerpt, true);
+        setMeta('og:type', 'article', true);
+        setMeta('og:url', `${window.location.origin}/blog/${post.slug}`, true);
+        if (post.coverImage) {
+          setMeta('og:image', post.coverImage, true);
+          setMeta('twitter:image', post.coverImage);
+        }
+        setMeta('twitter:card', 'summary_large_image');
+        setMeta('twitter:title', post.title);
+        setMeta('twitter:description', excerpt);
+        let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+        if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
+        canonical.href = `${window.location.origin}/blog/${post.slug}`;
+
+        // Article JSON-LD
+        injectSchema('schema-article', {
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: post.title,
+          description: excerpt,
+          image: post.coverImage || undefined,
+          author: { '@type': 'Person', name: post.author || 'Serpely Team' },
+          publisher: {
+            '@type': 'Organization',
+            name: 'Serpely',
+            logo: { '@type': 'ImageObject', url: `${window.location.origin}/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png` },
+          },
+          datePublished: post.publishedAt,
+          dateModified: post.updatedAt || post.publishedAt,
+          mainEntityOfPage: { '@type': 'WebPage', '@id': `${window.location.origin}/blog/${post.slug}` },
+        });
+
+        // BreadcrumbList JSON-LD
+        injectSchema('schema-breadcrumb', {
+          '@context': 'https://schema.org',
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Home', item: window.location.origin },
+            { '@type': 'ListItem', position: 2, name: 'Blog', item: `${window.location.origin}/blog` },
+            { '@type': 'ListItem', position: 3, name: post.title, item: `${window.location.origin}/blog/${post.slug}` },
+          ],
+        });
+
         getPosts()
-          .then(all => setRelatedPosts(all.data.filter(p => p.category === r.data.category && p.slug !== slug).slice(0, 3)))
+          .then(all => setRelatedPosts(all.data.filter(p => p.category === post.category && p.slug !== slug).slice(0, 3)))
           .catch(() => {});
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+    return () => {
+      document.title = 'Serpely — Agentic SEO for the AI-First Web';
+      removeSchema('schema-article');
+      removeSchema('schema-breadcrumb');
+    };
   }, [slug]);
 
   useEffect(() => {
-    // Load Tailwind CDN
-    const twScript = document.createElement("script");
-    twScript.src = "https://cdn.tailwindcss.com";
-    twScript.onload = () => {
-      if (window.tailwind) {
-        window.tailwind.config = {
-          theme: {
-            extend: {
-              fontFamily: {
-                display: ["Satoshi", "sans-serif"],
-                body: ["Satoshi", "sans-serif"],
-                sans: ["Satoshi", "sans-serif"],
-              },
-              colors: {
-                green: {
-                  DEFAULT: "#00C27A",
-                  light: "#00E08F",
-                  soft: "#E6FBF4",
-                  mid: "#00A868",
-                  dark: "#008451",
-                },
-              },
-            },
-          },
-        };
-      }
-    };
-    document.head.appendChild(twScript);
-
-    // Load Satoshi font
-    const fontLink = document.createElement("link");
-    fontLink.rel = "stylesheet";
-    fontLink.href =
-      "https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,800,900&display=swap";
-    document.head.appendChild(fontLink);
-
     // Theme init
     const root = document.documentElement;
     rootRef.current = root;
@@ -664,7 +683,7 @@ export function BlogPost() {
       {/* â•â•â• NAVBAR â•â•â• */}
       <nav id="navbar">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="serpely-homepage-v4.html" className="flex items-center flex-shrink-0">
+          <a href="/" className="flex items-center flex-shrink-0">
             <img src="/Serpely Logo PNG/Serpely - Logo_Logo - Main.png" alt="Serpely" className="h-9 w-auto brand-logo" />
           </a>
           <div className="hidden lg:flex items-center gap-1">
@@ -681,9 +700,9 @@ export function BlogPost() {
                 <div className="mega-grid">
                   <div className="mega-col">
                     <div className="mega-title">Explore</div>
-                    <a className="mega-link" href="serpely-homepage-v4.html#how-it-works"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M12 3v4"/><path d="M12 17v4"/><path d="M3 12h4"/><path d="M17 12h4"/><circle cx="12" cy="12" r="3.5"/></svg></div><div className="dd-text"><strong>How It Works</strong><span>Continuous SEO workflow</span></div></a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7l5-2 6 2 5-2v12l-5 2-6-2-5 2z"/><path d="M9 5v12"/><path d="M15 7v12"/></svg></div><div className="dd-text"><strong>Product Roadmap</strong><span>What's coming next</span></div></a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#testimonials"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.47L21 9.4l-4.5 4.39L17.54 21 12 18.1 6.46 21l1.04-7.21L3 9.4l6.3-.93z"/></svg></div><div className="dd-text"><strong>Customer Stories</strong><span>Real results from real teams</span></div></a>
+                    <a className="mega-link" href="/how-it-works"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M12 3v4"/><path d="M12 17v4"/><path d="M3 12h4"/><path d="M17 12h4"/><circle cx="12" cy="12" r="3.5"/></svg></div><div className="dd-text"><strong>How It Works</strong><span>Continuous SEO workflow</span></div></a>
+                    <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7l5-2 6 2 5-2v12l-5 2-6-2-5 2z"/><path d="M9 5v12"/><path d="M15 7v12"/></svg></div><div className="dd-text"><strong>Product Roadmap</strong><span>What's coming next</span></div></a>
+                    <a className="mega-link" href="/"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.47L21 9.4l-4.5 4.39L17.54 21 12 18.1 6.46 21l1.04-7.21L3 9.4l6.3-.93z"/></svg></div><div className="dd-text"><strong>Customer Stories</strong><span>Real results from real teams</span></div></a>
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Compare</div>
@@ -708,10 +727,10 @@ export function BlogPost() {
                 <div className="mega-grid">
                   <div className="mega-col">
                     <div className="mega-title">Features</div>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg></div><div className="dd-text"><strong>AI Rank Tracking</strong><span>Track Google, AI Overviews, and LLM visibility.</span></div></a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18"/></svg></div><div className="dd-text"><strong>GEO Monitoring</strong><span>See citation visibility across AI search surfaces.</span></div></a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div><div className="dd-text"><strong>Technical Site Audit</strong><span>Monitor crawl issues, vitals, and schema health.</span></div></a>
-                    <a className="mega-footer" href="serpely-homepage-v4.html#features">See All Features â†’</a>
+                    <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg></div><div className="dd-text"><strong>AI Rank Tracking</strong><span>Track Google, AI Overviews, and LLM visibility.</span></div></a>
+                    <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18"/></svg></div><div className="dd-text"><strong>GEO Monitoring</strong><span>See citation visibility across AI search surfaces.</span></div></a>
+                    <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div><div className="dd-text"><strong>Technical Site Audit</strong><span>Monitor crawl issues, vitals, and schema health.</span></div></a>
+                    <a className="mega-footer" href="/features">See All Features â†’</a>
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Integrations</div>
@@ -733,7 +752,7 @@ export function BlogPost() {
                 Resources<svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
               </button>
               <div className="dropdown-menu">
-                <a href="serpely-blog.html"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div><div className="dd-text">Blog<span>SEO &amp; GEO insights</span></div></a>
+                <a href="/blog"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div><div className="dd-text">Blog<span>SEO &amp; GEO insights</span></div></a>
                 <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4"/><path d="M4 7h5l2 2h3l2-2h4"/><path d="M4 17h16"/></svg></div><div className="dd-text">Affiliate Program<span>Earn 30% recurring</span></div></a>
                 <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div><div className="dd-text">FAQ<span>Common questions answered</span></div></a>
                 <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></div><div className="dd-text">Technical Docs<span>API &amp; integration guides</span></div></a>
@@ -743,7 +762,7 @@ export function BlogPost() {
             </div>
             <a href="#" className="btn-audit ml-1"><span className="audit-pulse"></span>Free Site Audit</a>
             <a
-              href="serpely-homepage-v4.html#pricing"
+              href="/pricing"
               className="px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors"
               style={{ color: "var(--text-soft)", letterSpacing: "-0.012em" }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "var(--bg-subtle)"; }}

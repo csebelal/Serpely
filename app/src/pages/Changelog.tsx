@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getChangelog, type ChangelogData } from '../lib/api';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 
 const TYPE_CONFIG = {
   feature:     { label: 'New Feature', color: '#6366f1', bg: '#eef2ff' },
@@ -8,6 +9,7 @@ const TYPE_CONFIG = {
 };
 
 export function Changelog() {
+  useSEOMeta('changelog', { title: 'Changelog — Serpely', description: 'Latest product updates, new features, and improvements to Serpely.' });
   const [entries, setEntries] = useState<ChangelogData[]>([]);
   const [loading, setLoading] = useState(true);
 

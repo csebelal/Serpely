@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { submitContact } from '../lib/api';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -111,6 +112,7 @@ const heroStats = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 export function Contact() {
+  useSEOMeta('contact', { title: 'Contact Serpely', description: 'Get in touch with the Serpely team. We\'d love to hear from you.' });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState('');

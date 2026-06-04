@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getSection, updateSection, uploadFile } from '@/lib/api';
 
+function normalizeImgUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return '/' + url.replace(/\\/g, '/').replace(/^\/+/, '');
+}
+
 interface StatItem { value: string; label: string; }
 interface SocialLinks { linkedin: string; twitter: string; facebook: string; }
 interface TeamMember { initials: string; name: string; role: string; bg: string; image: string; socials: SocialLinks; }
@@ -112,7 +118,12 @@ export function AboutEditor() {
 
   async function save() {
     setSaving(true);
-    await updateSection('about', data as unknown as Record<string, unknown>);
+    const normalized = {
+      ...data,
+      team: data.team.map(m => ({ ...m, image: normalizeImgUrl(m.image) })),
+    };
+    await updateSection('about', normalized as unknown as Record<string, unknown>);
+    setData(normalized);
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2500);
   }
 

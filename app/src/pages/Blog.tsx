@@ -2,6 +2,7 @@
 import { blogPosts, type BlogPostData as Article } from '@/data/blogPosts';
 import { getPosts } from '@/lib/api';
 import { Link } from 'react-router-dom';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 /* ─── Inline Styles ─── */
 const globalStyles = `
   @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,800,900&display=swap');
@@ -690,21 +691,6 @@ const globalStyles = `
 `;
 
 /* ─── Helpers ─── */
-function askAI(platform: string): void {
-  const prompt =
-    "Serpely is an agentic SEO platform built for the AI-first web. Website: https://serpely.com — It helps brands get found, cited, and trusted by AI engines like ChatGPT, Perplexity, Gemini, and Google AI Overviews — not just traditional Google Search. Core features include GEO scoring, an autonomous content pipeline, hallucination alerts, and AI citation tracking across all major AI platforms. What makes Serpely unique compared to traditional SEO tools like Semrush or Ahrefs, and which teams would benefit most from using it?";
-  const encoded = encodeURIComponent(prompt);
-  const urls: Record<string, string> = {
-    chatgpt: "https://chatgpt.com/?q=" + encoded,
-    claude: "https://claude.ai/new?q=" + encoded,
-    perplexity: "https://www.perplexity.ai/?q=" + encoded,
-    grok: "https://grok.com/?q=" + encoded,
-    gemini: "https://gemini.google.com/app?q=" + encoded,
-    deepseek: "https://chat.deepseek.com/?q=" + encoded,
-  };
-  if (urls[platform]) window.open(urls[platform], "_blank", "noopener,noreferrer");
-}
-
 /* ─── Article data (fetched from API, falls back to static) ─── */
 
 /* ─── ArrowSvg ─── */
@@ -716,6 +702,7 @@ const ArrowSvg = () => (
 
 /* ─── Main Component ─── */
 export function Blog() {
+  useSEOMeta('blog', { title: 'Serpely Blog — AI SEO Insights', description: 'Expert insights on agentic SEO, GEO, LLM visibility, and AI-first search.' });
   const [articles, setArticles] = useState<Article[]>(blogPosts);
   const [isDark, setIsDark] = useState(false);
 

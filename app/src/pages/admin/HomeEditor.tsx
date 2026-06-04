@@ -27,7 +27,7 @@ interface AudienceCardData { label: string; title: string; items: string[]; cta:
 function useSaveState() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  async function doSave(fn: () => Promise<void>) {
+  async function doSave(fn: () => Promise<unknown>) {
     setSaving(true);
     try { await fn(); } catch { /* ignore */ }
     setSaving(false);

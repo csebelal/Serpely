@@ -1,11 +1,32 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
+import { competitors, COMPETITOR_SLUGS } from '@/data/competitors';
+import { getSection } from '@/lib/api';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const comparisons = [
+export interface CompRow {
+  feature: string;
+  category?: string;
+  serpely: boolean | string;
+  ahrefs: boolean | string;
+  semrush: boolean | string;
+  moz: boolean | string;
+  isPrice?: boolean;
+}
+
+export interface DiffCard {
+  title: string;
+  description: string;
+  icon: string;
+  accent: boolean;
+}
+
+export const DEFAULT_COMPARISONS: CompRow[] = [
   { feature: 'AI-Powered Optimization', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
   { feature: 'Generative Engine Optimization (GEO)', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
   { feature: 'LLM Visibility Tracking', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
@@ -19,7 +40,7 @@ const comparisons = [
   { feature: 'Starting Price', serpely: '$0 / mo', ahrefs: '$99 / mo', semrush: '$119 / mo', moz: '$99 / mo', isPrice: true },
 ];
 
-const differences = [
+export const DEFAULT_DIFFERENCES: DiffCard[] = [
   {
     title: 'Agentic AI',
     description: "Our AI agents don't just report on your SEO — they actively work to improve it with zero manual effort.",
@@ -63,7 +84,52 @@ function Cross() {
 }
 
 export function Compare() {
+  useSEOMeta('compare', { title: 'Serpely vs Ahrefs, Semrush & Moz — Compare', description: 'See how Serpely compares to traditional SEO tools for AI-first search visibility.' });
   const pageRef = useRef<HTMLDivElement>(null);
+
+  const [heroHeadline,  setHeroHeadline]  = useState('See how we stack up');
+  const [heroSubtext,   setHeroSubtext]   = useState('See why thousands of teams are switching to Serpely for their SEO and GEO needs.');
+  const [comparisons,   setComparisons]   = useState<CompRow[]>(DEFAULT_COMPARISONS);
+  const [differences,   setDifferences]   = useState<DiffCard[]>(DEFAULT_DIFFERENCES);
+  const [ctaHeadline,   setCtaHeadline]   = useState('Ready to make the switch?');
+  const [ctaSubtext,    setCtaSubtext]    = useState('Start your free trial today and experience the difference Agentic SEO can make.');
+  const [ctaPrimText,   setCtaPrimText]   = useState('Start Free Trial');
+  const [ctaPrimHref,   setCtaPrimHref]   = useState('/pricing');
+  const [ctaSecText,    setCtaSecText]    = useState('See How It Works');
+  const [ctaSecHref,    setCtaSecHref]    = useState('/how-it-works');
+
+  useEffect(() => {
+    getSection('compare').then(r => {
+      const d = r.data.data as Record<string, unknown>;
+      if (typeof d.heroHeadline  === 'string') setHeroHeadline(d.heroHeadline);
+      if (typeof d.heroSubtext   === 'string') setHeroSubtext(d.heroSubtext);
+      if (Array.isArray(d.comparisons))        setComparisons(d.comparisons as CompRow[]);
+      if (Array.isArray(d.differences))        setDifferences(d.differences as DiffCard[]);
+      if (typeof d.ctaHeadline   === 'string') setCtaHeadline(d.ctaHeadline);
+      if (typeof d.ctaSubtext    === 'string') setCtaSubtext(d.ctaSubtext);
+      if (typeof d.ctaPrimText   === 'string') setCtaPrimText(d.ctaPrimText);
+      if (typeof d.ctaPrimHref   === 'string') setCtaPrimHref(d.ctaPrimHref);
+      if (typeof d.ctaSecText    === 'string') setCtaSecText(d.ctaSecText);
+      if (typeof d.ctaSecHref    === 'string') setCtaSecHref(d.ctaSecHref);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    injectSchema('schema-compare', {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: 'Serpely vs SEO Tools Comparison',
+      description: 'Feature-by-feature comparison of Serpely against Ahrefs, Semrush, and Moz for AI-first SEO.',
+      url: 'https://serpely.com/compare',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Serpely', url: 'https://serpely.com', description: 'Agentic SEO platform with GEO Scoring and AI Citation Monitor. Free plan available, paid plans from $49/month.' },
+        { '@type': 'ListItem', position: 2, name: 'Ahrefs', url: 'https://ahrefs.com', description: 'Traditional SEO tool. No GEO Score or AI citation monitoring. Plans from $99/month.' },
+        { '@type': 'ListItem', position: 3, name: 'Semrush', url: 'https://semrush.com', description: 'Traditional SEO platform. No GEO Score or AI citation monitoring. Plans from $119/month.' },
+        { '@type': 'ListItem', position: 4, name: 'Moz', url: 'https://moz.com', description: 'Traditional SEO tool. No GEO Score or AI citation monitoring. Plans from $99/month.' },
+      ],
+    });
+    return () => removeSchema('schema-compare');
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -92,7 +158,9 @@ export function Compare() {
     return () => ctx.revert();
   }, []);
 
-  const categories = [...new Set(comparisons.filter(r => r.category).map(r => r.category))];
+  const featureRows  = comparisons.filter(r => !r.isPrice && r.category);
+  const priceRow     = comparisons.find(r => r.isPrice);
+  const categories   = [...new Set(featureRows.map(r => r.category))];
 
   return (
     <div ref={pageRef} style={{ background: 'var(--bg)', color: 'var(--text)' }}>
@@ -106,11 +174,16 @@ export function Compare() {
             Compare
           </span>
           <h1 className="font-black mb-5" style={{ fontSize: 'clamp(26px,5vw,60px)', fontWeight: 900, lineHeight: 1.04, letterSpacing: '-0.045em' }}>
-            See how we{' '}
-            <span className="text-gradient">stack up</span>
+            {heroHeadline.includes('stack up') ? (
+              <>
+                {heroHeadline.split('stack up')[0]}
+                <span className="text-gradient">stack up</span>
+                {heroHeadline.split('stack up')[1]}
+              </>
+            ) : heroHeadline}
           </h1>
           <p className="font-medium max-w-xl mx-auto" style={{ fontSize: 17, lineHeight: 1.65, color: 'var(--text-soft)' }}>
-            See why thousands of teams are switching to Serpely for their SEO and GEO needs.
+            {heroSubtext}
           </p>
         </div>
       </section>
@@ -160,7 +233,7 @@ export function Compare() {
                           <span className="text-[10px] font-black uppercase" style={{ color: 'var(--text-faint)', letterSpacing: '0.14em' }}>{cat}</span>
                         </td>
                       </tr>
-                      {comparisons.filter(r => r.category === cat).map((row, i) => (
+                      {featureRows.filter(r => r.category === cat).map((row, i) => (
                         <tr
                           key={`${cat}-${i}`}
                           className="cmp-row"
@@ -185,27 +258,25 @@ export function Compare() {
                       ))}
                     </>
                   ))}
-                  {/* Price row */}
-                  <tr style={{ borderTop: '2px solid hsl(var(--border))', background: 'var(--bg-subtle)' }}>
-                    <td className="py-4 px-6 font-black text-sm" style={{ color: 'var(--text)' }}>Starting Price</td>
-                    {[comparisons[comparisons.length - 1].serpely, comparisons[comparisons.length - 1].ahrefs, comparisons[comparisons.length - 1].semrush, comparisons[comparisons.length - 1].moz].map((val, vi) => (
-                      <td
-                        key={vi}
-                        className="py-4 px-4 text-center"
-                        style={{
-                          background: vi === 0 ? 'rgba(0,194,122,0.06)' : 'transparent',
-                          borderLeft: vi === 0 ? '1px solid rgba(0,194,122,0.2)' : '1px solid hsl(var(--border))',
-                        }}
-                      >
-                        <span
-                          className="font-black text-sm"
-                          style={{ color: vi === 0 ? '#00C27A' : 'var(--text-soft)' }}
+                  {priceRow && (
+                    <tr style={{ borderTop: '2px solid hsl(var(--border))', background: 'var(--bg-subtle)' }}>
+                      <td className="py-4 px-6 font-black text-sm" style={{ color: 'var(--text)' }}>Starting Price</td>
+                      {[priceRow.serpely, priceRow.ahrefs, priceRow.semrush, priceRow.moz].map((val, vi) => (
+                        <td
+                          key={vi}
+                          className="py-4 px-4 text-center"
+                          style={{
+                            background: vi === 0 ? 'rgba(0,194,122,0.06)' : 'transparent',
+                            borderLeft: vi === 0 ? '1px solid rgba(0,194,122,0.2)' : '1px solid hsl(var(--border))',
+                          }}
                         >
-                          {val as string}
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
+                          <span className="font-black text-sm" style={{ color: vi === 0 ? '#00C27A' : 'var(--text-soft)' }}>
+                            {val as string}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -276,6 +347,67 @@ export function Compare() {
         </div>
       </section>
 
+      {/* ── Detailed Comparisons ── */}
+      <section className="py-20 px-6" style={{ borderTop: '1px solid hsl(var(--border))' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="pill-s inline-flex mb-4">
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00C27A' }} />
+              Detailed Comparisons
+            </span>
+            <h2 className="font-black mb-3" style={{ fontSize: 'clamp(22px,3vw,36px)', fontWeight: 900, letterSpacing: '-0.04em' }}>
+              See how Serpely compares to each tool
+            </h2>
+            <p className="font-medium" style={{ fontSize: 15, color: 'var(--text-soft)' }}>
+              Full feature tables, pricing breakdowns, and FAQs for each competitor.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {COMPETITOR_SLUGS.map(slug => {
+              const c = competitors[slug];
+              return (
+                <Link
+                  key={slug}
+                  to={`/compare/${slug}`}
+                  style={{
+                    borderRadius: 16,
+                    padding: '20px 22px',
+                    background: 'var(--card-bg)',
+                    border: '1px solid hsl(var(--border))',
+                    textDecoration: 'none',
+                    display: 'block',
+                    transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.borderColor = 'rgba(0,194,122,0.4)';
+                    e.currentTarget.style.boxShadow = '0 12px 36px rgba(0,194,122,0.10)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = 'hsl(var(--border))';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="font-black text-base" style={{ color: 'var(--text)', letterSpacing: '-0.02em' }}>
+                      Serpely vs {c.name}
+                    </span>
+                    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: '#00C27A' }}>
+                      <path d="M3 8h10M9 4l4 4-4 4"/>
+                    </svg>
+                  </div>
+                  <p className="font-medium mb-3" style={{ fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.5 }}>{c.tagline}</p>
+                  <span className="text-[11px] font-bold uppercase" style={{ color: 'var(--text-faint)', letterSpacing: '0.08em' }}>
+                    from {c.startingPrice}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto">
@@ -287,18 +419,18 @@ export function Compare() {
                 Free to Start
               </span>
               <h2 className="font-black mb-4" style={{ fontSize: 'clamp(26px,3.5vw,40px)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.04em', color: '#fff' }}>
-                Ready to make the switch?
+                {ctaHeadline}
               </h2>
               <p className="mb-8 mx-auto max-w-lg font-medium" style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(255,255,255,0.6)' }}>
-                Start your free trial today and experience the difference Agentic SEO can make.
+                {ctaSubtext}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link to="/pricing" className="btn-accent-s">
-                  Start Free Trial
+                <Link to={ctaPrimHref} className="btn-accent-s">
+                  {ctaPrimText}
                   <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 ml-1" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
                 </Link>
-                <Link to="/how-it-works" className="btn-secondary-s" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
-                  See How It Works
+                <Link to={ctaSecHref} className="btn-secondary-s" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
+                  {ctaSecText}
                 </Link>
               </div>
             </div>

@@ -5,7 +5,8 @@ import { inspectAttr } from 'kimi-plugin-inspect-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  // Use root-relative assets so direct route reloads work in production.
+  base: '/',
   plugins: [inspectAttr(), react()],
   resolve: {
     alias: {

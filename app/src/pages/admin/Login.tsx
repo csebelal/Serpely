@@ -1,4 +1,5 @@
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '@/lib/api';
 
@@ -16,9 +17,10 @@ export function AdminLogin() {
     try {
       const { data } = await login(email, password);
       localStorage.setItem('serpely_token', data.token);
-      navigate('/admin');
-    } catch {
-      setError('Invalid email or password');
+      navigate('/sp-super-admin');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

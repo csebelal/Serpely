@@ -1,6 +1,7 @@
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
@@ -9,6 +10,11 @@ import dns from 'dns';
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 dotenv.config();
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET must be set and be at least 32 characters');
+  process.exit(1);
+}
 
 import authRouter from './routes/auth';
 import sectionsRouter from './routes/sections';
@@ -30,12 +36,22 @@ import analyticsRouter from './routes/analytics';
 import auditRouter from './routes/audit';
 import backupRouter from './routes/backup';
 import apiKeysRouter from './routes/apikeys';
+import sitemapRouter from './routes/sitemap';
 import AdminUser from './models/AdminUser';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173', credentials: true }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+  .split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) cb(null, true);
+    else cb(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
 
@@ -60,13 +76,18 @@ app.use('/api/audit', auditRouter);
 app.use('/api/backup', backupRouter);
 app.use('/api/keys', apiKeysRouter);
 
+app.use('/api', sitemapRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 async function seedAdmin() {
   const existing = await AdminUser.findOne();
   if (!existing) {
     const email = process.env.ADMIN_EMAIL || 'admin@serpely.com';
-    const password = process.env.ADMIN_PASSWORD || 'admin123';
+    const password = process.env.ADMIN_PASSWORD;
+    if (!password) {
+      console.error('FATAL: ADMIN_PASSWORD env var not set — cannot seed admin user');
+      process.exit(1);
+    }
     const passwordHash = await bcrypt.hash(password, 10);
     await AdminUser.create({ email, passwordHash });
     console.log(`Admin user created: ${email}`);

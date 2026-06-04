@@ -15,12 +15,14 @@ router.get('/:name', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/sections/:name  (auth)
+// PUT /api/sections/:name  (auth) — merges with existing data so per-tab saves don't clobber each other
 router.put('/:name', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
+    const existing = await SiteSection.findOne({ section: req.params.name });
+    const merged = { ...(existing?.data as Record<string, unknown> || {}), ...(req.body.data as Record<string, unknown>) };
     const doc = await SiteSection.findOneAndUpdate(
       { section: req.params.name },
-      { data: req.body.data, updatedAt: new Date() },
+      { data: merged, updatedAt: new Date() },
       { upsert: true, new: true }
     );
     res.json(doc);

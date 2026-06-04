@@ -2,6 +2,8 @@
 import { getPricing, getFaq } from '@/lib/api';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -99,11 +101,61 @@ const faqs = [
 ];
 
 export function Pricing() {
+  useSEOMeta('pricing', { title: 'Pricing — Serpely', description: 'Simple, transparent pricing for agencies, startups, and enterprise SEO teams.' });
   const [isAnnual, setIsAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [livePlans, setLivePlans] = useState(plans);
   const [liveFaqs, setLiveFaqs] = useState(faqs);
   const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    injectSchema('schema-pricing', {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Serpely',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: 'https://serpely.com',
+      description: 'Agentic SEO platform with GEO Scoring and AI Citation Monitoring for the AI-first web.',
+      offers: [
+        {
+          '@type': 'Offer',
+          name: 'Starter',
+          price: '0',
+          priceCurrency: 'USD',
+          description: 'Free plan: 100 keywords, 1 website, weekly rank tracking and audits, GEO Score read-only.',
+          eligibleDuration: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MON' },
+        },
+        {
+          '@type': 'Offer',
+          name: 'Professional',
+          price: '49',
+          priceCurrency: 'USD',
+          description: 'Professional plan: 1,000 keywords, 5 websites, daily tracking, full GEO dashboard, API access, AI Citation Monitor. $39/month billed annually.',
+          eligibleDuration: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MON' },
+        },
+        {
+          '@type': 'Offer',
+          name: 'Business',
+          price: '99',
+          priceCurrency: 'USD',
+          description: 'Business plan: unlimited keywords and websites, real-time tracking, white-label reports, dedicated account manager. $79/month billed annually.',
+          eligibleDuration: { '@type': 'QuantitativeValue', value: 1, unitCode: 'MON' },
+        },
+      ],
+      featureList: [
+        'GEO Score — AI visibility scoring 0–100 per page',
+        'AI Citation Monitor — tracks ChatGPT, Perplexity, Gemini, Google AI Overviews',
+        'Hallucination Alerts — detects inaccurate AI-generated brand information',
+        'Daily Rank Tracking — Google and AI-driven search engines',
+        'Technical Site Audit — Core Web Vitals, crawl issues, schema errors',
+        'Content Prioritization — AI-scored action queue',
+        'Backlink Monitoring — new and lost links with authority scoring',
+        'White-Label Reporting — branded dashboards and automated reports',
+      ],
+    });
+    return () => removeSchema('schema-pricing');
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {

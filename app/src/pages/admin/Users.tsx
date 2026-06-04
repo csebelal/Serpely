@@ -1,6 +1,7 @@
-import { useEffect, useState, FormEvent, CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent, CSSProperties } from 'react';
 import {
-  getAdminUsers, createAdminUser, deleteAdminUser, getLoginLogs,
+  getAdminUsers, createAdminUser, deleteAdminUser, setAdminUserPassword, getLoginLogs,
   type AdminUserData, type LoginLogData,
 } from '@/lib/api';
 
@@ -33,6 +34,19 @@ export function Users() {
       setCreateErr(msg);
     }
     setCreating(false);
+  }
+
+  async function handleSetPassword(user: AdminUserData) {
+    const pw = prompt(`New password for ${user.email} (min 6 chars):`);
+    if (!pw) return;
+    if (pw.length < 6) { alert('Password must be at least 6 characters'); return; }
+    try {
+      await setAdminUserPassword(user._id, pw);
+      alert(`Password updated for ${user.email}`);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to set password';
+      alert(msg);
+    }
   }
 
   async function handleDelete(user: AdminUserData) {
@@ -99,10 +113,16 @@ export function Users() {
                 <td style={td}><span style={{ fontWeight: 600 }}>{u.email}</span></td>
                 <td style={{ ...td, color: '#64748b' }}>{fmtDate(u.createdAt)}</td>
                 <td style={{ ...td, textAlign: 'right' }}>
-                  <button onClick={() => handleDelete(u)}
-                    style={{ padding: '4px 12px', background: '#fef2f2', border: 'none', borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                    Delete
-                  </button>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <button onClick={() => handleSetPassword(u)}
+                      style={{ padding: '4px 12px', background: '#f0fdf4', border: 'none', borderRadius: 6, color: '#16a34a', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Set Password
+                    </button>
+                    <button onClick={() => handleDelete(u)}
+                      style={{ padding: '4px 12px', background: '#fef2f2', border: 'none', borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

@@ -3,8 +3,15 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 
 gsap.registerPlugin(ScrollTrigger);
+
+function normalizeImgUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return '/' + url.replace(/\\/g, '/').replace(/^\/+/, '');
+}
 
 const defaultStats = [
   { value: '2,000+', label: 'Active Teams' },
@@ -70,8 +77,6 @@ const defaultStory = [
 ];
 
 type Milestone = typeof defaultMilestones[0];
-type TeamMember = typeof defaultTeam[0];
-
 function TimelineCard({ m, dir }: { m: Milestone; dir: 'left' | 'right' }) {
   return (
     <div
@@ -102,6 +107,7 @@ function TimelineCard({ m, dir }: { m: Milestone; dir: 'left' | 'right' }) {
 }
 
 export function About() {
+  useSEOMeta('about', { title: 'About Serpely — Our Mission & Team', description: 'Learn about the Serpely team and our mission to build the AI-first SEO platform.' });
   const [stats, setStats]             = useState(defaultStats);
   const [team, setTeam]               = useState(defaultTeam);
   const [milestones, setMilestones]   = useState(defaultMilestones);
@@ -438,7 +444,7 @@ export function About() {
 
                   {/* Photo or initials */}
                   {m.image ? (
-                    <img src={m.image} alt={m.name} className="team-photo absolute inset-0 w-full h-full object-cover object-top"
+                    <img src={normalizeImgUrl(m.image)} alt={m.name} className="team-photo absolute inset-0 w-full h-full object-cover object-top"
                       style={{ transition: 'transform 0.5s ease' }} />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">

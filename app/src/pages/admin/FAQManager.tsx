@@ -11,6 +11,7 @@ const SECTIONS: { value: Section; label: string }[] = [
   { value: 'faq-page', label: 'FAQ Page' },
 ];
 const EMPTY: FaqItemData = { question: '', answer: '', category: '', section: 'home', order: 0, isVisible: true };
+const FAQ_CATEGORIES = ['General', 'Pricing', 'Features', 'Technical', 'Account', 'Integrations', 'API', 'Support', 'Other'];
 
 function SortableRow({ item, onEdit, onDelete, onToggle }: {
   item: FaqItemData; onEdit: () => void; onDelete: () => void; onToggle: () => void;
@@ -114,6 +115,11 @@ export function FAQManager() {
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{field}</label>
                 {field === 'answer'
                   ? <textarea value={editing[field]} onChange={e => setEditing({ ...editing, [field]: e.target.value })} rows={4} style={{ width: '100%', padding: '9px 12px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+                  : field === 'category'
+                  ? <select value={editing[field]} onChange={e => setEditing({ ...editing, [field]: e.target.value })} style={{ width: '100%', padding: '9px 12px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, cursor: 'pointer' }}>
+                      <option value="">— Select category —</option>
+                      {FAQ_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   : <input value={editing[field]} onChange={e => setEditing({ ...editing, [field]: e.target.value })} style={{ width: '100%', padding: '9px 12px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, boxSizing: 'border-box' }} />
                 }
               </div>

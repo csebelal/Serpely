@@ -16,8 +16,13 @@ const PAGE_KEYS = [
   { key: 'changelog', label: 'Changelog', path: '/changelog' },
 ];
 
+const BUILT_IN_SCHEMA: Record<string, string[]> = {
+  home: ['Organization', 'SoftwareApplication'],
+  faq: ['FAQPage'],
+};
+
 const empty: Omit<SEOPageData, '_id' | 'updatedAt'> = {
-  pageKey: '', metaTitle: '', metaDescription: '', ogImage: '', canonicalUrl: '', noIndex: false,
+  pageKey: '', metaTitle: '', metaDescription: '', ogImage: '', canonicalUrl: '', noIndex: false, customSchema: '',
 };
 
 export function SEOManager() {
@@ -44,7 +49,7 @@ export function SEOManager() {
   function startEdit(key: string) {
     setEditing(key);
     const existing = pages[key];
-    setForm(existing ? { pageKey: key, metaTitle: existing.metaTitle, metaDescription: existing.metaDescription, ogImage: existing.ogImage || '', canonicalUrl: existing.canonicalUrl || '', noIndex: existing.noIndex } : { ...empty, pageKey: key });
+    setForm(existing ? { pageKey: key, metaTitle: existing.metaTitle, metaDescription: existing.metaDescription, ogImage: existing.ogImage || '', canonicalUrl: existing.canonicalUrl || '', noIndex: existing.noIndex, customSchema: existing.customSchema || '' } : { ...empty, pageKey: key });
   }
 
   async function save() {
@@ -86,7 +91,15 @@ export function SEOManager() {
                 {!isEditing && (
                   <>
                     <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: '#1e40af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page?.metaTitle || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No title set</span>}</p>
-                    <p style={{ margin: 0, fontSize: 11, color: '#475569', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as React.CSSProperties['WebkitBoxOrient'] }}>{page?.metaDescription || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No description set</span>}</p>
+                    <p style={{ margin: '0 0 8px', fontSize: 11, color: '#475569', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as React.CSSProperties['WebkitBoxOrient'] }}>{page?.metaDescription || <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No description set</span>}</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {(BUILT_IN_SCHEMA[key] || []).map(s => (
+                        <span key={s} style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(0,194,122,0.1)', color: '#00915a' }}>{s}</span>
+                      ))}
+                      {page?.customSchema?.trim() && (
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(99,102,241,0.1)', color: '#4f46e5' }}>Custom JSON-LD</span>
+                      )}
+                    </div>
                   </>
                 )}
 
@@ -112,6 +125,25 @@ export function SEOManager() {
                       <input type="checkbox" checked={form.noIndex} onChange={e => setForm(f => ({ ...f, noIndex: e.target.checked }))} />
                       noIndex (hide from search engines)
                     </label>
+                    <div>
+                      <label style={labelStyle}>Custom JSON-LD Schema <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional)</span></label>
+                      <textarea
+                        value={form.customSchema || ''}
+                        onChange={e => setForm(f => ({ ...f, customSchema: e.target.value }))}
+                        style={{ ...inputStyle, height: 90, resize: 'vertical', fontFamily: 'monospace', fontSize: 11 }}
+                        placeholder={'{\n  "@context": "https://schema.org",\n  "@type": "WebPage",\n  ...\n}'}
+                        spellCheck={false}
+                      />
+                      {form.customSchema?.trim() && (() => {
+                        try { JSON.parse(form.customSchema!); return <p style={{ margin: '3px 0 0', fontSize: 10, color: '#00915a', fontWeight: 600 }}>✓ Valid JSON</p>; }
+                        catch { return <p style={{ margin: '3px 0 0', fontSize: 10, color: '#ef4444', fontWeight: 600 }}>✗ Invalid JSON — fix before saving</p>; }
+                      })()}
+                      {(BUILT_IN_SCHEMA[key] || []).length > 0 && (
+                        <p style={{ margin: '4px 0 0', fontSize: 10, color: '#64748b' }}>
+                          Built-in: {(BUILT_IN_SCHEMA[key] || []).join(', ')} schema already injected automatically for this page.
+                        </p>
+                      )}
+                    </div>
 
                     {/* Google SERP Preview */}
                     {(form.metaTitle || form.metaDescription) && (

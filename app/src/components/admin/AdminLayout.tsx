@@ -2,29 +2,30 @@ import { useState } from 'react';
 import { NavLink, useNavigate, Outlet } from 'react-router-dom';
 
 const NAV = [
-  { to: '/admin', label: 'Dashboard', icon: '◈', end: true },
-  { to: '/admin/home-editor', label: 'Home Page', icon: '🏠' },
-  { to: '/admin/about', label: 'About Page', icon: '🏢' },
-  { to: '/admin/features-editor', label: 'Features', icon: '⚡' },
-  { to: '/admin/integrations-editor', label: 'Integrations', icon: '🔌' },
-  { to: '/admin/blog', label: 'Blog', icon: '✦' },
-  { to: '/admin/pricing', label: 'Pricing', icon: '◇' },
-  { to: '/admin/navbar', label: 'Navbar', icon: '≡' },
-  { to: '/admin/footer', label: 'Footer', icon: '⊡' },
-  { to: '/admin/testimonials', label: 'Testimonials', icon: '❝' },
-  { to: '/admin/faq', label: 'FAQ', icon: '?' },
-  { to: '/admin/media', label: 'Media', icon: '⊕' },
+  { to: '/sp-super-admin', label: 'Dashboard', icon: '◈', end: true },
+  { to: '/sp-super-admin/home-editor', label: 'Home Page', icon: '🏠' },
+  { to: '/sp-super-admin/about', label: 'About Page', icon: '🏢' },
+  { to: '/sp-super-admin/features-editor', label: 'Features', icon: '⚡' },
+  { to: '/sp-super-admin/integrations-editor', label: 'Integrations', icon: '🔌' },
+  { to: '/sp-super-admin/compare-editor', label: 'Compare Page', icon: '⚖' },
+  { to: '/sp-super-admin/blog', label: 'Blog', icon: '✦' },
+  { to: '/sp-super-admin/pricing', label: 'Pricing', icon: '◇' },
+  { to: '/sp-super-admin/navbar', label: 'Navbar', icon: '≡' },
+  { to: '/sp-super-admin/footer', label: 'Footer', icon: '⊡' },
+  { to: '/sp-super-admin/testimonials', label: 'Testimonials', icon: '❝' },
+  { to: '/sp-super-admin/faq', label: 'FAQ', icon: '?' },
+  { to: '/sp-super-admin/media', label: 'Media', icon: '⊕' },
   null,
-  { to: '/admin/contact', label: 'Contact Inbox', icon: '✉' },
-  { to: '/admin/subscribers', label: 'Subscribers', icon: '📧' },
-  { to: '/admin/popups', label: 'Popups', icon: '📢' },
-  { to: '/admin/changelog', label: 'Changelog', icon: '📋' },
-  { to: '/admin/seo', label: 'SEO Manager', icon: '🔍' },
-  { to: '/admin/api-keys', label: 'API Keys', icon: '🔑' },
-  { to: '/admin/audit', label: 'Audit Log', icon: '📜' },
+  { to: '/sp-super-admin/contact', label: 'Contact Inbox', icon: '✉' },
+  { to: '/sp-super-admin/subscribers', label: 'Subscribers', icon: '📧' },
+  { to: '/sp-super-admin/popups', label: 'Popups', icon: '📢' },
+  { to: '/sp-super-admin/changelog', label: 'Changelog', icon: '📋' },
+  { to: '/sp-super-admin/seo', label: 'SEO Manager', icon: '🔍' },
+  { to: '/sp-super-admin/api-keys', label: 'API Keys', icon: '🔑' },
+  { to: '/sp-super-admin/audit', label: 'Audit Log', icon: '📜' },
   null,
-  { to: '/admin/users', label: 'Users', icon: '👤' },
-  { to: '/admin/settings', label: 'Settings', icon: '⚙' },
+  { to: '/sp-super-admin/users', label: 'Users', icon: '👤' },
+  { to: '/sp-super-admin/settings', label: 'Settings', icon: '⚙' },
 ];
 
 export function AdminLayout() {
@@ -33,7 +34,7 @@ export function AdminLayout() {
 
   function logout() {
     localStorage.removeItem('serpely_token');
-    navigate('/admin/login');
+    navigate('/sp-super-admin/login');
   }
 
   return (

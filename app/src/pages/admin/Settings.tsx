@@ -1,9 +1,10 @@
-import { useEffect, useState, FormEvent, useRef } from 'react';
-import { getSettings, updateSettings, changePassword, uploadFile, downloadBackup, restoreBackup, type SiteSettingsData } from '@/lib/api';
+import { useEffect, useState, useRef } from 'react';
+import type { FormEvent } from 'react';
+import { getSettings, updateSettings, setMyPassword, uploadFile, downloadBackup, restoreBackup, type SiteSettingsData } from '@/lib/api';
 
 export function Settings() {
   const [form, setForm] = useState<Partial<SiteSettingsData>>({});
-  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwForm, setPwForm] = useState({ newPw: '', confirm: '' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pwMsg, setPwMsg] = useState('');
@@ -23,13 +24,14 @@ export function Settings() {
 
   async function handlePwChange(e: FormEvent) {
     e.preventDefault();
+    if (pwForm.newPw.length < 6) { setPwMsg('Password must be at least 6 characters'); return; }
     if (pwForm.newPw !== pwForm.confirm) { setPwMsg('Passwords do not match'); return; }
     try {
-      await changePassword(pwForm.current, pwForm.newPw);
-      setPwMsg('✓ Password changed');
-      setPwForm({ current: '', newPw: '', confirm: '' });
-    } catch { setPwMsg('Current password is incorrect'); }
-    setTimeout(() => setPwMsg(''), 3000);
+      await setMyPassword(pwForm.newPw);
+      setPwMsg('✓ Password updated successfully');
+      setPwForm({ newPw: '', confirm: '' });
+    } catch { setPwMsg('Failed to update password'); }
+    setTimeout(() => setPwMsg(''), 4000);
   }
 
   async function handleImgUpload(field: 'ogImage' | 'faviconUrl', file: File) {
@@ -149,10 +151,10 @@ export function Settings() {
       <div style={{ paddingTop: 8 }}>
         <h2 style={{ margin: '0 0 18px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Change Password</h2>
         <form onSubmit={handlePwChange} style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 400 }}>
-          {[['Current Password', 'current'], ['New Password', 'newPw'], ['Confirm New Password', 'confirm']].map(([label, key]) => (
+          {[['New Password', 'newPw'], ['Confirm New Password', 'confirm']].map(([label, key]) => (
             <div key={key}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-              <input type="password" value={pwForm[key as keyof typeof pwForm]} onChange={e => setPwForm(f => ({ ...f, [key]: e.target.value }))} required
+              <input type="password" value={pwForm[key as keyof typeof pwForm]} onChange={e => setPwForm(f => ({ ...f, [key]: e.target.value }))} required minLength={6}
                 style={{ width: '100%', padding: '9px 13px', background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#0f172a', fontSize: 14, boxSizing: 'border-box' }} />
             </div>
           ))}

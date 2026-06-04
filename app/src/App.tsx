@@ -18,6 +18,7 @@ import { ProductTour } from './pages/ProductTour';
 import { Integrations } from './pages/Integrations';
 import { HowItWorks } from './pages/HowItWorks';
 import { Compare } from './pages/Compare';
+import { CompareVs } from './pages/CompareVs';
 import { Changelog } from './pages/Changelog';
 import { getSettings, trackPageView } from './lib/api';
 import { ScrollToTop } from './components/ScrollToTop';
@@ -39,6 +40,7 @@ import { Users } from './pages/admin/Users';
 import { AboutEditor } from './pages/admin/AboutEditor';
 import { IntegrationsEditor } from './pages/admin/IntegrationsEditor';
 import { FeaturesEditor } from './pages/admin/FeaturesEditor';
+import { CompareEditor } from './pages/admin/CompareEditor';
 import { HomeEditor } from './pages/admin/HomeEditor';
 import { ContactInbox } from './pages/admin/ContactInbox';
 import { SubscribersManager } from './pages/admin/SubscribersManager';
@@ -70,7 +72,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 function AnalyticsTracker() {
   const location = useLocation();
   useEffect(() => {
-    if (location.pathname.startsWith('/admin')) return;
+    if (location.pathname.startsWith('/sp-super-admin')) return;
     trackPageView(location.pathname, document.referrer);
   }, [location.pathname]);
   return null;
@@ -104,6 +106,7 @@ function PublicShell() {
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/compare" element={<Compare />} />
+          <Route path="/compare/:slug" element={<CompareVs />} />
           <Route path="/changelog" element={<Changelog />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -123,9 +126,9 @@ function App() {
         <AnalyticsTracker />
         <Routes>
           {/* Admin routes — no Navbar/Footer */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/sp-super-admin/login" element={<AdminLogin />} />
           <Route
-            path="/admin"
+            path="/sp-super-admin"
             element={
               <ProtectedRoute>
                 <AdminLayout />
@@ -137,6 +140,7 @@ function App() {
             <Route path="about" element={<AboutEditor />} />
             <Route path="integrations-editor" element={<IntegrationsEditor />} />
             <Route path="features-editor" element={<FeaturesEditor />} />
+            <Route path="compare-editor" element={<CompareEditor />} />
             <Route path="navbar" element={<NavbarEditor />} />
             <Route path="footer" element={<FooterEditor />} />
             <Route path="blog" element={<BlogManager />} />

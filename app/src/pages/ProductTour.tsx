@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -279,6 +280,7 @@ function StepVisual({ step, idx }: { step: typeof tourSteps[0]; idx: number }) {
 }
 
 export function ProductTour() {
+  useSEOMeta('product-tour', { title: 'Product Tour — Serpely', description: 'Take a tour of Serpely\'s AI SEO dashboard, rank tracking, and GEO monitoring features.' });
   const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

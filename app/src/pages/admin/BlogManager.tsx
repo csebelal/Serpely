@@ -71,7 +71,7 @@ export function BlogManager() {
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#0f172a' }}>Blog</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#94a3b8' }}>{posts.length} posts total</p>
         </div>
-        <Link to="/admin/blog/new" style={{ padding: '9px 20px', background: '#00C27A', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>+ New Post</Link>
+        <Link to="/sp-super-admin/blog/new" style={{ padding: '9px 20px', background: '#00C27A', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>+ New Post</Link>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -129,7 +129,7 @@ export function BlogManager() {
                 <td style={{ padding: '12px 16px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatDate(p.publishedAt)}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <Link to={`/admin/blog/${p._id}`} style={{ padding: '4px 10px', borderRadius: 6, background: '#f1f5f9', color: '#64748b', fontSize: 11, textDecoration: 'none' }}>Edit</Link>
+                    <Link to={`/sp-super-admin/blog/${p._id}`} style={{ padding: '4px 10px', borderRadius: 6, background: '#f1f5f9', color: '#64748b', fontSize: 11, textDecoration: 'none' }}>Edit</Link>
                     <button onClick={() => handleDelete(p._id!, p.title)} disabled={deleting === p._id}
                       style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#fef2f2', color: '#ef4444', fontSize: 11, cursor: 'pointer' }}>
                       {deleting === p._id ? '…' : 'Del'}
