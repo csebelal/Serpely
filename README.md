@@ -351,3 +351,4 @@ Analytics: Visit 5 pages → /admin dashboard shows correct view counts + top pa
 Changelog: Publish entry → /changelog shows it publicly
 RBAC: Editor account → Settings nav item hidden; owner account → all visible
 API Key: Generate key → use in X-API-Key header → API request succeeds
+"# serpely" 
