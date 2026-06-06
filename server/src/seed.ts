@@ -628,6 +628,7 @@ async function seed() {
   // ── Site Sections ─────────────────────────────────────────────────────────────
   await SiteSection.deleteMany({});
   await SiteSection.insertMany([
+    // ── Home: Hero ──
     {
       section: 'hero',
       data: {
@@ -660,6 +661,90 @@ async function seed() {
         ],
       },
     },
+    // ── Home: Problem/Solution ──
+    {
+      section: 'problem-solution',
+      data: {
+        pillText: 'AI Search Visibility Gap',
+        headline1: 'Stop Losing Traffic to',
+        headline2: 'AI Search',
+        subtext: 'Serpely powers Agentic SEO and Generative Engine Optimization so you stay visible across Google and LLM-driven results.',
+        problemLabel: "What's Costing Your Rankings",
+        problemItems: [
+          "Your organic traffic dropped after AI Overviews launched and you still don't know which keywords triggered it or why",
+          "Your competitors appear when people ask ChatGPT or Perplexity about your category. Your brand doesn't.",
+          "You're publishing content but have no idea if AI crawlers are indexing it or ignoring it entirely",
+          "Your last SEO audit is already outdated. You don't know what broke since then",
+        ],
+        statNum: '40%',
+        statLabel: 'of searches',
+        statDesc: "Now get answered by AI without a click. Traditional SEO tools can't track that.",
+        solutionLabel: 'The Serpely Agentic SEO System',
+        solutionHeadline: 'Four engines, one\nagentic loop.',
+        solutionBody: 'Continuous Agentic SEO workflows built for measurable search growth. From keyword intelligence to LLM-driven visibility, one unified SEO operating system.',
+        engineTitles: ['Daily AI Audit', 'AI Citation Monitor', 'GEO Score', 'Content Prioritization'],
+        engineDescs: [
+          'On-page, off-page, and technical SEO audited every day. Wake up to a prioritized fix list.',
+          'Tracks citations across ChatGPT, Perplexity, Gemini, and Google AI Overviews.',
+          'Every page scored 0–100 for AI visibility and citation eligibility. Updated continuously.',
+          'Identifies pages to refresh first, scored by traffic decay, GEO Score, and keyword movement.',
+        ],
+      },
+    },
+    // ── Home: How It Works ──
+    {
+      section: 'how-it-works',
+      data: {
+        pillText: 'How It Works',
+        headline: 'A Continuous SEO\nWorkflow',
+        subtext: 'Four stages that run automatically, surface the right actions, and help you ship improvements faster.',
+        loopCardTitle: 'Closed Loop System',
+        loopCardBody: 'After each cycle, the system learns. Outputs from Improve feed back into Monitor, refining what gets prioritized next.',
+        steps: [
+          { num: '1', title: 'Monitor', desc: 'Track keyword rankings, Core Web Vitals, backlinks, and AI citation signals across Google and LLM search engines, all in one dashboard.', tags: ['Rank Tracking', 'GEO Signals'] },
+          { num: '2', title: 'Analyze', desc: 'Identify keyword gaps, content decay, technical errors, and competitor movements. Understand exactly why rankings shift before they hurt you.', tags: ['Gap Analysis', 'Insights'] },
+          { num: '3', title: 'Prioritize', desc: "AI-powered scoring tells you which pages need attention most. Not a firehose of data — a clear, ranked action queue your team can actually act on.", tags: ['Action Queue', 'AI Scoring'] },
+          { num: '4', title: 'Improve', desc: 'Apply AI-suggested fixes, track the impact, and generate reports that prove SEO value. Then the loop restarts, automatically.', tags: ['Auto Reports', 'Loop'] },
+        ],
+      },
+    },
+    // ── Home: Core Features ──
+    {
+      section: 'core-features',
+      data: {
+        pillText: 'Serpely Features',
+        headline1: 'Everything You Need.',
+        headline2: "Nothing You Don't.",
+        subtext: 'Eight powerful modules for modern SEO. One unified platform that connects monitoring, optimization, and reporting.',
+        cards: [
+          { title: 'GEO Score + Keyword Intelligence', desc: 'Discover keyword gaps, search intent signals, and competitor ranking opportunities. Build structured topic clusters for scalable SEO and GEO growth.', desc2: 'Every page gets a GEO Score from 0 to 100 showing how likely it is to appear in AI-generated answers.' },
+          { title: 'AI Citation Monitor', desc: 'Track whether ChatGPT, Perplexity, Gemini, and Google AI Overviews are citing your content. Get alerted when citation frequency changes.' },
+          { title: 'Hallucination Alerts', desc: 'Know when AI engines return inaccurate information about your brand or content. Severity scores and fix recommendations included.' },
+          { title: 'Content Prioritization', desc: 'Serpely scans every page daily and ranks which ones need a content refresh for AI optimization. A specific, scored action queue based on traffic decay, GEO Score, and keyword movement.' },
+          { title: 'Daily Rank Tracking', desc: 'Track keyword rankings across Google and AI-driven search results including LLM answer engines. Real-time visibility shifts with intelligent alerts.' },
+          { title: 'Technical Site Audit', desc: 'Continuously audit Core Web Vitals, crawl issues, indexing gaps, and schema errors. Prioritize fixes that directly impact AI visibility.' },
+          { title: 'Backlink Monitoring', desc: 'Track new and lost backlinks with quality and authority scoring. Protect domain strength and uncover link-building opportunities.' },
+          { title: 'White-Label Reporting', desc: 'Generate SEO, GEO, and LLM visibility reports instantly. Share client-ready dashboards under your brand.' },
+        ],
+      },
+    },
+    // ── Home: Target Audience ──
+    {
+      section: 'target-audience',
+      data: {
+        pillText: 'Solutions',
+        rotatingLabel: 'Built for your workflow',
+        words: ['Modern SEO Teams', 'Growing Agencies', 'AI-First Startups', 'Enterprise Brands'],
+        headline1: 'Serpely is built for',
+        subtext: 'Tailored Agentic SEO workflows for agencies, startups, and enterprise teams.',
+        cards: [
+          { label: 'For Agencies', title: 'Scale client SEO\nwithout the overhead.', items: ['Multi-client AI SEO workspaces', 'White-label GEO & LLM reporting', 'Bulk keyword rank tracking', 'AI visibility dashboards per client', 'Automated SEO reporting software'], cta: 'Get started for agencies →', ctaHref: '#' },
+          { label: 'For Startups', title: 'Grow SEO like a\nteam 10x your size.', items: ['AI SEO agent for fast growth', 'Automated keyword gap analysis', 'Real-time AI search tracking', 'AI-powered content optimization', 'Scalable SEO automation platform'], cta: 'Get started for startups →', ctaHref: '#' },
+          { label: 'For Enterprise', title: 'Enterprise-grade SEO\nat every scale.', items: ['Granular SEO roles and permissions', 'Enterprise AI SEO platform', 'Technical SEO audit & compliance logs', 'Generative Engine Optimization (GEO) tools', 'LLM SEO monitoring & API integration'], cta: 'Talk to enterprise sales →', ctaHref: '#' },
+        ],
+      },
+    },
+    // ── Home: Testimonials ──
     {
       section: 'testimonials',
       data: {
@@ -667,6 +752,7 @@ async function seed() {
         heading: 'Teams that moved from data to results',
       },
     },
+    // ── Home: FAQ ──
     {
       section: 'faq-home',
       data: {
@@ -674,6 +760,7 @@ async function seed() {
         heading: 'Common Questions',
       },
     },
+    // ── Home: CTA ──
     {
       section: 'cta',
       data: {
@@ -687,6 +774,7 @@ async function seed() {
         supportText: 'No credit card required · 14-day free trial · Cancel anytime',
       },
     },
+    // ── Home: Newsletter ──
     {
       section: 'newsletter',
       data: {
@@ -699,8 +787,206 @@ async function seed() {
         privacyText: 'No spam. Unsubscribe anytime.',
       },
     },
+    // ── About Page ──
+    {
+      section: 'about',
+      data: {
+        stats: [
+          { value: '2,000+', label: 'Active Teams' },
+          { value: '50M+',   label: 'Keywords Tracked' },
+          { value: '99.9%',  label: 'Uptime SLA' },
+          { value: '24/7',   label: 'Support' },
+        ],
+        mission: {
+          headline: 'Democratize SEO for the AI-first era',
+          body: 'We build intelligent tools that help every business thrive in AI-era search — where SEO is automated, accessible, and effective for everyone, not just enterprises with big budgets.',
+        },
+        visionHeadline: 'A world where every brand thrives in AI-era search',
+        visionPillars: [
+          { title: 'AI-Native Search Visibility',   body: 'The future of search is AI-generated answers. Serpely is built from day one to measure and optimize your presence across ChatGPT, Perplexity, Gemini, and every AI surface that matters.',                                                                                         color: '#00C27A' },
+          { title: 'Autonomous, Not Just Automated', body: "Automation runs tasks. Autonomy makes decisions. Serpely's agentic pipeline doesn't just report problems — it identifies, prioritizes, and resolves them 24/7 without manual intervention.",                                                                                  color: '#7c3aed' },
+          { title: 'Democratize Enterprise SEO',    body: "Fortune 500 teams shouldn't be the only ones with access to world-class SEO intelligence. Serpely makes enterprise-grade tooling accessible to every team, from solo founders to global brands.",                                                                              color: '#0ea5e9' },
+        ],
+        valuesHeadline: 'What drives every decision we make',
+        valuesSubtext: 'Six principles shaping how we build, hire, and serve customers.',
+        values: [
+          { title: 'Customer First',    body: "Every product decision, every feature shipped, every line of support — it all starts with what's best for our customers. Their wins are our wins.",   color: '#00C27A' },
+          { title: 'Move Fast',         body: 'The AI-search landscape evolves daily. We ship fast, iterate relentlessly, and stay ahead so our customers always have an edge.',                      color: '#7c3aed' },
+          { title: 'Radical Clarity',   body: "No black boxes. No vanity metrics. We show you exactly what's working, what's not, and what to do next — in plain language.",                         color: '#0ea5e9' },
+          { title: 'Accessibility',     body: "Great SEO intelligence shouldn't require a six-figure budget. We price and design for real-world teams, not just enterprise procurement cycles.",      color: '#f59e0b' },
+          { title: 'Own the Outcome',   body: "We don't ship features — we deliver results. We measure ourselves by the growth our customers achieve, not the complexity of our product.",           color: '#ec4899' },
+          { title: 'Honest by Default', body: 'We tell you when rankings drop, when GEO score falls, when something breaks. Honest signal in your inbox is worth more than comfortable silence.',   color: '#10b981' },
+        ],
+        storyParagraphs: [
+          'Serpely began in 2023 when a team of SEO experts and AI engineers came together with a shared frustration: existing tools were built for the old web — too complex, too expensive, requiring constant manual work.',
+          'We envisioned a platform that acts as an intelligent partner — monitoring, analyzing, and optimizing automatically. One that tracks brand visibility not just on Google, but across every AI surface reshaping how people search.',
+          "Today, Serpely powers 2,000+ teams worldwide, from solo founders to Fortune 500 companies. We're just getting started.",
+        ],
+        milestones: [
+          { year: '2023',    label: 'Founded',        event: 'Founded in San Francisco by SEO experts and AI engineers frustrated that existing tools were built for the old web.', color: '#00C27A', icon: '🚀' },
+          { year: 'Q3 2023', label: 'Beta Launch',    event: 'Launched closed beta with 200 early-access customers. First real-world GEO score data collected across ChatGPT and Google AI Overviews.', color: '#7c3aed', icon: '⚡' },
+          { year: 'Q1 2024', label: 'GEO Monitoring', event: 'GEO Monitoring went live — the first AI visibility score on the market. Brands could now see exactly where they appear in AI-generated answers.', color: '#0ea5e9', icon: '🤖' },
+          { year: 'Q3 2024', label: '1,000 Teams',    event: 'Crossed 1,000 active teams across 40+ countries. Expanded rank tracking to Perplexity, Gemini, and Grok alongside traditional Google Search.', color: '#f59e0b', icon: '🌍' },
+          { year: '2025',    label: 'Agentic SEO',    event: 'Launched the Agentic SEO pipeline — autonomous content optimization running 24/7 without manual effort. Now powering 2,000+ teams worldwide.', color: '#ec4899', icon: '✨' },
+        ],
+        team: [
+          { initials: 'AK', name: 'Alex Kim',    role: 'CEO & Co-Founder', bg: '#00C27A', image: '',
+            socials: { linkedin: '#', twitter: '#', facebook: '#' } },
+          { initials: 'SR', name: 'Sofia Reyes', role: 'CTO & Co-Founder', bg: '#7c3aed', image: '',
+            socials: { linkedin: '#', twitter: '#', facebook: '#' } },
+          { initials: 'MB', name: 'Marcus Bell', role: 'Head of Product',  bg: '#0ea5e9', image: '',
+            socials: { linkedin: '#', twitter: '#', facebook: '#' } },
+          { initials: 'LP', name: 'Lena Park',   role: 'Head of Growth',   bg: '#f59e0b', image: '',
+            socials: { linkedin: '#', twitter: '#', facebook: '#' } },
+        ],
+      },
+    },
+    // ── Features Page ──
+    {
+      section: 'features',
+      data: {
+        heroHeadline: 'Everything you need to rank higher',
+        heroSubtext: 'A complete suite of SEO tools powered by AI. From keyword research to technical audits, all in one platform.',
+        heroPrimText: 'Start Free Trial',
+        heroPrimHref: '/pricing',
+        heroSecText: 'See How It Works',
+        heroSecHref: '/how-it-works',
+        mainFeats: [
+          {
+            title: 'Keyword Research & Gap Finder',
+            description: 'Discover untapped keyword opportunities with AI-powered research. Analyze search intent, competition levels, and traffic potential to build a winning content strategy.',
+            items: ['Competitor keyword analysis', 'Search intent classification', 'Topic cluster builder', 'Keyword difficulty scoring'],
+            tag: 'Research',
+          },
+          {
+            title: 'Daily Rank Tracking',
+            description: 'Monitor keyword rankings across Google, Bing, and AI search engines. Get real-time alerts for ranking changes and track your progress over time.',
+            items: ['Multi-engine tracking', 'SERP feature monitoring', 'Competitor comparison', 'Historical ranking data'],
+            tag: 'Tracking',
+          },
+          {
+            title: 'Technical Site Audit',
+            description: "Continuously monitor your website's technical health. Identify and fix issues that hurt search performance before they impact rankings.",
+            items: ['Core Web Vitals monitoring', 'Crawl error detection', 'Indexability checks', 'Mobile optimization'],
+            tag: 'Audit',
+          },
+          {
+            title: 'Backlink Monitoring',
+            description: 'Track your backlink profile in real-time. Monitor new and lost links, analyze link quality, and discover link-building opportunities.',
+            items: ['New/lost link alerts', 'Domain authority tracking', 'Anchor text analysis', 'Toxic link detection'],
+            tag: 'Backlinks',
+          },
+        ],
+        addHeadline: 'The complete SEO platform',
+        addSubtext: 'Every tool you need, unified in one place.',
+        addFeats: [
+          { title: 'Content Prioritization',  description: 'AI-driven scoring to identify which pages need attention first.' },
+          { title: 'White-Label Reports',     description: 'Generate professional, branded reports for your clients instantly.' },
+          { title: 'AI Content Optimization', description: 'Get AI-powered suggestions to improve your content quality.' },
+          { title: 'Security Monitoring',     description: 'Monitor for security issues that could affect your SEO ranking.' },
+          { title: 'Automated Workflows',     description: 'Set up automated SEO tasks and scheduled reporting flows.' },
+          { title: 'Advanced Analytics',      description: 'Deep dive into your SEO performance with rich metric dashboards.' },
+          { title: 'Multi-Language Support',  description: 'Track rankings in multiple languages and target regions globally.' },
+          { title: 'Smart Alerts',            description: 'Get notified about important SEO changes the moment they happen.' },
+        ],
+        ctaHeadline: 'Ready to unlock every feature?',
+        ctaSubtext: 'Start your free trial today and see what Serpely can do for your SEO.',
+        ctaPrimText: 'Start Free Trial',
+        ctaPrimHref: '/pricing',
+        ctaSecText: 'Compare Plans',
+        ctaSecHref: '/compare',
+      },
+    },
+    // ── Integrations Page ──
+    {
+      section: 'integrations',
+      data: {
+        heroHeadline: 'Connect your favorite tools',
+        heroSubtext: 'Serpely integrates seamlessly with the tools you already use, making it easy to incorporate SEO into your existing workflow.',
+        integrations: [
+          { category: 'Analytics', items: [
+            { name: 'Google Analytics',      description: 'Track website traffic and user behavior',    img: '/Other Logos/Google_Analytics_Logo_2019.svg.png', abbr: 'GA', color: '#E37400', connected: true },
+            { name: 'Google Search Console', description: 'Monitor search performance and indexing',    img: '/processed-logos/ribbon-gsc.png',                  abbr: 'SC', color: '#4285F4', connected: true },
+            { name: 'Adobe Analytics',       description: 'Enterprise analytics and reporting',         img: '',                                                 abbr: 'AA', color: '#E34220', connected: false },
+          ]},
+          { category: 'CMS', items: [
+            { name: 'WordPress',  description: "The world's most popular CMS",          img: '/processed-logos/ribbon-wordpress.png', abbr: 'WP', color: '#21759B', connected: true },
+            { name: 'Shopify',    description: 'E-commerce platform for online stores', img: '',                                     abbr: 'SH', color: '#96BF48', connected: false },
+            { name: 'Webflow',    description: 'Visual website builder',                img: '/processed-logos/ribbon-webflow.png',  abbr: 'WF', color: '#4353FF', connected: false },
+            { name: 'Contentful', description: 'Headless CMS for modern websites',      img: '',                                     abbr: 'CF', color: '#2478CC', connected: false },
+          ]},
+          { category: 'Communication', items: [
+            { name: 'Slack',           description: 'Get alerts and reports in Slack',  img: '/Other Logos/Slack-logo.png', abbr: 'SL', color: '#4A154B', connected: false },
+            { name: 'Microsoft Teams', description: 'Collaborate with your team',       img: '',                            abbr: 'MT', color: '#4B53BC', connected: false },
+            { name: 'Discord',         description: 'Community and team communication', img: '',                            abbr: 'DC', color: '#5865F2', connected: false },
+          ]},
+          { category: 'Project Management', items: [
+            { name: 'Jira',   description: 'Track SEO tasks and projects', img: '', abbr: 'JI', color: '#0052CC', connected: false },
+            { name: 'Asana',  description: 'Manage SEO workflows',         img: '', abbr: 'AS', color: '#F06A6A', connected: false },
+            { name: 'Trello', description: 'Visual project management',    img: '', abbr: 'TR', color: '#0079BF', connected: false },
+          ]},
+          { category: 'Data & Reporting', items: [
+            { name: 'Google Data Studio', description: 'Create custom SEO dashboards', img: '', abbr: 'DS', color: '#669DF6', connected: false },
+            { name: 'Tableau',            description: 'Advanced data visualization',  img: '', abbr: 'TB', color: '#E97627', connected: false },
+            { name: 'Zapier',             description: 'Automate workflows',           img: '', abbr: 'ZP', color: '#FF4A00', connected: false },
+          ]},
+        ],
+        apiHeadline: 'Build custom integrations',
+        apiBody: 'Our comprehensive API allows you to build custom integrations and automate your SEO workflows. Access all Serpely features programmatically.',
+        apiFeatures: ['RESTful API with comprehensive documentation', 'Webhook support for real-time updates', 'SDKs for popular programming languages', 'Rate limits that scale with your plan'],
+        apiButtonText: 'View API Documentation',
+        apiButtonHref: '#',
+      },
+    },
+    // ── Compare Page ──
+    {
+      section: 'compare',
+      data: {
+        heroHeadline: 'See how we stack up',
+        heroSubtext: 'See why thousands of teams are switching to Serpely for their SEO and GEO needs.',
+        comparisons: [
+          { feature: 'AI-Powered Optimization', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
+          { feature: 'Generative Engine Optimization (GEO)', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
+          { feature: 'LLM Visibility Tracking', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
+          { feature: 'Content Prioritization', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
+          { feature: 'Automated Workflows', category: 'AI & GEO', serpely: true, ahrefs: false, semrush: false, moz: false },
+          { feature: 'Daily Rank Tracking', category: 'Core SEO', serpely: true, ahrefs: true, semrush: true, moz: true },
+          { feature: 'Technical Site Audits', category: 'Core SEO', serpely: true, ahrefs: true, semrush: true, moz: true },
+          { feature: 'Backlink Analysis', category: 'Core SEO', serpely: true, ahrefs: true, semrush: true, moz: true },
+          { feature: 'API Access', category: 'Core SEO', serpely: true, ahrefs: true, semrush: true, moz: true },
+          { feature: 'White-Label Reports', category: 'Agency', serpely: true, ahrefs: true, semrush: true, moz: false },
+          { feature: 'Starting Price', serpely: '$0 / mo', ahrefs: '$99 / mo', semrush: '$119 / mo', moz: '$99 / mo', isPrice: true },
+        ],
+        differences: [
+          {
+            title: 'Agentic AI',
+            description: "Our AI agents don't just report on your SEO — they actively work to improve it with zero manual effort.",
+            icon: 'M13 2 4 14h6l-1 8 9-12h-6z',
+            accent: true,
+          },
+          {
+            title: 'GEO Scoring',
+            description: 'Measure and optimize how often your brand appears in AI-generated answers across every major AI search engine.',
+            icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+            accent: false,
+          },
+          {
+            title: 'LLM Privacy Mode',
+            description: 'Audit your AI search presence with full data privacy. Zero data sharing with third-party AI providers.',
+            icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+            accent: false,
+          },
+        ],
+        ctaHeadline: 'Ready to make the switch?',
+        ctaSubtext: 'Start your free trial today and experience the difference Agentic SEO can make.',
+        ctaPrimText: 'Start Free Trial',
+        ctaPrimHref: '/pricing',
+        ctaSecText: 'See How It Works',
+        ctaSecHref: '/how-it-works',
+      },
+    },
   ]);
-  console.log('✓ Site sections');
+  console.log('✓ Site sections (13)');
 
   await mongoose.disconnect();
   console.log('\n✅ Seed complete!');
