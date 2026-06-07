@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import SEOPage from '../models/SEOPage';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
+import { pick } from '../lib/utils';
+
+const SEO_FIELDS = ['title', 'description', 'ogImage', 'noIndex'] as const;
 
 const router = Router();
 
@@ -28,7 +31,7 @@ router.get('/:key', async (req: Request, res: Response) => {
 // PUT /api/seo/:key (auth — upsert)
 router.put('/:key', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const data = { ...req.body, pageKey: req.params.key, updatedAt: new Date() };
+    const data = { ...pick(req.body, SEO_FIELDS), pageKey: req.params.key, updatedAt: new Date() };
     const page = await SEOPage.findOneAndUpdate(
       { pageKey: req.params.key },
       data,

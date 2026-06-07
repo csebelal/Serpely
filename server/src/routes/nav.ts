@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import NavItem from '../models/NavItem';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { pick } from '../lib/utils';
+
+const NAV_FIELDS = ['label', 'href', 'order', 'children'] as const;
 
 const router = Router();
 
@@ -17,7 +20,7 @@ router.get('/', async (_req: Request, res: Response) => {
 // PUT /api/nav  (replace all, auth)
 router.put('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const items = req.body as typeof NavItem[];
+    const items = (req.body as Record<string, unknown>[]).map(item => pick(item, NAV_FIELDS));
     await NavItem.deleteMany({});
     const saved = await NavItem.insertMany(items);
     res.json(saved);

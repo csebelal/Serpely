@@ -14,8 +14,22 @@ function getIP(req: Request): string {
   return req.socket.remoteAddress || req.ip || '';
 }
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts. Try again later.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+
+const changePasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many password change attempts.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
     if (!email || !password) {
@@ -66,11 +80,13 @@ router.put('/me/password', verifyJWT, async (req: AuthRequest, res: Response) =>
 });
 
 // POST /api/auth/change-password
-router.post('/change-password', verifyJWT, async (req: AuthRequest, res: Response) => {
+router.post('/change-password', changePasswordLimiter, verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body as {
       currentPassword: string; newPassword: string;
     };
+    if (!currentPassword || !newPassword) { res.status(400).json({ error: 'Current and new password required' }); return; }
+    if (newPassword.length < 6) { res.status(400).json({ error: 'New password must be at least 6 characters' }); return; }
     const user = await AdminUser.findById(req.adminId);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);

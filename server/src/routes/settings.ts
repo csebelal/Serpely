@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import SiteSettings from '../models/SiteSettings';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { pick } from '../lib/utils';
+
+const SETTINGS_FIELDS = ['siteName', 'tagline', 'logo', 'favicon', 'email', 'phone', 'address', 'socialLinks', 'footerText', 'metaTitle', 'metaDescription'] as const;
 
 const router = Router();
 
@@ -15,7 +18,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.put('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const settings = await SiteSettings.findOneAndUpdate({}, req.body, { upsert: true, new: true });
+    const settings = await SiteSettings.findOneAndUpdate({}, pick(req.body, SETTINGS_FIELDS), { upsert: true, new: true });
     res.json(settings);
   } catch {
     res.status(500).json({ error: 'Server error' });

@@ -74,14 +74,22 @@ export function PopupManager() {
   }
 
   async function toggleActive(p: PopupData) {
-    const res = await updatePopup(p._id!, { active: !p.active });
-    setPopups(prev => prev.map(x => x._id === p._id ? res.data : x));
+    try {
+      const res = await updatePopup(p._id!, { active: !p.active });
+      setPopups(prev => prev.map(x => x._id === p._id ? res.data : x));
+    } catch {
+      alert('Failed to toggle popup status.');
+    }
   }
 
   async function remove(id: string) {
     if (!confirm('Delete popup?')) return;
-    await deletePopup(id);
-    setPopups(prev => prev.filter(x => x._id !== id));
+    try {
+      await deletePopup(id);
+      setPopups(prev => prev.filter(x => x._id !== id));
+    } catch {
+      alert('Failed to delete popup.');
+    }
   }
 
   const f = form;

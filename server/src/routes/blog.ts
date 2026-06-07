@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import BlogPost from '../models/BlogPost';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
+import { pick } from '../lib/utils';
 
 const router = Router();
 
@@ -47,10 +48,13 @@ router.get('/:slug', async (req: Request, res: Response) => {
   }
 });
 
+const BLOG_FIELDS = ['title', 'slug', 'excerpt', 'body', 'category', 'author', 'coverImage', 'published', 'publishedAt', 'tags', 'metaTitle', 'metaDescription', 'canonicalUrl'] as const;
+
 // POST /api/blog  (auth)
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const post = new BlogPost(req.body);
+    const data = pick(req.body, BLOG_FIELDS) as Record<string, unknown>;
+    const post = new BlogPost(data);
     if (post.published && !post.publishedAt) post.publishedAt = new Date();
     await post.save();
     res.status(201).json(post);
@@ -63,8 +67,9 @@ router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
 // PUT /api/blog/:id  (auth)
 router.put('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const body = req.body as Partial<typeof BlogPost>;
-    const post = await BlogPost.findByIdAndUpdate(req.params.id, { ...body, updatedAt: new Date() }, { new: true });
+    const data = pick(req.body, BLOG_FIELDS) as Record<string, unknown>;
+    data.updatedAt = new Date();
+    const post = await BlogPost.findByIdAndUpdate(req.params.id, data, { new: true });
     if (!post) { res.status(404).json({ error: 'Post not found' }); return; }
     res.json(post);
   } catch {

@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import FaqItem from '../models/FaqItem';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { pick } from '../lib/utils';
+
+const FAQ_FIELDS = ['question', 'answer', 'section', 'order', 'isVisible'] as const;
 
 const router = Router();
 
@@ -28,7 +31,7 @@ router.get('/all', verifyJWT, async (req: AuthRequest, res: Response) => {
 
 router.put('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const items = req.body as Array<Record<string, unknown>>;
+    const items = (req.body as Record<string, unknown>[]).map(item => pick(item, FAQ_FIELDS));
     await FaqItem.deleteMany({});
     const saved = await FaqItem.insertMany(items);
     res.json(saved);

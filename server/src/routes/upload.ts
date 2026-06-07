@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
@@ -14,13 +15,13 @@ const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    cb(null, `${Date.now()}-${crypto.randomBytes(12).toString('hex')}${ext}`);
   },
 });
 
 const ALLOWED_MIME = new Set([
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  'image/svg+xml', 'image/avif',
+  'image/avif',
 ]);
 
 const upload = multer({

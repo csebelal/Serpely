@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import Popup from '../models/Popup';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
+import { pick } from '../lib/utils';
+
+const POPUP_FIELDS = ['type', 'title', 'body', 'ctaText', 'ctaHref', 'bgColor', 'trigger', 'delay', 'active', 'startAt', 'endAt'] as const;
 
 const router = Router();
 
@@ -32,7 +35,7 @@ router.get('/all', verifyJWT, async (_req: AuthRequest, res: Response) => {
 // POST /api/popups (auth)
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const popup = await Popup.create(req.body);
+    const popup = await Popup.create(pick(req.body, POPUP_FIELDS));
     await logAction(req, 'create', 'popup', `name:${popup.title}`);
     res.status(201).json(popup);
   } catch {
@@ -43,7 +46,7 @@ router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
 // PUT /api/popups/:id (auth)
 router.put('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const popup = await Popup.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const popup = await Popup.findByIdAndUpdate(req.params.id, pick(req.body, POPUP_FIELDS), { new: true });
     if (!popup) { res.status(404).json({ error: 'Not found' }); return; }
     await logAction(req, 'update', 'popup', `id:${req.params.id}`);
     res.json(popup);

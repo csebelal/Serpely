@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import Changelog from '../models/Changelog';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
+import { pick } from '../lib/utils';
+
+const CHANGELOG_FIELDS = ['title', 'slug', 'body', 'published', 'publishedAt', 'tags'] as const;
 
 const router = Router();
 
@@ -28,7 +31,7 @@ router.get('/all', verifyJWT, async (_req: AuthRequest, res: Response) => {
 // POST /api/changelog (auth)
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const data = req.body as Record<string, unknown>;
+    const data = pick(req.body, CHANGELOG_FIELDS) as Record<string, unknown>;
     if (data.published && !data.publishedAt) data.publishedAt = new Date();
     const entry = await Changelog.create(data);
     await logAction(req, 'create', 'changelog', `slug:${entry.slug}`);
@@ -41,7 +44,7 @@ router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
 // PUT /api/changelog/:id (auth)
 router.put('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const data = req.body as Record<string, unknown>;
+    const data = pick(req.body, CHANGELOG_FIELDS) as Record<string, unknown>;
     data.updatedAt = new Date();
     if (data.published && !data.publishedAt) data.publishedAt = new Date();
     const entry = await Changelog.findByIdAndUpdate(req.params.id, data, { new: true });

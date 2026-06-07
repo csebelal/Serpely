@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import FooterConfig from '../models/FooterConfig';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { pick } from '../lib/utils';
+
+const FOOTER_FIELDS = ['columns', 'socialLinks', 'bottomText'] as const;
 
 const router = Router();
 
@@ -19,7 +22,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 router.put('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const config = await FooterConfig.findOneAndUpdate({}, req.body, { upsert: true, new: true });
+    const config = await FooterConfig.findOneAndUpdate({}, pick(req.body, FOOTER_FIELDS), { upsert: true, new: true });
     res.json(config);
   } catch {
     res.status(500).json({ error: 'Server error' });

@@ -2,10 +2,18 @@ import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import ClientUser from '../models/ClientUser';
 
 const router = Router();
 const SECRET = () => process.env.JWT_SECRET as string;
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many attempts. Try again later.' },
+  standardHeaders: true, legacyHeaders: false,
+});
 
 function verifyClientToken(req: Request): { clientId: string } | null {
   const header = req.headers.authorization;
@@ -32,7 +40,7 @@ function safeUser(user: InstanceType<typeof ClientUser>) {
 }
 
 // POST /api/users/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', authLimiter, async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body as { name: string; email: string; password: string };
     if (!name || !email || !password) {
@@ -53,7 +61,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/users/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
     if (!email || !password) { res.status(400).json({ error: 'Email and password required' }); return; }
