@@ -41,7 +41,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     const user = await AdminUser.findOne({ email: email.toLowerCase() });
     if (!user) {
       await LoginLog.create({ email, ip, userAgent, success: false });
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Incorrect email or password' });
       return;
     }
     if (!user.passwordHash) {
@@ -52,7 +52,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       await LoginLog.create({ email, ip, userAgent, success: false });
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Incorrect email or password' });
       return;
     }
     await LoginLog.create({ email, ip, userAgent, success: true });
