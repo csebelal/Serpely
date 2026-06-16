@@ -45,7 +45,7 @@ export function BlogPostEditor() {
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
       Image,
       Link.configure({ openOnClick: false }),
     ],
@@ -154,8 +154,8 @@ export function BlogPostEditor() {
             />
           </div>
 
-          <div style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
-            <div style={{ display: 'flex', gap: 2, padding: '8px 10px', background: '#f8fafc', flexWrap: 'wrap' }}>
+          <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
+            <div style={{ display: 'flex', gap: 2, padding: '8px 10px', background: '#f8fafc', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 1 }}>
               <ToolbarBtn onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive('bold')}>B</ToolbarBtn>
               <ToolbarBtn onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive('italic')}>I</ToolbarBtn>
               <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive('heading', { level: 2 })}>H2</ToolbarBtn>
@@ -172,7 +172,9 @@ export function BlogPostEditor() {
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files && handleImageUpload(e.target.files[0])} />
               </label>
             </div>
-            <EditorContent editor={editor} />
+            <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
+              <EditorContent editor={editor} />
+            </div>
           </div>
         </div>
 
