@@ -33,6 +33,7 @@ export function BlogPostEditor() {
     tagColor: '',
     category: 'geo-aeo',
     published: false,
+    featured: false,
     publishedAt: new Date().toISOString().slice(0, 10),
   });
   const [saving, setSaving] = useState(false);
@@ -129,6 +130,10 @@ export function BlogPostEditor() {
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' }}>
             <input type="checkbox" checked={!!form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} style={{ width: 15, height: 15, accentColor: '#00C27A' }} />
             Published
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#64748b' }}>
+            <input type="checkbox" checked={!!form.featured} onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))} style={{ width: 15, height: 15, accentColor: '#00C27A' }} />
+            Featured
           </label>
           {saveError && <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{saveError}</span>}
           <button onClick={() => navigate('/sp-super-admin/blog')} style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#64748b', fontSize: 13, cursor: 'pointer' }}>Cancel</button>

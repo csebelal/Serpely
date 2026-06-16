@@ -80,6 +80,7 @@ export interface BlogPostData {
   coverImage?: string;
   category: string;
   published: boolean;
+  featured?: boolean;
   publishedAt?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -92,6 +93,7 @@ export const createPost = (data: Partial<BlogPostData>) => api.post<BlogPostData
 export const updatePost = (id: string, data: Partial<BlogPostData>) => api.put<BlogPostData>(`/api/blog/${id}`, data);
 export const deletePost = (id: string) => api.delete(`/api/blog/${id}`);
 export const getCategories = () => api.get<string[]>('/api/blog/categories');
+export const getFeaturedPosts = () => api.get<BlogPostData[]>('/api/blog/featured');
 
 // ── Pricing ───────────────────────────────────────────────────────────────────
 export interface PricingPlanData {

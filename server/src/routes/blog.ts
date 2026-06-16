@@ -16,6 +16,16 @@ router.get('/categories', verifyJWT, async (_req: AuthRequest, res: Response) =>
   }
 });
 
+// GET /api/blog/featured  (public - featured posts, max 4)
+router.get('/featured', async (_req: Request, res: Response) => {
+  try {
+    const posts = await BlogPost.find({ published: true, featured: true }).sort({ publishedAt: -1 }).limit(4);
+    res.json(posts);
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/blog  (public - published only)
 router.get('/', async (_req: Request, res: Response) => {
   try {
@@ -58,7 +68,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
   }
 });
 
-const BLOG_FIELDS = ['title', 'slug', 'excerpt', 'body', 'category', 'author', 'coverImage', 'published', 'publishedAt', 'tags', 'metaTitle', 'metaDescription', 'canonicalUrl'] as const;
+const BLOG_FIELDS = ['title', 'slug', 'excerpt', 'body', 'category', 'author', 'coverImage', 'published', 'featured', 'publishedAt', 'tags', 'metaTitle', 'metaDescription', 'canonicalUrl'] as const;
 
 // POST /api/blog  (auth)
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {

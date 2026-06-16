@@ -1,6 +1,6 @@
 ﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { blogPosts, type BlogPostData as Article } from '@/data/blogPosts';
-import { getPosts } from '@/lib/api';
+import { getPosts, getFeaturedPosts } from '@/lib/api';
 import { Link } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
 /* ─── Inline Styles ─── */
@@ -704,12 +704,31 @@ const ArrowSvg = () => (
 export function Blog() {
   useSEOMeta('blog', { title: 'Serpely Blog — AI SEO Insights', description: 'Expert insights on agentic SEO, GEO, LLM visibility, and AI-first search.' });
   const [articles, setArticles] = useState<Article[]>(blogPosts);
+  const [featuredPosts, setFeaturedPosts] = useState<Article[]>([]);
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     getPosts().then(r => {
       if (r.data.length > 0)
         setArticles(r.data.map(p => ({
+          slug: p.slug,
+          category: p.category,
+          tagLabel: p.tagLabel,
+          tagAccent: p.tagAccent,
+          thumbIconSvg: '',
+          coverImage: p.coverImage || '',
+          title: p.title,
+          excerpt: p.excerpt,
+          initials: p.authorInitials,
+          author: p.author,
+          date: p.publishedAt
+            ? new Date(p.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '',
+        })));
+    }).catch(() => {});
+    getFeaturedPosts().then(r => {
+      if (r.data.length > 0)
+        setFeaturedPosts(r.data.map(p => ({
           slug: p.slug,
           category: p.category,
           tagLabel: p.tagLabel,
@@ -1070,7 +1089,7 @@ export function Blog() {
                   </button>
                 </div>
                 <div className="hero-posts-rail" ref={heroRailRef} aria-label="Latest published posts">
-                  {articles.slice(0, 3).map((a, idx) => (
+                  {(featuredPosts.length ? featuredPosts : articles).slice(0, 4).map((a, idx) => (
                     <Link key={a.slug} to={`/blog/${a.slug}`} className="card featured-card card-hover hero-post-card" aria-label={a.title}>
                       <div className="featured-visual" style={{
                         backgroundImage: a.coverImage ? `url(${a.coverImage})` : 'none',

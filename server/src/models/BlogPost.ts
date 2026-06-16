@@ -13,6 +13,7 @@ export interface IBlogPost extends Document {
   coverImage: string;
   category: string;
   published: boolean;
+  featured: boolean;
   publishedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +32,7 @@ const BlogPostSchema = new Schema<IBlogPost>({
   coverImage: { type: String, default: '' },
   category: { type: String, default: '' },
   published: { type: Boolean, default: false },
+  featured: { type: Boolean, default: false },
   publishedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
