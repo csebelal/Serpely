@@ -91,6 +91,7 @@ export const getPostById = (id: string) => api.get<BlogPostData>(`/api/blog/admi
 export const createPost = (data: Partial<BlogPostData>) => api.post<BlogPostData>('/api/blog', data);
 export const updatePost = (id: string, data: Partial<BlogPostData>) => api.put<BlogPostData>(`/api/blog/${id}`, data);
 export const deletePost = (id: string) => api.delete(`/api/blog/${id}`);
+export const getCategories = () => api.get<string[]>('/api/blog/categories');
 
 // ── Pricing ───────────────────────────────────────────────────────────────────
 export interface PricingPlanData {

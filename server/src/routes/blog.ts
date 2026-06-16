@@ -6,6 +6,16 @@ import { pick } from '../lib/utils';
 
 const router = Router();
 
+// GET /api/blog/categories  (auth - distinct categories)
+router.get('/categories', verifyJWT, async (_req: AuthRequest, res: Response) => {
+  try {
+    const categories = await BlogPost.distinct('category');
+    res.json(categories.filter(Boolean));
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/blog  (public - published only)
 router.get('/', async (_req: Request, res: Response) => {
   try {

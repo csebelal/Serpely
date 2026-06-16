@@ -4,9 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
-import { getPostById, createPost, updatePost, uploadFile, type BlogPostData } from '@/lib/api';
-
-const CATEGORIES = ['geo-aeo', 'agentic-seo', 'ai-seo-tools', 'technical-seo', 'keyword-strategy', 'llm-seo', 'reporting', 'case-studies', 'product-updates'];
+import { getPostById, createPost, updatePost, uploadFile, getCategories, type BlogPostData } from '@/lib/api';
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-');
@@ -42,6 +40,11 @@ export function BlogPostEditor() {
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverError, setCoverError] = useState('');
   const [autoSlug, setAutoSlug] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    getCategories().then(r => setCategories(r.data)).catch(() => {});
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -184,9 +187,13 @@ export function BlogPostEditor() {
             {field('Excerpt', 'excerpt')}
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</label>
-              <select value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={{ width: '100%', padding: '8px 11px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13 }}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input list="cat-list" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Select or type new…" style={{ flex: 1, padding: '8px 11px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13 }} />
+                <datalist id="cat-list">
+                  {categories.map(c => <option key={c} value={c} />)}
+                </datalist>
+                <button type="button" onClick={() => { const v = prompt('New category name:'); if (v && v.trim()) { setForm(f => ({ ...f, category: v.trim() })); setCategories(prev => prev.includes(v.trim()) ? prev : [...prev, v.trim()]); } }} style={{ padding: '8px 12px', background: '#00C27A', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>+ New</button>
+              </div>
             </div>
             {field('Tag Label', 'tagLabel')}
             {field('Tag Color', 'tagColor')}
