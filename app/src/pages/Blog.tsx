@@ -1092,11 +1092,10 @@ export function Blog() {
                   {(featuredPosts.length ? featuredPosts : articles).slice(0, 4).map((a, idx) => (
                     <Link key={a.slug} to={`/blog/${a.slug}`} className="card featured-card card-hover hero-post-card" aria-label={a.title}>
                       <div className="featured-visual" style={{
-                        backgroundImage: a.coverImage ? `url(${a.coverImage})` : 'none',
-                        background: a.coverImage ? undefined : 'linear-gradient(135deg, #071a10 0%, #0d3b26 100%)',
-                        backgroundSize: 'cover', backgroundPosition: 'center',
+                        background: a.coverImage ? 'transparent' : 'linear-gradient(135deg, #071a10 0%, #0d3b26 100%)',
                       }}>
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, rgba(0,10,6,0.55) 0%, rgba(0,194,122,0.18) 100%)' }} />
+                        {a.coverImage && <img src={a.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                        <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${a.coverImage ? 'rgba(0,10,6,0.22)' : 'rgba(0,10,6,0.55)'} 0%, rgba(0,194,122,0.18) 100%)` }} />
                         <div className="absolute top-6 left-6 flex gap-2">
                           {idx === 0 && <span className="tag tag-accent">Featured</span>}
                           {a.tagLabel && <span className="tag">{a.tagLabel}</span>}
