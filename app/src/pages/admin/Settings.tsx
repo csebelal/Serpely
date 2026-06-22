@@ -115,6 +115,13 @@ export function Settings() {
           {inp('Google Analytics ID', 'googleAnalyticsId')}
         </div>
 
+        <div style={{ background: '#fff', borderRadius: 16, padding: '24px 26px', marginBottom: 16, boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
+          {section('Custom Head Code')}
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>Paste any <code>&lt;meta&gt;</code>, <code>&lt;script&gt;</code>, <code>&lt;link&gt;</code>, or other <code>&lt;head&gt;</code> HTML below. It will be injected into every page. Google Analytics is also handled automatically from the ID above.</p>
+          <textarea value={form.customHeadCode || ''} onChange={e => setForm(f => ({ ...f, customHeadCode: e.target.value }))} rows={10} spellCheck={false}
+            style={{ width: '100%', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, color: '#0f172a', fontSize: 13, fontFamily: '"Cascadia Code", "JetBrains Mono", "Fira Code", monospace', resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box' }} />
+        </div>
+
         <div style={{ background: '#fff', borderRadius: 16, padding: '24px 26px', marginBottom: 24, boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
           {section('System')}
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 16 }}>

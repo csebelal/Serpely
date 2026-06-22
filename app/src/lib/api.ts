@@ -153,6 +153,7 @@ export interface SiteSettingsData {
   googleAnalyticsId?: string;
   maintenanceMode: boolean;
   systemStatus: string;
+  customHeadCode?: string;
 }
 export const getSettings = () => api.get<SiteSettingsData>('/api/settings');
 export const updateSettings = (data: Partial<SiteSettingsData>) => api.put('/api/settings', data);

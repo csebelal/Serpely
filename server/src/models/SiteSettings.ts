@@ -10,6 +10,7 @@ export interface ISiteSettings extends Document {
   googleAnalyticsId: string;
   maintenanceMode: boolean;
   systemStatus: string;
+  customHeadCode: string;
 }
 
 const SiteSettingsSchema = new Schema<ISiteSettings>({
@@ -22,6 +23,7 @@ const SiteSettingsSchema = new Schema<ISiteSettings>({
   googleAnalyticsId: { type: String, default: '' },
   maintenanceMode: { type: Boolean, default: false },
   systemStatus: { type: String, default: 'All Systems Operational' },
+  customHeadCode: { type: String, default: '' },
 });
 
 export default mongoose.model<ISiteSettings>('SiteSettings', SiteSettingsSchema);

@@ -3,7 +3,7 @@ import SiteSettings from '../models/SiteSettings';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { pick } from '../lib/utils';
 
-const SETTINGS_FIELDS = ['siteName', 'tagline', 'logo', 'favicon', 'email', 'phone', 'address', 'socialLinks', 'footerText', 'metaTitle', 'metaDescription'] as const;
+const SETTINGS_FIELDS = ['siteName', 'siteUrl', 'defaultMetaTitle', 'defaultMetaDescription', 'ogImage', 'faviconUrl', 'googleAnalyticsId', 'maintenanceMode', 'systemStatus', 'customHeadCode'] as const;
 
 const router = Router();
 
