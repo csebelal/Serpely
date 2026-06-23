@@ -787,9 +787,9 @@ export function BlogPost() {
           {/* Breadcrumb */}
           <nav className="breadcrumb" aria-label="Breadcrumb">
             <span className="bc-item"><Link to="/blog">Blog</Link></span>
-            <span className="bc-sep">â€º</span>
+            <span className="bc-sep">›</span>
             <span className="bc-item"><a href="#">{data.tagLabel}</a></span>
-            <span className="bc-sep">â€º</span>
+            <span className="bc-sep">›</span>
             <span className="bc-item bc-current">{data.title}</span>
           </nav>
 
