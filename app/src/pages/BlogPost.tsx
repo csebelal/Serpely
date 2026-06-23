@@ -206,12 +206,12 @@ export function BlogPost() {
     const urls: Record<string, string> = {
       chatgpt: "https://chatgpt.com/?q=" + encoded,
       claude: "https://claude.ai/new?q=" + encoded,
-      googleai: "https://gemini.google.com/app?prompt=" + encoded,
-      deepseek: "https://www.deepseek.com/?prompt=" + encoded,
+      googleai: "https://gemini.google.com/app",
+      deepseek: "https://chat.deepseek.com",
       perplexity: "https://www.perplexity.ai/?q=" + encoded,
       grok: "https://grok.com/?q=" + encoded,
-      gemini: "https://gemini.google.com/app?prompt=" + encoded,
-      google: "https://gemini.google.com/app?prompt=" + encoded,
+      gemini: "https://gemini.google.com/app",
+      google: "https://gemini.google.com/app",
     };
     if (urls[platform]) window.open(urls[platform], "_blank", "noopener,noreferrer");
   }
