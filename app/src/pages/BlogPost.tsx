@@ -194,12 +194,8 @@ export function BlogPost() {
   }
 
   function toggleSummarize() {
-    const panel = document.getElementById("summarize-panel");
-    const btn = document.querySelector<HTMLElement>(".summarize-btn");
-    if (!panel) return;
-    const isOpen = panel.style.display === "block";
-    panel.style.display = isOpen ? "none" : "block";
-    if (btn) btn.setAttribute("aria-expanded", String(!isOpen));
+    const buttons = document.querySelector<HTMLElement>(".actions-row");
+    buttons?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function askAI(platform: string) {
@@ -844,25 +840,17 @@ export function BlogPost() {
                 <div className="actions-sep"></div>
                 <span className="actions-ask-label">Ask AI</span>
                 <button className="ai-pill" onClick={() => askAI("chatgpt")}>
-                  <span className="ai-dot" style={{ background: "#10a37f" }}></span>ChatGPT
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10a37f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>ChatGPT
                 </button>
                 <button className="ai-pill" onClick={() => askAI("claude")}>
-                  <span className="ai-dot" style={{ background: "#c96a35" }}></span>Claude
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c96a35" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>Claude
                 </button>
                 <button className="ai-pill" onClick={() => askAI("google")}>
-                  <span className="ai-dot" style={{ background: "#4285F4" }}></span>Google AI Mode
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4285F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/></svg>Google AI Mode
                 </button>
                 <button className="ai-pill" onClick={() => askAI("deepseek")}>
-                  <span className="ai-dot" style={{ background: "#5ba3d9" }}></span>DeepSeek
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5ba3d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16l4-8 4 8 4-8 4 8"/></svg>DeepSeek
                 </button>
-              </div>
-              {/* Summarize expand panel */}
-              <div className="summarize-panel" id="summarize-panel">
-                <div className="sp-label">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-                  AI Summary
-                </div>
-                <p className="sp-text">{data.excerpt}</p>
               </div>
             </div>
           </div>
