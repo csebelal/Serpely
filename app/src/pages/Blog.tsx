@@ -339,11 +339,11 @@ const globalStyles = `
     scroll-snap-align: start; flex: 0 0 auto;
   }
   .hero-post-card .featured-visual {
-    min-height: 138px;
+    min-height: 100px;
   }
   .hero-post-card h2 {
-    font-size: clamp(1.85rem, 2.35vw, 2.7rem);
-    line-height: 0.98;
+    font-size: clamp(1.1rem, 1.5vw, 1.5rem);
+    line-height: 1.15;
   }
   .hero-post-card .article-arrow {
     width: 32px; height: 32px;
@@ -622,8 +622,8 @@ const globalStyles = `
     .hero-posts-rail { padding: 6px 32px 12px 0 !important; gap: 12px !important; }
     .hero-post-card { min-width: calc(100% - 24px) !important; max-width: calc(100% - 24px) !important; }
     .hero-post-card .featured-visual,
-    .hero-post-card.secondary .featured-visual { min-height: 110px !important; }
-    .hero-post-card h2 { font-size: 1.45rem !important; }
+    .hero-post-card.secondary .featured-visual { min-height: 80px !important; }
+    .hero-post-card h2 { font-size: 1.05rem !important; }
     .hero-post-card.secondary h3 { font-size: 1.2rem !important; }
     .hero-post-card .p-7, .hero-post-card .p-6 { padding: 18px !important; }
     .hero-post-nav { width: 36px !important; height: 36px !important; }
@@ -1095,34 +1095,9 @@ export function Blog() {
                         background: a.coverImage ? 'transparent' : 'linear-gradient(135deg, #071a10 0%, #0d3b26 100%)',
                       }}>
                         {a.coverImage && <img src={a.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-                        <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${a.coverImage ? 'rgba(0,10,6,0.22)' : 'rgba(0,10,6,0.55)'} 0%, rgba(0,194,122,0.18) 100%)` }} />
-                        <div className="absolute top-6 left-6 flex gap-2">
-                          {idx === 0 && <span className="tag tag-accent">Featured</span>}
-                          {a.tagLabel && <span className="tag">{a.tagLabel}</span>}
-                        </div>
-                        <div className="signal-line">
-                          <svg viewBox="0 0 420 120" fill="none" aria-hidden="true">
-                            <path d="M0 82 C42 74 58 36 94 44 C130 52 126 96 168 90 C214 84 224 26 274 34 C318 41 330 74 360 64 C386 56 396 40 420 36" stroke="rgba(0,194,122,0.22)" strokeWidth="14" strokeLinecap="round"/>
-                            <path d="M0 82 C42 74 58 36 94 44 C130 52 126 96 168 90 C214 84 224 26 274 34 C318 41 330 74 360 64 C386 56 396 40 420 36" stroke="#00C27A" strokeWidth="4" strokeLinecap="round"/>
-                            <circle cx="274" cy="34" r="7" fill="#00C27A"/>
-                          </svg>
-                        </div>
                       </div>
                       <div className="p-7 lg:p-8">
-                        <div className="flex items-start justify-between gap-5 mb-5">
-                          <div>
-                            <p className="text-[12px] uppercase tracking-[0.12em] font-black mb-3" style={{ color: "var(--text-faint)" }}>
-                              {idx === 0 ? 'Latest analysis' : 'Published recently'}
-                            </p>
-                            <h2 className="font-display text-3xl lg:text-4xl" style={{ fontWeight: 900, lineHeight: 1.04 }}>{a.title}</h2>
-                          </div>
-                          <span className="article-arrow"><ArrowSvg /></span>
-                        </div>
-                        {a.excerpt && <p className="hero-post-summary text-[15px] leading-relaxed font-medium mb-6" style={{ color: "var(--text-soft)" }}>{a.excerpt}</p>}
-                        <div className="flex flex-wrap gap-3 text-[13px] font-bold" style={{ color: "var(--text-faint)" }}>
-                          {a.date && <span>{a.date}</span>}
-                          {a.tagLabel && <span>{a.tagLabel}</span>}
-                        </div>
+                        <h2 className="font-display" style={{ fontWeight: 900, lineHeight: 1.15 }}>{a.title}</h2>
                       </div>
                     </Link>
                   ))}
