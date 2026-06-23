@@ -105,7 +105,7 @@ async function getCustomHeadCode(): Promise<string> {
   }
 }
 
-app.get('*', async (req, res) => {
+app.get('/*', async (req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
   if (req.path.startsWith('/uploads/')) return res.status(404).json({ error: 'Not found' });
 
