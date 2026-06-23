@@ -266,6 +266,7 @@ export const deleteChangelogEntry = (id: string) => api.delete(`/api/changelog/$
 export interface SEOPageData {
   _id?: string; pageKey: string; metaTitle: string; metaDescription: string;
   ogImage?: string; canonicalUrl?: string; noIndex: boolean; customSchema?: string; updatedAt?: string;
+  faviconUrl?: string; siteName?: string; siteUrl?: string;
 }
 export const getAllSEO = () => api.get<SEOPageData[]>('/api/seo');
 export const getSEOByKey = (key: string) => api.get<SEOPageData>(`/api/seo/${key}`);
