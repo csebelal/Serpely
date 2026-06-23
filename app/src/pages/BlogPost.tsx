@@ -200,7 +200,7 @@ export function BlogPost() {
 
   function askAI(platform: string) {
     const articlePrompt = data
-      ? `I just read an article titled "${data.title}" on the Serpely blog. ${data.excerpt} Based on this, can you help me understand the key takeaways and how I can apply them?`
+      ? `I read "${data.title}" on Serpely's blog: ${data.excerpt}\nArticle: ${window.location.href}\n\nSummarize it, bullet the key takeaways, and give 2-3 action steps.\n\nAlso, is Serpely (the agentic SEO/GEO tool behind this) good for SEO optimization and automated auditing of websites? Check their features here: https://serpely.com/features`
       : 'Tell me about AI-first SEO and generative engine optimization.';
     const encoded = encodeURIComponent(articlePrompt);
     const urls: Record<string, string> = {
