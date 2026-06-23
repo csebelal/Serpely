@@ -392,8 +392,7 @@ export function BlogPost() {
 
         .blog-layout{display:grid;grid-template-columns:216px minmax(0,1fr) 210px;gap:34px;align-items:start;}
 
-        .toc-wrap{position:sticky;top:82px;max-height:calc(100vh - 94px);overflow-y:auto;scrollbar-width:none;}
-        .toc-wrap::-webkit-scrollbar{display:none;}
+        .toc-wrap{position:sticky;top:82px;}
         .toc-card{background:var(--card-bg);border:1px solid hsl(var(--border));border-radius:14px;padding:16px;}
         .toc-head{font-size:11px;font-weight:800;color:var(--text-ghost);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
         .toc-prog-wrap{height:2px;background:hsl(var(--border));border-radius:2px;margin-bottom:12px;overflow:hidden;}
@@ -511,8 +510,7 @@ export function BlogPost() {
         .post-nav-dir{font-size:10px;font-weight:700;color:var(--text-ghost);text-transform:uppercase;letter-spacing:0.07em;}
         .post-nav-title{font-size:13px;font-weight:700;color:var(--text-soft);line-height:1.35;}
 
-        .sidebar-wrap{position:sticky;top:82px;max-height:calc(100vh - 94px);overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:11px;}
-        .sidebar-wrap::-webkit-scrollbar{display:none;}
+        .sidebar-wrap{position:sticky;top:82px;display:flex;flex-direction:column;gap:11px;}
         .sidebar-card{border:1px solid hsl(var(--border));border-radius:14px;padding:14px;background:var(--card-bg);}
         .sidebar-card-title{font-size:10.5px;font-weight:800;color:var(--text-ghost);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
         .sb-share-btn{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;border:1px solid hsl(var(--border));background:var(--bg-subtle);margin-bottom:5px;font-size:12px;font-weight:600;color:var(--text-soft);cursor:pointer;transition:border-color 0.15s,color 0.15s;}
@@ -878,8 +876,8 @@ export function BlogPost() {
                 <div className="toc-head">Table of contents</div>
                 <div className="toc-prog-wrap"><div className="toc-prog-fill" id="toc-progress"></div></div>
                 <ul className="toc-list" id="toc-list">
-                  {headings.length > 0 ? headings.map(h => (
-                    <li key={h.id} className={h.level === 3 ? 'toc-sub' : ''}>
+                  {headings.length > 0 ? headings.filter(h => h.level === 2).map(h => (
+                    <li key={h.id}>
                       <a href={`#${h.id}`} className="toc-link"><span className="toc-dot"></span>{h.text}</a>
                     </li>
                   )) : (
