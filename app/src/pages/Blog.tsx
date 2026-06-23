@@ -1089,7 +1089,7 @@ export function Blog() {
                   </button>
                 </div>
                 <div className="hero-posts-rail" ref={heroRailRef} aria-label="Latest published posts">
-                  {(featuredPosts.length ? featuredPosts : articles).slice(0, 4).map((a, idx) => (
+                  {(featuredPosts.length ? featuredPosts : articles).slice(0, 4).map((a) => (
                     <Link key={a.slug} to={`/blog/${a.slug}`} className="card featured-card card-hover hero-post-card" aria-label={a.title}>
                       <div className="featured-visual" style={{
                         background: a.coverImage ? 'transparent' : 'linear-gradient(135deg, #071a10 0%, #0d3b26 100%)',
