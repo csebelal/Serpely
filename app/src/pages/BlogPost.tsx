@@ -824,9 +824,9 @@ export function BlogPost() {
                 <div className="hero-meta">
                   <div className="hero-avatar">{data.authorInitials || '??'}</div>
                   <span className="hero-meta-name">{data.author}</span>
-                  <span className="hero-meta-sep">Â·</span>
+                  <span className="hero-meta-sep">·</span>
                   <span className="hero-meta-date">{formattedDate}</span>
-                  <span className="hero-meta-sep">Â·</span>
+                  <span className="hero-meta-sep">·</span>
                   <span className="hero-meta-read">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                     {readTime}
