@@ -840,16 +840,16 @@ export function BlogPost() {
                 <div className="actions-sep"></div>
                 <span className="actions-ask-label">Ask AI</span>
                 <button className="ai-pill" onClick={() => askAI("chatgpt")}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10a37f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>ChatGPT
+                  <img src="/Other Logos/openai-chatgpt-logo-icon-free-png.webp" alt="ChatGPT" width="13" height="13" style={{ borderRadius: 0 }} />ChatGPT
                 </button>
                 <button className="ai-pill" onClick={() => askAI("claude")}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c96a35" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>Claude
+                  <img src="/Other Logos/Claude-ai-icon.svg.png" alt="Claude" width="13" height="13" style={{ borderRadius: 0 }} />Claude
                 </button>
                 <button className="ai-pill" onClick={() => askAI("google")}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4285F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/></svg>Google AI Mode
+                  <img src="/Other Logos/Google_Gemini_icon_2025.svg.webp" alt="Google AI" width="13" height="13" style={{ borderRadius: 0 }} />Google AI Mode
                 </button>
                 <button className="ai-pill" onClick={() => askAI("deepseek")}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5ba3d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16l4-8 4 8 4-8 4 8"/></svg>DeepSeek
+                  <img src="/Other Logos/Deepseek-logo-icon.svg.png" alt="DeepSeek" width="13" height="13" style={{ borderRadius: 0 }} />DeepSeek
                 </button>
               </div>
             </div>
