@@ -23,7 +23,7 @@ import { Changelog } from './pages/Changelog';
 import { getSettings, trackPageView } from './lib/api';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PopupRenderer } from './components/PopupRenderer';
-import { HeadInjector } from './components/HeadInjector';
+
 
 // Admin
 import { AdminLogin } from './pages/admin/Login';
@@ -125,7 +125,6 @@ function App() {
       <Router>
         <ScrollToTop />
         <AnalyticsTracker />
-        <HeadInjector />
         <Routes>
           {/* Admin routes — no Navbar/Footer */}
           <Route path="/sp-super-admin/login" element={<AdminLogin />} />

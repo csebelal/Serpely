@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -38,6 +39,7 @@ import backupRouter from './routes/backup';
 import apiKeysRouter from './routes/apikeys';
 import sitemapRouter from './routes/sitemap';
 import AdminUser from './models/AdminUser';
+import SiteSettings from './models/SiteSettings';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -79,6 +81,45 @@ app.use('/api/keys', apiKeysRouter);
 
 app.use('/api', sitemapRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ─── Frontend: Serve index.html with injected custom head code ──────────
+const frontendDist = path.resolve(__dirname, '../../app/dist');
+const indexHtmlPath = path.join(frontendDist, 'index.html');
+
+interface SettingsCache { customHeadCode: string; updatedAt: number }
+let settingsCache: SettingsCache | null = null;
+const SETTINGS_CACHE_TTL = 60_000;
+
+async function getCustomHeadCode(): Promise<string> {
+  const now = Date.now();
+  if (settingsCache && now - settingsCache.updatedAt < SETTINGS_CACHE_TTL) {
+    return settingsCache.customHeadCode;
+  }
+  try {
+    const s = await SiteSettings.findOne().lean();
+    const code = (s as any)?.customHeadCode || '';
+    settingsCache = { customHeadCode: code, updatedAt: now };
+    return code;
+  } catch {
+    return settingsCache?.customHeadCode || '';
+  }
+}
+
+app.get('*', async (req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  if (req.path.startsWith('/uploads/')) return res.status(404).json({ error: 'Not found' });
+
+  try {
+    let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+    const code = await getCustomHeadCode();
+    if (code) {
+      html = html.replace('</head>', code + '\n</head>');
+    }
+    res.type('html').send(html);
+  } catch {
+    res.sendFile(indexHtmlPath);
+  }
+});
 
 async function seedAdmin() {
   const existing = await AdminUser.findOne();
