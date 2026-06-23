@@ -226,7 +226,7 @@ export function BlogPost() {
     const input = form.querySelector<HTMLInputElement>('input[type="email"]');
     const btn = form.querySelector<HTMLButtonElement>("button");
     if (btn) {
-      btn.textContent = "âœ“ You're in!";
+      btn.textContent = "✓ You're in!";
       btn.style.background = "#00a868";
     }
     if (input) input.disabled = true;
@@ -236,7 +236,7 @@ export function BlogPost() {
   if (loading) {
     return (
       <div style={{ padding: "120px 24px", textAlign: "center", fontFamily: "Satoshi, sans-serif", color: "#737373" }}>
-        Loadingâ€¦
+        Loading…
       </div>
     );
   }
@@ -249,7 +249,7 @@ export function BlogPost() {
           The article you're looking for doesn't exist or has been moved.
         </p>
         <Link to="/blog" style={{ color: "#00C27A", fontWeight: 700, textDecoration: "underline" }}>
-          â† Back to Blog
+          ← Back to Blog
         </Link>
       </div>
     );
@@ -678,7 +678,7 @@ export function BlogPost() {
         }
       `}</style>
 
-      {/* â•â•â• NAVBAR â•â•â• */}
+      {/* ═══ NAVBAR ═══ */}
       <nav id="navbar">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center flex-shrink-0">
@@ -728,14 +728,14 @@ export function BlogPost() {
                     <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg></div><div className="dd-text"><strong>AI Rank Tracking</strong><span>Track Google, AI Overviews, and LLM visibility.</span></div></a>
                     <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18"/></svg></div><div className="dd-text"><strong>GEO Monitoring</strong><span>See citation visibility across AI search surfaces.</span></div></a>
                     <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div><div className="dd-text"><strong>Technical Site Audit</strong><span>Monitor crawl issues, vitals, and schema health.</span></div></a>
-                    <a className="mega-footer" href="/features">See All Features â†’</a>
+                    <a className="mega-footer" href="/features">See All Features →</a>
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Integrations</div>
                     <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24" className="no-invert" fill="none"><path d="M10 4a6 6 0 0 1 6 6h-6V4z" fill="#EA4335"/><path d="M16 10a6 6 0 0 1-6 6v-6h6z" fill="#FBBC04"/><path d="M10 16a6 6 0 0 1-6-6h6v6z" fill="#34A853"/><path d="M4 10a6 6 0 0 1 6-6v6H4z" fill="#4285F4"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/><path d="M14.5 14.5l5.5 5.5" stroke="#5F6368" strokeWidth="2.2" strokeLinecap="round"/></svg></div><div className="dd-text"><strong>Google Search Console</strong></div></a>
                     <a className="mega-link simple" href="#"><div className="dd-icon"><img src="/Other Logos/Logo_Google_Analytics.svg.png" alt="GA4"/></div><div className="dd-text"><strong>Google Analytics 4</strong></div></a>
                     <a className="mega-link simple" href="#"><div className="dd-icon"><img src="/Other Logos/dataforseo.webp" alt="DataForSEO"/></div><div className="dd-text"><strong>DataForSEO</strong></div></a>
-                    <a className="mega-footer" href="#">All Integrations â†’</a>
+                    <a className="mega-footer" href="#">All Integrations →</a>
                   </div>
                 </div>
               </div>
@@ -778,7 +778,7 @@ export function BlogPost() {
         </div>
       </nav>
 
-      {/* â•â•â• MAIN â•â•â• */}
+      {/* ═══ MAIN ═══ */}
       <main className="pt-24 pb-0">
         <div className="max-w-7xl mx-auto px-6">
 
@@ -935,7 +935,7 @@ export function BlogPost() {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
                     LinkedIn
                   </a>
-                  <a className="sidebar-share-btn copy" href="#" onClick={(e) => { e.preventDefault(); navigator.clipboard.writeText(window.location.href); (e.currentTarget as HTMLElement).textContent = "âœ“ Copied!"; setTimeout(() => { (e.currentTarget as HTMLElement).innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Copy link'; }, 2000); }}>
+                  <a className="sidebar-share-btn copy" href="#" onClick={(e) => { e.preventDefault(); navigator.clipboard.writeText(window.location.href); (e.currentTarget as HTMLElement).textContent = "✓ Copied!"; setTimeout(() => { (e.currentTarget as HTMLElement).innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Copy link'; }, 2000); }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                     Copy link
                   </a>
@@ -948,12 +948,20 @@ export function BlogPost() {
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                 </div>
                 <div className="sidebar-newsletter-heading">AI Search Weekly</div>
-                <p className="sidebar-newsletter-sub">GEO tactics, AI visibility updates, and Serpely tips â€” straight to your inbox.</p>
+                <p className="sidebar-newsletter-sub">GEO tactics, AI visibility updates, and Serpely tips — straight to your inbox.</p>
                 <form className="sidebar-newsletter-form" onSubmit={handleNewsletterSubmit}>
                   <input type="email" placeholder="Your email address" required />
                   <button type="submit">Subscribe Free</button>
                 </form>
                 <p className="sidebar-newsletter-note">No spam. Unsubscribe anytime.</p>
+              </div>
+
+              {/* Mini CTA */}
+              <div className="sidebar-card sidebar-cta-card">
+                <div className="sidebar-cta-badge">Free Tool</div>
+                <div className="sidebar-cta-heading">See how visible you are in AI search</div>
+                <p className="sidebar-cta-sub">Serpely tracks your brand mentions across ChatGPT, Claude, Gemini, and Perplexity — so you know exactly where you stand.</p>
+                <a href="#" className="sidebar-cta-btn">Audit Your AI Visibility →</a>
               </div>
 
               {/* Topics / Tags */}
@@ -969,14 +977,6 @@ export function BlogPost() {
                   <a href="#" className="stag">Structured Data</a>
                   <a href="#" className="stag">Entity SEO</a>
                 </div>
-              </div>
-
-              {/* Mini CTA */}
-              <div className="sidebar-card sidebar-cta-card">
-                <div className="sidebar-cta-badge">Free Tool</div>
-                <div className="sidebar-cta-heading">See how visible you are in AI search</div>
-                <p className="sidebar-cta-sub">Serpely tracks your brand mentions across ChatGPT, Claude, Gemini, and Perplexity â€” so you know exactly where you stand.</p>
-                <a href="#" className="sidebar-cta-btn">Audit Your AI Visibility â†’</a>
               </div>
 
             </aside>
@@ -1020,15 +1020,15 @@ export function BlogPost() {
       </section>
       )}
 
-      {/* â•â•â• MAIN CTA BAND â•â•â• */}
+      {/* ═══ MAIN CTA BAND ═══ */}
       <section className="cta-band">
         <div className="container max-w-7xl mx-auto px-6">
           <div className="cta-band-inner">
-            <div className="cta-band-eyebrow">Start for free â€” no credit card needed</div>
+            <div className="cta-band-eyebrow">Start for free — no credit card needed</div>
             <h2 className="cta-band-heading">See exactly where your brand appears in AI search</h2>
             <p className="cta-band-sub">Serpely tracks your visibility across ChatGPT, Claude, Google AI Mode, and Perplexity. Know when you are cited, when you are missing, and how to close the gap.</p>
             <div className="cta-band-actions">
-              <a href="#" className="btn-primary-lg">Start Free Audit â†’</a>
+              <a href="#" className="btn-primary-lg">Start Free Audit →</a>
               <a href="#" className="btn-ghost-lg">See How It Works</a>
             </div>
             <div className="cta-band-social-proof">
