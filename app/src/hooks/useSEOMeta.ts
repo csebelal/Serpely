@@ -51,6 +51,13 @@ export function useSEOMeta(pageKey: string, fallback?: Fallback) {
           setMeta('twitter:image', d.ogImage);
         }
 
+        if (d?.siteName) setMeta('og:site_name', d.siteName);
+
+        if (d?.faviconUrl) {
+          setLink('icon', d.faviconUrl);
+          setLink('apple-touch-icon', d.faviconUrl);
+        }
+
         const canonical = d?.canonicalUrl || (window.location.origin + window.location.pathname);
         setLink('canonical', canonical);
         setMeta('og:url', canonical);
