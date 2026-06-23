@@ -105,9 +105,10 @@ async function getCustomHeadCode(): Promise<string> {
   }
 }
 
-app.get('/*', async (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
-  if (req.path.startsWith('/uploads/')) return res.status(404).json({ error: 'Not found' });
+app.use(async (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (req.path.startsWith('/api/')) return next();
+  if (req.path.startsWith('/uploads/')) return next();
 
   try {
     let html = fs.readFileSync(indexHtmlPath, 'utf-8');
