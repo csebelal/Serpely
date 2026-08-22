@@ -84,6 +84,7 @@ export interface BlogPostData {
   publishedAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  faq?: { question: string; answer: string; order: number }[];
 }
 export const getPosts = () => api.get<BlogPostData[]>('/api/blog');
 export const getAllPosts = () => api.get<BlogPostData[]>('/api/blog/all');

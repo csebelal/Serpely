@@ -25,6 +25,21 @@ function calcReadTime(html: string): string {
   return `${Math.max(1, Math.round(words / 200))} min read`;
 }
 
+function BlogFAQItem({ question, answer }: { question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="faq-item" onClick={() => setOpen(!open)} style={{ cursor: 'pointer' }}>
+      <div className="faq-q" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{question}</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0)', color: open ? '#00C27A' : '#94a3b8' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+      {open && <div className="faq-a">{answer}</div>}
+    </div>
+  );
+}
+
 export function BlogPost() {
   const rootRef = useRef<HTMLElement | null>(null);
   const { slug } = useParams<{ slug: string }>();
@@ -96,6 +111,21 @@ export function BlogPost() {
             { '@type': 'ListItem', position: 3, name: post.title, item: `${window.location.origin}/blog/${post.slug}` },
           ],
         });
+
+        // FAQPage JSON-LD
+        if (post.faq && post.faq.length > 0) {
+          injectSchema('schema-faq', {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: post.faq.map((item: { question: string; answer: string }) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: { '@type': 'Answer', text: item.answer },
+            })),
+          });
+        } else {
+          removeSchema('schema-faq');
+        }
 
         getPosts()
           .then(all => setRelatedPosts(all.data.filter(p => p.category === post.category && p.slug !== slug).slice(0, 3)))
@@ -483,6 +513,8 @@ export function BlogPost() {
         .faq-item:last-child{border-bottom:none;}
         .faq-q{font-size:15.5px;font-weight:700;color:var(--text);margin-bottom:7px;letter-spacing:-0.02em;}
         .faq-a{font-size:14.5px;line-height:1.72;color:var(--text-soft);font-weight:450;margin:0;}
+        .blog-faq-section{margin:32px 0 0;padding-top:24px;border-top:1px solid var(--border-soft);}
+        .blog-faq-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-0.03em;}
 
         .bottom-line{background:rgba(0,194,122,0.05);border:1px solid rgba(0,194,122,0.18);border-radius:16px;padding:22px 24px;margin:30px 0 0;}
         [data-theme="dark"] .bottom-line{background:rgba(0,255,136,0.04);border-color:rgba(0,255,136,0.11);}
@@ -910,6 +942,18 @@ export function BlogPost() {
                   </button>
                 </div>
               </div>
+
+              {/* FAQ Section */}
+              {data.faq && data.faq.length > 0 && (
+                <div className="blog-faq-section">
+                  <h2 className="blog-faq-title">Frequently Asked Questions</h2>
+                  <div className="blog-faq-list">
+                    {data.faq.sort((a, b) => a.order - b.order).map((item, i) => (
+                      <BlogFAQItem key={i} question={item.question} answer={item.answer} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
             </article>
 

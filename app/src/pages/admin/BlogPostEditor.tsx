@@ -46,6 +46,9 @@ export function BlogPostEditor() {
   const [coverError, setCoverError] = useState('');
   const [autoSlug, setAutoSlug] = useState(true);
   const [categories, setCategories] = useState<string[]>([]);
+  const [faqItems, setFaqItems] = useState<{ question: string; answer: string; order: number }[]>([]);
+  const [editingFaq, setEditingFaq] = useState<number | null>(null);
+  const [faqForm, setFaqForm] = useState({ question: '', answer: '' });
 
   useEffect(() => {
     getCategories().then(r => setCategories(r.data)).catch(() => {});
@@ -75,6 +78,7 @@ export function BlogPostEditor() {
       getPostById(id).then(r => {
         setForm({ ...r.data, publishedAt: r.data.publishedAt ? r.data.publishedAt.slice(0, 10) : '' });
         editor.commands.setContent(r.data.body || '');
+        setFaqItems(r.data.faq || []);
         setAutoSlug(false);
       }).catch(() => navigate('/sp-super-admin/blog'));
     }
@@ -88,7 +92,7 @@ export function BlogPostEditor() {
     if (!editor) return;
     setSaving(true);
     setSaveError('');
-    const payload = { ...form, body: editor.getHTML() };
+    const payload = { ...form, body: editor.getHTML(), faq: faqItems };
     try {
       if (isNew) {
         await createPost(payload);
@@ -126,7 +130,7 @@ export function BlogPostEditor() {
     if (!editor || !form.title) return;
     setPreviewing(true);
     try {
-      const payload = { ...form, body: editor.getHTML() };
+      const payload = { ...form, body: editor.getHTML(), faq: faqItems };
       const { data } = await api.post<{ token: string }>('/api/blog/preview', payload);
       window.open(`/blog/preview/${data.token}`, '_blank');
     } catch {
@@ -259,6 +263,47 @@ export function BlogPostEditor() {
               </div>
             )}
           </div>
+
+          <div style={{ background: '#fff', borderRadius: 14, padding: '18px 16px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              FAQ {faqItems.length > 0 && <span style={{ color: '#00C27A' }}>({faqItems.length})</span>}
+            </h3>
+            {faqItems.map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', background: '#f8fafc', borderRadius: 8, marginBottom: 6 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.question || 'Untitled question'}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.answer || 'No answer'}</div>
+                </div>
+                <button type="button" onClick={() => { setEditingFaq(i); setFaqForm({ question: item.question, answer: item.answer }); }} style={{ padding: '3px 8px', borderRadius: 5, border: 'none', background: '#f1f5f9', color: '#64748b', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                <button type="button" onClick={() => setFaqItems(items => items.filter((_, j) => j !== i))} style={{ padding: '3px 8px', borderRadius: 5, border: 'none', background: '#fef2f2', color: '#ef4444', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>✕</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => { setEditingFaq(faqItems.length); setFaqForm({ question: '', answer: '' }); }} style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,194,122,0.08)', border: '1px dashed rgba(0,194,122,0.3)', borderRadius: 8, color: '#00C27A', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+ Add FAQ</button>
+          </div>
+
+          {editingFaq !== null && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditingFaq(null)}>
+              <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: 480, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 24px 48px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+                <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{editingFaq < faqItems.length ? 'Edit FAQ' : 'Add FAQ'}</h3>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question</label>
+                <input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder="e.g. What is AI SEO?" style={{ width: '100%', padding: '8px 11px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, marginBottom: 14, boxSizing: 'border-box' }} />
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Answer</label>
+                <textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} placeholder="Type the answer…" rows={4} style={{ width: '100%', padding: '8px 11px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setEditingFaq(null)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#f1f5f9', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                  <button type="button" onClick={() => {
+                    if (!faqForm.question.trim()) return;
+                    if (editingFaq < faqItems.length) {
+                      setFaqItems(items => items.map((item, j) => j === editingFaq ? { ...item, question: faqForm.question, answer: faqForm.answer } : item));
+                    } else {
+                      setFaqItems(items => [...items, { question: faqForm.question, answer: faqForm.answer, order: items.length }]);
+                    }
+                    setEditingFaq(null);
+                  }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#00C27A', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div style={{ background: '#fff', borderRadius: 14, padding: '18px 16px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
             <h3 style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cover Image</h3>

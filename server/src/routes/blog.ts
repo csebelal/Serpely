@@ -100,7 +100,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
   }
 });
 
-const BLOG_FIELDS = ['title', 'slug', 'excerpt', 'body', 'category', 'author', 'coverImage', 'published', 'featured', 'publishedAt', 'tags', 'metaTitle', 'metaDescription', 'canonicalUrl'] as const;
+const BLOG_FIELDS = ['title', 'slug', 'excerpt', 'body', 'category', 'author', 'authorInitials', 'tagLabel', 'tagColor', 'tagAccent', 'coverImage', 'published', 'featured', 'publishedAt', 'tags', 'metaTitle', 'metaDescription', 'canonicalUrl', 'faq'] as const;
 
 // POST /api/blog  (auth)
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {

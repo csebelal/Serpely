@@ -17,6 +17,7 @@ export interface IBlogPost extends Document {
   publishedAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  faq: { question: string; answer: string; order: number }[];
 }
 
 const BlogPostSchema = new Schema<IBlogPost>({
@@ -36,6 +37,11 @@ const BlogPostSchema = new Schema<IBlogPost>({
   publishedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  faq: [{
+    question: { type: String, default: '' },
+    answer: { type: String, default: '' },
+    order: { type: Number, default: 0 },
+  }],
 });
 
 
