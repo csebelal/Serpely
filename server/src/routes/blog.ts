@@ -1,10 +1,42 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import BlogPost from '../models/BlogPost';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 import { pick } from '../lib/utils';
 
 const router = Router();
+
+// ─── Preview in-memory store ───────────────────────────────────────────
+const previewStore = new Map<string, { data: Record<string, unknown>; createdAt: number }>();
+const PREVIEW_TTL = 30 * 60 * 1000; // 30 minutes
+
+// POST /api/blog/preview  (auth) — store preview data, return token
+router.post('/preview', verifyJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const token = crypto.randomBytes(16).toString('hex');
+    previewStore.set(token, { data: req.body, createdAt: Date.now() });
+    // Cleanup expired tokens
+    for (const [key, val] of previewStore) {
+      if (Date.now() - val.createdAt > PREVIEW_TTL) previewStore.delete(key);
+    }
+    res.json({ token });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/blog/preview/:token  (public — token-gated)
+router.get('/preview/:token', async (req: Request<{ token: string }>, res: Response) => {
+  const token = req.params.token;
+  const entry = previewStore.get(token);
+  if (!entry || Date.now() - entry.createdAt > PREVIEW_TTL) {
+    previewStore.delete(token);
+    res.status(404).json({ error: 'Preview expired or not found' });
+    return;
+  }
+  res.json(entry.data);
+});
 
 // GET /api/blog/categories  (auth - distinct categories)
 router.get('/categories', verifyJWT, async (_req: AuthRequest, res: Response) => {

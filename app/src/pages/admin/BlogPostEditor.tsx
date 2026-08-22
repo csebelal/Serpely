@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
-import { getPostById, createPost, updatePost, uploadFile, getCategories, type BlogPostData } from '@/lib/api';
+import { getPostById, createPost, updatePost, uploadFile, getCategories, api, type BlogPostData } from '@/lib/api';
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-');
@@ -110,6 +110,21 @@ export function BlogPostEditor() {
     setCoverUploading(false);
   }
 
+  const [previewing, setPreviewing] = useState(false);
+
+  async function handlePreview() {
+    if (!editor || !form.title) return;
+    setPreviewing(true);
+    try {
+      const payload = { ...form, body: editor.getHTML() };
+      const { data } = await api.post<{ token: string }>('/api/blog/preview', payload);
+      window.open(`/blog/preview/${data.token}`, '_blank');
+    } catch {
+      alert('Failed to generate preview. Please save first if this is a new post.');
+    }
+    setPreviewing(false);
+  }
+
   const field = (label: string, key: keyof BlogPostData, type = 'text') => (
     <div style={{ marginBottom: 14 }}>
       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
@@ -137,6 +152,9 @@ export function BlogPostEditor() {
           </label>
           {saveError && <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{saveError}</span>}
           <button onClick={() => navigate('/sp-super-admin/blog')} style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#64748b', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={handlePreview} disabled={previewing || !form.title} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, color: '#64748b', fontSize: 13, cursor: 'pointer' }}>
+            {previewing ? 'Loading…' : '👁 Preview'}
+          </button>
           <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
             {saving ? 'Saving…' : isNew ? 'Create Post' : 'Update Post'}
           </button>

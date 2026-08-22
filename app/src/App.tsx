@@ -13,6 +13,7 @@ import { Pricing } from './pages/Pricing';
 import { Contact } from './pages/Contact';
 import { Blog } from './pages/Blog';
 import { BlogPost } from './pages/BlogPost';
+import { PreviewBlogPost } from './pages/PreviewBlogPost';
 import { FAQ } from './pages/FAQ';
 import { ProductTour } from './pages/ProductTour';
 import { Integrations } from './pages/Integrations';
@@ -101,6 +102,7 @@ function PublicShell() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/preview/:token" element={<PreviewBlogPost />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/product-tour" element={<ProductTour />} />
