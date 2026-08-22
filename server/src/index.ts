@@ -171,7 +171,6 @@ app.use(async (req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/uploads/')) return next();
-  if (req.path.startsWith('/sp-super-admin')) return next();
 
   // Detect /blog/:slug (not /blog itself or nested routes)
   const blogMatch = req.path.match(/^\/blog\/([a-z0-9-]+)$/);
