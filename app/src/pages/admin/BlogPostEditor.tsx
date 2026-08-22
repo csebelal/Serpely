@@ -4,6 +4,10 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table/row';
+import { TableCell } from '@tiptap/extension-table/cell';
+import { TableHeader } from '@tiptap/extension-table/header';
 import { getPostById, createPost, updatePost, uploadFile, getCategories, api, type BlogPostData } from '@/lib/api';
 
 function slugify(s: string) {
@@ -52,6 +56,10 @@ export function BlogPostEditor() {
       StarterKit.configure({ link: false }),
       Image,
       Link.configure({ openOnClick: false }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: '',
     editorProps: {
@@ -197,6 +205,23 @@ export function BlogPostEditor() {
                 Img
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files && handleImageUpload(e.target.files[0])} />
               </label>
+              <div style={{ width: 1, height: 24, background: '#e2e8f0', margin: '0 4px', alignSelf: 'center' }} />
+              {!editor?.isActive('table') ? (
+                <ToolbarBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>Table</ToolbarBtn>
+              ) : (
+                <>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().addColumnBefore().run()}>+Col L</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().addColumnAfter().run()}>+Col R</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().deleteColumn().run()}>-Col</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().addRowBefore().run()}>+Row T</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().addRowAfter().run()}>+Row B</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().deleteRow().run()}>-Row</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().mergeCells().run()}>Merge</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().splitCell().run()}>Split</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeaderRow().run()} active={editor?.isActive('tableHeader')}>Header</ToolbarBtn>
+                  <ToolbarBtn onClick={() => editor?.chain().focus().deleteTable().run()} active={false}>✕ Table</ToolbarBtn>
+                </>
+              )}
             </div>
             <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
               <EditorContent editor={editor} />
@@ -246,6 +271,15 @@ export function BlogPostEditor() {
         .tiptap pre { background: #f1f5f9; padding: 16px; border-radius: 10px; margin-bottom: 14px; overflow-x: auto; }
         .tiptap img { max-width: 100%; border-radius: 10px; margin: 16px 0; }
         .tiptap p.is-editor-empty:first-child::before { content: 'Start writing your post…'; color: #94a3b8; pointer-events: none; float: left; height: 0; }
+        .tiptap table { border-collapse: collapse; width: 100%; margin: 16px 0; table-layout: fixed; }
+        .tiptap th, .tiptap td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; vertical-align: top; position: relative; min-width: 60px; }
+        .tiptap th { background: #f8fafc; font-weight: 700; font-size: 13px; color: #0f172a; }
+        .tiptap td { font-size: 14px; color: #334155; }
+        .tiptap .selectedCell { background: rgba(0,194,122,0.08); }
+        .tiptap .column-resize-handle { width: 4px; background: #00C27A; position: absolute; right: -2px; top: 0; bottom: 0; cursor: col-resize; z-index: 10; }
+        .tiptap .resize-cursor { cursor: col-resize; }
+        .tiptap .tableWrapper { overflow-x: auto; }
+        .tiptap .fixedTable { width: 100%; }
       `}</style>
     </div>
   );
