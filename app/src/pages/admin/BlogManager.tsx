@@ -126,7 +126,7 @@ export function BlogManager() {
                     {p.published ? 'Published' : 'Draft'}
                   </span>
                 </td>
-                <td style={{ padding: '12px 16px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatDate(p.publishedAt)}</td>
+                <td style={{ padding: '12px 16px', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatDate(p.updatedAt || p.publishedAt)}</td>
                 <td style={{ padding: '12px 16px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <Link to={`/sp-super-admin/blog/${p._id}`} style={{ padding: '4px 10px', borderRadius: 6, background: '#f1f5f9', color: '#64748b', fontSize: 11, textDecoration: 'none' }}>Edit</Link>

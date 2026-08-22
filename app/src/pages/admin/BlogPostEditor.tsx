@@ -250,6 +250,14 @@ export function BlogPostEditor() {
             {field('Author', 'author')}
             {field('Author Initials', 'authorInitials')}
             {field('Publish Date', 'publishedAt', 'date')}
+            {!isNew && form.updatedAt && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last updated</label>
+                <div style={{ width: '100%', padding: '8px 11px', background: '#f8fafc', border: 'none', borderRadius: 8, color: '#94a3b8', fontSize: 12, fontFamily: 'monospace' }}>
+                  {new Date(form.updatedAt).toLocaleString()}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ background: '#fff', borderRadius: 14, padding: '18px 16px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
