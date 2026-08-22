@@ -62,6 +62,7 @@ export function BlogPostEditor() {
       TableHeader,
     ],
     content: '',
+    onTransaction: () => forceUpdate(n => n + 1),
     editorProps: {
       attributes: {
         style: 'min-height: 400px; padding: 20px; outline: none; font-size: 15px; line-height: 1.7; color: #0f172a;',
@@ -119,6 +120,7 @@ export function BlogPostEditor() {
   }
 
   const [previewing, setPreviewing] = useState(false);
+  const [, forceUpdate] = useState(0);
 
   async function handlePreview() {
     if (!editor || !form.title) return;
