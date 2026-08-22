@@ -40,6 +40,7 @@ import apiKeysRouter from './routes/apikeys';
 import sitemapRouter from './routes/sitemap';
 import AdminUser from './models/AdminUser';
 import SiteSettings from './models/SiteSettings';
+import BlogPost from './models/BlogPost';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -105,13 +106,87 @@ async function getCustomHeadCode(): Promise<string> {
   }
 }
 
+// ─── Blog post OG cache ────────────────────────────────────────────────
+interface BlogOgCache { title: string; excerpt: string; coverImage: string; slug: string; updatedAt: number }
+const blogOgCache = new Map<string, BlogOgCache>();
+const BLOG_OG_CACHE_TTL = 60_000;
+
+async function getBlogOgData(slug: string): Promise<BlogOgCache | null> {
+  const now = Date.now();
+  const cached = blogOgCache.get(slug);
+  if (cached && now - cached.updatedAt < BLOG_OG_CACHE_TTL) return cached;
+  try {
+    const post = await BlogPost.findOne({ slug, published: true }).lean();
+    if (!post) return null;
+    const excerpt = (post as any).excerpt || (post as any).body?.replace(/<[^>]+>/g, '').slice(0, 160) || '';
+    const coverImage = (post as any).coverImage || '';
+    const data: BlogOgCache = {
+      title: (post as any).title || '',
+      excerpt,
+      coverImage,
+      slug,
+      updatedAt: now,
+    };
+    blogOgCache.set(slug, data);
+    return data;
+  } catch {
+    return cached || null;
+  }
+}
+
+function replaceMeta(html: string, og: BlogOgCache): string {
+  const origin = 'https://serpely.com';
+  const url = `${origin}/blog/${og.slug}`;
+  const image = og.coverImage
+    ? (og.coverImage.startsWith('http') ? og.coverImage : `${origin}${og.coverImage}`)
+    : `${origin}/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png`;
+
+  const set = (tag: string, content: string) => tag.replace(/content="[^"]*"/, `content="${content.replace(/"/g, '&quot;')}"`);
+
+  // Replace <title>
+  html = html.replace(/<title>[^<]*<\/title>/, `<title>${og.title} — Serpely Blog</title>`);
+
+  // Replace meta description
+  html = html.replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${og.excerpt.replace(/"/g, '&quot;')}"`);
+
+  // Replace OG tags
+  html = html.replace(/<meta property="og:title" content="[^"]*"/, `<meta property="og:title" content="${og.title.replace(/"/g, '&quot;')}"`);
+  html = html.replace(/<meta property="og:description" content="[^"]*"/, `<meta property="og:description" content="${og.excerpt.replace(/"/g, '&quot;')}"`);
+  html = html.replace(/<meta property="og:type" content="[^"]*"/, `<meta property="og:type" content="article"`);
+  html = html.replace(/<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${url}"`);
+  html = html.replace(/<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${image}"`);
+
+  // Replace Twitter tags
+  html = html.replace(/<meta name="twitter:title" content="[^"]*"/, `<meta name="twitter:title" content="${og.title.replace(/"/g, '&quot;')}"`);
+  html = html.replace(/<meta name="twitter:description" content="[^"]*"/, `<meta name="twitter:description" content="${og.excerpt.replace(/"/g, '&quot;')}"`);
+  html = html.replace(/<meta name="twitter:image" content="[^"]*"/, `<meta name="twitter:image" content="${image}"`);
+
+  // Replace canonical
+  html = html.replace(/<link rel="canonical" href="[^"]*"/, `<link rel="canonical" href="${url}"`);
+
+  return html;
+}
+
 app.use(async (req, res, next) => {
   if (req.method !== 'GET') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/uploads/')) return next();
+  if (req.path.startsWith('/sp-super-admin')) return next();
+
+  // Detect /blog/:slug (not /blog itself or nested routes)
+  const blogMatch = req.path.match(/^\/blog\/([a-z0-9-]+)$/);
 
   try {
     let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+
+    // Inject blog post OG tags for crawlers
+    if (blogMatch) {
+      const og = await getBlogOgData(blogMatch[1]);
+      if (og) {
+        html = replaceMeta(html, og);
+      }
+    }
+
     const code = await getCustomHeadCode();
     if (code) {
       html = html.replace('</head>', code + '\n</head>');
