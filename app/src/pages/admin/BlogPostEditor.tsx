@@ -368,7 +368,7 @@ export function BlogPostEditor() {
         .tiptap table { border-collapse: collapse; width: 100%; margin: 16px 0; table-layout: fixed; }
         .tiptap th, .tiptap td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; vertical-align: top; position: relative; min-width: 60px; }
         .tiptap th { background: #f8fafc; font-weight: 700; font-size: 13px; color: #0f172a; }
-        .tiptap td { font-size: 14px; color: #334155; }
+        .tiptap td { font-size: 14px; color: #334155; background: #ffffff; }
         .tiptap .selectedCell { background: rgba(0,194,122,0.08); }
         .tiptap .column-resize-handle { width: 4px; background: #00C27A; position: absolute; right: -2px; top: 0; bottom: 0; cursor: col-resize; z-index: 10; }
         .tiptap .resize-cursor { cursor: col-resize; }

@@ -448,7 +448,7 @@ export function BlogPost() {
 
         .article-body table{width:100%;border-collapse:collapse;margin:18px 0 26px;border-radius:12px;overflow:hidden;border:1px solid hsl(var(--border));}
         .article-body th{padding:11px 15px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid hsl(var(--border));text-align:left;background:var(--bg-subtle);color:var(--text-faint);}
-        .article-body td{padding:10px 15px;font-size:13.5px;font-weight:500;color:var(--text-mid);border-bottom:1px solid var(--border-soft);vertical-align:top;}
+        .article-body td{padding:10px 15px;font-size:13.5px;font-weight:500;color:var(--text-mid);border-bottom:1px solid var(--border-soft);vertical-align:top;background:var(--card-bg,#fff);}
         .article-body tr:hover td{background:var(--bg-subtle);}
 
         .article-hook{font-size:16px;line-height:1.85;color:var(--text-soft);border-left:3px solid rgba(0,194,122,0.4);padding:4px 0 4px 18px;margin-bottom:28px;font-weight:450;}
