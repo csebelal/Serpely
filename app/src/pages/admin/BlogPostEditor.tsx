@@ -215,7 +215,7 @@ export function BlogPostEditor() {
                 Img
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files && handleImageUpload(e.target.files[0])} />
               </label>
-              <ToolbarBtn onClick={() => editor?.chain().focus().insertContent({ type: 'ctaButton', attrs: { text: 'Get Started →', url: '#', style: 'primary' } }).run()}>CTA</ToolbarBtn>
+              <ToolbarBtn onClick={() => editor?.chain().focus().insertContent({ type: 'ctaButton', attrs: { text: 'Get Started →', url: '#', style: 'primary' } }).run()}>Add Button</ToolbarBtn>
               <div style={{ width: 1, height: 24, background: '#e2e8f0', margin: '0 4px', alignSelf: 'center' }} />
               {!editor?.isActive('table') ? (
                 <ToolbarBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>Table</ToolbarBtn>
