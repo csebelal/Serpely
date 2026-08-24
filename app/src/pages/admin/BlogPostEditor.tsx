@@ -9,6 +9,9 @@ import { TableRow } from '@tiptap/extension-table/row';
 import { TableCell } from '@tiptap/extension-table/cell';
 import { TableHeader } from '@tiptap/extension-table/header';
 import { CtaButton } from '@/components/editor/CtaButton';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import TextAlign from '@tiptap/extension-text-align';
 import { getPostById, createPost, updatePost, uploadFile, getCategories, api, type BlogPostData } from '@/lib/api';
 
 function slugify(s: string) {
@@ -66,6 +69,9 @@ export function BlogPostEditor() {
       TableCell,
       TableHeader,
       CtaButton,
+      TextStyle,
+      Color,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: '',
     onTransaction: () => forceUpdate(n => n + 1),
@@ -217,6 +223,16 @@ export function BlogPostEditor() {
               </label>
               <ToolbarBtn onClick={() => editor?.chain().focus().insertContent({ type: 'ctaButton', attrs: { text: 'Get Started →', url: '#', style: 'primary' } }).run()}>Add Button</ToolbarBtn>
               <div style={{ width: 1, height: 24, background: '#e2e8f0', margin: '0 4px', alignSelf: 'center' }} />
+              <ToolbarBtn onClick={() => editor?.chain().focus().setTextAlign('left').run()} active={editor?.isActive({ textAlign: 'left' })}>⫷</ToolbarBtn>
+              <ToolbarBtn onClick={() => editor?.chain().focus().setTextAlign('center').run()} active={editor?.isActive({ textAlign: 'center' })}>⫶</ToolbarBtn>
+              <ToolbarBtn onClick={() => editor?.chain().focus().setTextAlign('right').run()} active={editor?.isActive({ textAlign: 'right' })}>⫸</ToolbarBtn>
+              <div style={{ width: 1, height: 24, background: '#e2e8f0', margin: '0 4px', alignSelf: 'center' }} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', background: 'none', border: 'none', borderRadius: 5, color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                <span style={{ width: 14, height: 14, borderRadius: 3, background: editor?.getAttributes('textStyle').color || '#0f172a', border: '1px solid #e2e8f0', display: 'inline-block' }} />
+                <input type="color" value={editor?.getAttributes('textStyle').color || '#0f172a'} onChange={e => editor?.chain().focus().setColor(e.target.value).run()} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+                Color
+              </label>
+              <ToolbarBtn onClick={() => editor?.chain().focus().unsetColor().run()}>✕Color</ToolbarBtn>
               {!editor?.isActive('table') ? (
                 <ToolbarBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>Table</ToolbarBtn>
               ) : (
