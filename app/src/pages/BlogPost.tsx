@@ -1069,7 +1069,7 @@ export function BlogPost() {
       )}
 
       {/* ═══ MAIN CTA BAND ═══ */}
-      {data.cta && (data.cta.primaryText || data.cta.secondaryText) && (
+      {data.cta && data.cta.secondaryText && (
         <section className="cta-band">
           <div className="container max-w-7xl mx-auto px-6">
             <div className="cta-band-inner">
@@ -1077,7 +1077,6 @@ export function BlogPost() {
               <h2 className="cta-band-heading">See exactly where your brand appears in AI search</h2>
               <p className="cta-band-sub">Serpely tracks your visibility across ChatGPT, Claude, Google AI Mode, and Perplexity. Know when you are cited, when you are missing, and how to close the gap.</p>
               <div className="cta-band-actions">
-                {data.cta.primaryText && <a href={data.cta.primaryUrl || '#'} className="btn-primary-lg">{data.cta.primaryText}</a>}
                 {data.cta.secondaryText && <a href={data.cta.secondaryUrl || '#'} className="btn-ghost-lg">{data.cta.secondaryText}</a>}
               </div>
               <div className="cta-band-social-proof">

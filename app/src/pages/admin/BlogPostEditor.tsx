@@ -316,23 +316,13 @@ export function BlogPostEditor() {
               <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtitle</label>
               <input value={ctaForm.subtitle} onChange={e => setCtaForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Start for free — no credit card needed" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary Text</label>
-                <input value={ctaForm.primaryText} onChange={e => setCtaForm(f => ({ ...f, primaryText: e.target.value }))} placeholder="Start Free Audit →" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary URL</label>
-                <input value={ctaForm.primaryUrl} onChange={e => setCtaForm(f => ({ ...f, primaryUrl: e.target.value }))} placeholder="https://..." style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, fontFamily: 'monospace', boxSizing: 'border-box' }} />
-              </div>
-            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secondary Text</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Text</label>
                 <input value={ctaForm.secondaryText} onChange={e => setCtaForm(f => ({ ...f, secondaryText: e.target.value }))} placeholder="See How It Works" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secondary URL</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button URL</label>
                 <input value={ctaForm.secondaryUrl} onChange={e => setCtaForm(f => ({ ...f, secondaryUrl: e.target.value }))} placeholder="https://..." style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, fontFamily: 'monospace', boxSizing: 'border-box' }} />
               </div>
             </div>

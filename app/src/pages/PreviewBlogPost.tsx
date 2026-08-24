@@ -302,11 +302,10 @@ export function PreviewBlogPost() {
                 </div>
               )}
 
-              {data.cta && (data.cta.primaryText || data.cta.secondaryText) && (
+              {data.cta && data.cta.secondaryText && (
                 <div className="blog-cta-section">
                   {data.cta.subtitle && <div className="blog-cta-subtitle">{data.cta.subtitle}</div>}
                   <div className="blog-cta-actions">
-                    {data.cta.primaryText && <a href={data.cta.primaryUrl || '#'} className="blog-cta-btn blog-cta-btn-primary">{data.cta.primaryText}</a>}
                     {data.cta.secondaryText && <a href={data.cta.secondaryUrl || '#'} className="blog-cta-btn blog-cta-btn-secondary">{data.cta.secondaryText}</a>}
                   </div>
                 </div>
