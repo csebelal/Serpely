@@ -8,6 +8,7 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table/row';
 import { TableCell } from '@tiptap/extension-table/cell';
 import { TableHeader } from '@tiptap/extension-table/header';
+import { CtaButton } from '@/components/editor/CtaButton';
 import { getPostById, createPost, updatePost, uploadFile, getCategories, api, type BlogPostData } from '@/lib/api';
 
 function slugify(s: string) {
@@ -49,6 +50,7 @@ export function BlogPostEditor() {
   const [faqItems, setFaqItems] = useState<{ question: string; answer: string; order: number }[]>([]);
   const [editingFaq, setEditingFaq] = useState<number | null>(null);
   const [faqForm, setFaqForm] = useState({ question: '', answer: '' });
+  const [ctaForm, setCtaForm] = useState({ subtitle: '', primaryText: '', primaryUrl: '', secondaryText: '', secondaryUrl: '' });
 
   useEffect(() => {
     getCategories().then(r => setCategories(r.data)).catch(() => {});
@@ -63,6 +65,7 @@ export function BlogPostEditor() {
       TableRow,
       TableCell,
       TableHeader,
+      CtaButton,
     ],
     content: '',
     onTransaction: () => forceUpdate(n => n + 1),
@@ -79,6 +82,7 @@ export function BlogPostEditor() {
         setForm({ ...r.data, publishedAt: r.data.publishedAt ? r.data.publishedAt.slice(0, 10) : '' });
         editor.commands.setContent(r.data.body || '');
         setFaqItems(r.data.faq || []);
+        setCtaForm(r.data.cta || { subtitle: '', primaryText: '', primaryUrl: '', secondaryText: '', secondaryUrl: '' });
         setAutoSlug(false);
       }).catch(() => navigate('/sp-super-admin/blog'));
     }
@@ -92,7 +96,7 @@ export function BlogPostEditor() {
     if (!editor) return;
     setSaving(true);
     setSaveError('');
-    const payload = { ...form, body: editor.getHTML(), faq: faqItems };
+    const payload = { ...form, body: editor.getHTML(), faq: faqItems, cta: ctaForm };
     try {
       if (isNew) {
         await createPost(payload);
@@ -130,7 +134,7 @@ export function BlogPostEditor() {
     if (!editor || !form.title) return;
     setPreviewing(true);
     try {
-      const payload = { ...form, body: editor.getHTML(), faq: faqItems };
+      const payload = { ...form, body: editor.getHTML(), faq: faqItems, cta: ctaForm };
       const { data } = await api.post<{ token: string }>('/api/blog/preview', payload);
       window.open(`/blog/preview/${data.token}`, '_blank');
     } catch {
@@ -211,6 +215,7 @@ export function BlogPostEditor() {
                 Img
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => e.target.files && handleImageUpload(e.target.files[0])} />
               </label>
+              <ToolbarBtn onClick={() => editor?.chain().focus().insertContent({ type: 'ctaButton', attrs: { text: 'Get Started →', url: '#', style: 'primary' } }).run()}>CTA</ToolbarBtn>
               <div style={{ width: 1, height: 24, background: '#e2e8f0', margin: '0 4px', alignSelf: 'center' }} />
               {!editor?.isActive('table') ? (
                 <ToolbarBtn onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>Table</ToolbarBtn>
@@ -306,6 +311,34 @@ export function BlogPostEditor() {
           )}
 
           <div style={{ background: '#fff', borderRadius: 14, padding: '18px 16px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CTA Section</h3>
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtitle</label>
+              <input value={ctaForm.subtitle} onChange={e => setCtaForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Start for free — no credit card needed" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary Text</label>
+                <input value={ctaForm.primaryText} onChange={e => setCtaForm(f => ({ ...f, primaryText: e.target.value }))} placeholder="Start Free Audit →" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Primary URL</label>
+                <input value={ctaForm.primaryUrl} onChange={e => setCtaForm(f => ({ ...f, primaryUrl: e.target.value }))} placeholder="https://..." style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, fontFamily: 'monospace', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secondary Text</label>
+                <input value={ctaForm.secondaryText} onChange={e => setCtaForm(f => ({ ...f, secondaryText: e.target.value }))} placeholder="See How It Works" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Secondary URL</label>
+                <input value={ctaForm.secondaryUrl} onChange={e => setCtaForm(f => ({ ...f, secondaryUrl: e.target.value }))} placeholder="https://..." style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, fontFamily: 'monospace', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: '#fff', borderRadius: 14, padding: '18px 16px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
             <h3 style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cover Image</h3>
             {form.coverImage && <img src={form.coverImage} alt="Cover" style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />}
             <input type="file" accept="image/*" onChange={e => e.target.files && handleCoverUpload(e.target.files[0])} style={{ fontSize: 12, color: '#64748b', width: '100%' }} />
@@ -335,6 +368,10 @@ export function BlogPostEditor() {
         .tiptap .resize-cursor { cursor: col-resize; }
         .tiptap .tableWrapper { overflow-x: auto; }
         .tiptap .fixedTable { width: 100%; }
+        .tiptap [data-cta-button] { display: flex; justify-content: center; margin: 16px 0; }
+        .tiptap [data-cta-button] .cta-body-btn { display: inline-block; padding: 12px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; }
+        .tiptap [data-cta-button] .cta-body-btn-primary { background: #00C27A; color: #fff; }
+        .tiptap [data-cta-button] .cta-body-btn-secondary { background: transparent; border: 2px solid #00C27A; color: #00C27A; }
       `}</style>
     </div>
   );

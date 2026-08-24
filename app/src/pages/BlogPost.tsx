@@ -516,6 +516,13 @@ export function BlogPost() {
         .blog-faq-section{margin:32px 0 0;padding-top:24px;border-top:1px solid var(--border-soft);}
         .blog-faq-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-0.03em;}
 
+        [data-cta-button]{display:flex;justify-content:center;margin:24px 0;}
+        .cta-body-btn{display:inline-block;padding:12px 28px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;}
+        .cta-body-btn-primary{background:#00C27A;color:#fff;}
+        .cta-body-btn-primary:hover{background:#00A868;}
+        .cta-body-btn-secondary{background:transparent;border:2px solid #00C27A;color:#00C27A;}
+        .cta-body-btn-secondary:hover{background:rgba(0,194,122,0.08);}
+
         .bottom-line{background:rgba(0,194,122,0.05);border:1px solid rgba(0,194,122,0.18);border-radius:16px;padding:22px 24px;margin:30px 0 0;}
         [data-theme="dark"] .bottom-line{background:rgba(0,255,136,0.04);border-color:rgba(0,255,136,0.11);}
         .bl-label{font-size:10px;font-weight:800;color:#00A868;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px;}
@@ -1062,29 +1069,31 @@ export function BlogPost() {
       )}
 
       {/* ═══ MAIN CTA BAND ═══ */}
-      <section className="cta-band">
-        <div className="container max-w-7xl mx-auto px-6">
-          <div className="cta-band-inner">
-            <div className="cta-band-eyebrow">Start for free — no credit card needed</div>
-            <h2 className="cta-band-heading">See exactly where your brand appears in AI search</h2>
-            <p className="cta-band-sub">Serpely tracks your visibility across ChatGPT, Claude, Google AI Mode, and Perplexity. Know when you are cited, when you are missing, and how to close the gap.</p>
-            <div className="cta-band-actions">
-              <a href="#" className="btn-primary-lg">Start Free Audit →</a>
-              <a href="#" className="btn-ghost-lg">See How It Works</a>
-            </div>
-            <div className="cta-band-social-proof">
-              <div className="cta-band-avatars">
-                <div className="cta-avatar" style={{ background: "#00c27a", fontSize: "11px", fontWeight: 700, color: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>RN</div>
-                <div className="cta-avatar" style={{ background: "#6366f1", fontSize: "11px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>JK</div>
-                <div className="cta-avatar" style={{ background: "#ec4899", fontSize: "11px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>SM</div>
-                <div className="cta-avatar" style={{ background: "#f59e0b", fontSize: "11px", fontWeight: 700, color: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>AL</div>
-                <div className="cta-avatar" style={{ background: "#3b82f6", fontSize: "11px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>PW</div>
+      {data.cta && (data.cta.primaryText || data.cta.secondaryText) && (
+        <section className="cta-band">
+          <div className="container max-w-7xl mx-auto px-6">
+            <div className="cta-band-inner">
+              {data.cta.subtitle && <div className="cta-band-eyebrow">{data.cta.subtitle}</div>}
+              <h2 className="cta-band-heading">See exactly where your brand appears in AI search</h2>
+              <p className="cta-band-sub">Serpely tracks your visibility across ChatGPT, Claude, Google AI Mode, and Perplexity. Know when you are cited, when you are missing, and how to close the gap.</p>
+              <div className="cta-band-actions">
+                {data.cta.primaryText && <a href={data.cta.primaryUrl || '#'} className="btn-primary-lg">{data.cta.primaryText}</a>}
+                {data.cta.secondaryText && <a href={data.cta.secondaryUrl || '#'} className="btn-ghost-lg">{data.cta.secondaryText}</a>}
               </div>
-              <span>Joined by <strong>2,400+</strong> marketers tracking AI visibility</span>
+              <div className="cta-band-social-proof">
+                <div className="cta-band-avatars">
+                  <div className="cta-avatar" style={{ background: "#00c27a", fontSize: "11px", fontWeight: 700, color: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>RN</div>
+                  <div className="cta-avatar" style={{ background: "#6366f1", fontSize: "11px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>JK</div>
+                  <div className="cta-avatar" style={{ background: "#ec4899", fontSize: "11px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>SM</div>
+                  <div className="cta-avatar" style={{ background: "#f59e0b", fontSize: "11px", fontWeight: 700, color: "#000", display: "flex", alignItems: "center", justifyContent: "center" }}>AL</div>
+                  <div className="cta-avatar" style={{ background: "#3b82f6", fontSize: "11px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>PW</div>
+                </div>
+                <span>Joined by <strong>2,400+</strong> marketers tracking AI visibility</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
     </>
   );

@@ -18,6 +18,13 @@ export interface IBlogPost extends Document {
   createdAt: Date;
   updatedAt: Date;
   faq: { question: string; answer: string; order: number }[];
+  cta: {
+    subtitle: string;
+    primaryText: string;
+    primaryUrl: string;
+    secondaryText: string;
+    secondaryUrl: string;
+  };
 }
 
 const BlogPostSchema = new Schema<IBlogPost>({
@@ -42,6 +49,13 @@ const BlogPostSchema = new Schema<IBlogPost>({
     answer: { type: String, default: '' },
     order: { type: Number, default: 0 },
   }],
+  cta: {
+    subtitle: { type: String, default: '' },
+    primaryText: { type: String, default: '' },
+    primaryUrl: { type: String, default: '' },
+    secondaryText: { type: String, default: '' },
+    secondaryUrl: { type: String, default: '' },
+  },
 });
 
 

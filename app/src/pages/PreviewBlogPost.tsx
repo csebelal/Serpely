@@ -188,6 +188,18 @@ export function PreviewBlogPost() {
         .blog-faq-section{margin:32px 0 0;padding-top:24px;border-top:1px solid var(--border-soft);}
         .blog-faq-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-0.03em;}
 
+        .blog-cta-section{margin:32px 0 0;padding-top:24px;border-top:1px solid var(--border-soft);text-align:center;}
+        .blog-cta-subtitle{font-size:12px;font-weight:700;color:#00A868;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
+        .blog-cta-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+        .blog-cta-btn{display:inline-block;padding:12px 28px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;}
+        .blog-cta-btn-primary{background:#00C27A;color:#fff;}
+        .blog-cta-btn-secondary{background:transparent;border:2px solid #00C27A;color:#00C27A;}
+
+        [data-cta-button]{display:flex;justify-content:center;margin:24px 0;}
+        .cta-body-btn{display:inline-block;padding:12px 28px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;}
+        .cta-body-btn-primary{background:#00C27A;color:#fff;}
+        .cta-body-btn-secondary{background:transparent;border:2px solid #00C27A;color:#00C27A;}
+
         @media(max-width:1100px){
           .blog-layout{grid-template-columns:1fr;}
           .toc-wrap{position:static;max-height:none;overflow:visible;}
@@ -286,6 +298,16 @@ export function PreviewBlogPost() {
                     {data.faq.sort((a, b) => a.order - b.order).map((item, i) => (
                       <BlogFAQItem key={i} question={item.question} answer={item.answer} />
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {data.cta && (data.cta.primaryText || data.cta.secondaryText) && (
+                <div className="blog-cta-section">
+                  {data.cta.subtitle && <div className="blog-cta-subtitle">{data.cta.subtitle}</div>}
+                  <div className="blog-cta-actions">
+                    {data.cta.primaryText && <a href={data.cta.primaryUrl || '#'} className="blog-cta-btn blog-cta-btn-primary">{data.cta.primaryText}</a>}
+                    {data.cta.secondaryText && <a href={data.cta.secondaryUrl || '#'} className="blog-cta-btn blog-cta-btn-secondary">{data.cta.secondaryText}</a>}
                   </div>
                 </div>
               )}

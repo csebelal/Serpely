@@ -10,6 +10,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && localStorage.getItem('serpely_token')) {
+      localStorage.removeItem('serpely_token');
+      localStorage.removeItem('serpely_login_time');
+      window.location.href = '/sp-super-admin/login';
+    }
+    return Promise.reject(err);
+  }
+);
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const login = (email: string, password: string) =>
   api.post<{ token: string }>('/api/auth/login', { email, password });
@@ -85,6 +97,13 @@ export interface BlogPostData {
   createdAt?: string;
   updatedAt?: string;
   faq?: { question: string; answer: string; order: number }[];
+  cta?: {
+    subtitle: string;
+    primaryText: string;
+    primaryUrl: string;
+    secondaryText: string;
+    secondaryUrl: string;
+  };
 }
 export const getPosts = () => api.get<BlogPostData[]>('/api/blog');
 export const getAllPosts = () => api.get<BlogPostData[]>('/api/blog/all');
