@@ -313,6 +313,56 @@ function buildBlogPostSsr(post: BlogPageData): string {
 </div>`;
 }
 
+function buildBlogPostHeadSchema(post: BlogPageData): string {
+  const origin = 'https://serpely.com';
+  const url = `${origin}/blog/${post.slug}`;
+  const image = post.coverImage
+    ? (post.coverImage.startsWith('http') ? post.coverImage : `${origin}${post.coverImage}`)
+    : `${origin}/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png`;
+
+  const schemas: Record<string, unknown>[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.excerpt,
+      image: post.coverImage ? image : undefined,
+      author: { '@type': 'Person', name: post.author || 'Serpely Team' },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Serpely',
+        logo: { '@type': 'ImageObject', url: `${origin}/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png` },
+      },
+      datePublished: post.publishedAt || undefined,
+      dateModified: post.publishedAt || undefined,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: origin },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${origin}/blog` },
+        { '@type': 'ListItem', position: 3, name: post.title, item: url },
+      ],
+    },
+  ];
+
+  if (post.faq && post.faq.length > 0) {
+    schemas.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: post.faq.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: { '@type': 'Answer', text: item.answer },
+      })),
+    });
+  }
+
+  return schemas.map(s => `<script type="application/ld+json">${JSON.stringify(s).replace(/</g, '\\u003c')}</script>`).join('\n');
+}
+
 const CRAWLER_RE = /googlebot|bingbot|duckduckbot|baiduspider|yandexbot|yandex|slurp|petalbot|semrushbot|ahrefsbot|majestic|rogerbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|gptbot|chatgpt-user|perplexitybot|claudebot|anthropic-ai|google-extended|ccbot|bingpreview|embedly|quora|pinterest|buffer|tumblr|isindex|gtmetrix|pingdom|screaming frog|sitebulb|google-sites-verification|googleinspectiontool/i;
 
 app.use(async (req, res, next) => {
@@ -335,7 +385,10 @@ app.use(async (req, res, next) => {
       const post = await getBlogPageData(blogMatch[1]);
       if (post) {
         html = replaceMeta(html, post);
-        if (isCrawler) serverSsr = buildBlogPostSsr(post);
+        if (isCrawler) {
+          serverSsr = buildBlogPostSsr(post);
+          html = html.replace('</head>', buildBlogPostHeadSchema(post) + '\n</head>');
+        }
       }
     } else if (isBlogList && isCrawler) {
       serverSsr = await buildBlogListSsr();

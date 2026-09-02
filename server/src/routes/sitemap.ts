@@ -47,7 +47,7 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
       return `
   <url>
     <loc>${BASE_URL}/blog/${p.slug}</loc>
-    ${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}
+    <lastmod>${lastmod || new Date().toISOString().split('T')[0]}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>`;
