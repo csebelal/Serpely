@@ -106,25 +106,37 @@ async function getCustomHeadCode(): Promise<string> {
   }
 }
 
-// ─── Blog post OG cache ────────────────────────────────────────────────
-interface BlogOgCache { title: string; excerpt: string; coverImage: string; slug: string; updatedAt: number }
-const blogOgCache = new Map<string, BlogOgCache>();
+// ─── Blog page cache (OG meta + full content for crawlers) ────────────
+interface BlogPageData {
+  title: string; excerpt: string; coverImage: string; slug: string;
+  author: string; authorInitials: string; publishedAt: string;
+  category: string; tagLabel: string; body: string;
+  faq: { question: string; answer: string; order?: number }[];
+  updatedAt: number;
+}
+const blogOgCache = new Map<string, BlogPageData>();
 const BLOG_OG_CACHE_TTL = 60_000;
 
-async function getBlogOgData(slug: string): Promise<BlogOgCache | null> {
+async function getBlogPageData(slug: string): Promise<BlogPageData | null> {
   const now = Date.now();
   const cached = blogOgCache.get(slug);
   if (cached && now - cached.updatedAt < BLOG_OG_CACHE_TTL) return cached;
   try {
-    const post = await BlogPost.findOne({ slug, published: true }).lean();
-    if (!post) return null;
-    const excerpt = (post as any).excerpt || (post as any).body?.replace(/<[^>]+>/g, '').slice(0, 160) || '';
-    const coverImage = (post as any).coverImage || '';
-    const data: BlogOgCache = {
-      title: (post as any).title || '',
+    const p = await BlogPost.findOne({ slug, published: true }).lean() as any;
+    if (!p) return null;
+    const excerpt = p.excerpt || p.body?.replace(/<[^>]+>/g, '').slice(0, 160) || '';
+    const data: BlogPageData = {
+      title: p.title || '',
       excerpt,
-      coverImage,
+      coverImage: p.coverImage || '',
       slug,
+      author: p.author || '',
+      authorInitials: p.authorInitials || '',
+      publishedAt: p.publishedAt || '',
+      category: p.category || '',
+      tagLabel: p.tagLabel || '',
+      body: p.body || '',
+      faq: Array.isArray(p.faq) ? p.faq : [],
       updatedAt: now,
     };
     blogOgCache.set(slug, data);
@@ -134,7 +146,19 @@ async function getBlogOgData(slug: string): Promise<BlogOgCache | null> {
   }
 }
 
-function replaceMeta(html: string, og: BlogOgCache): string {
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function sanitizeBodyHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/\son\w+=["'][^"']*["']/gi, '')
+    .replace(/href="javascript:[^"]*"/gi, 'href="#"');
+}
+
+function replaceMeta(html: string, og: BlogPageData): string {
   const origin = 'https://serpely.com';
   const url = `${origin}/blog/${og.slug}`;
   const image = og.coverImage
@@ -167,23 +191,161 @@ function replaceMeta(html: string, og: BlogOgCache): string {
   return html;
 }
 
+// ─── Server-rendered content blocks for crawlers ─────────────────────
+const STATIC_SEO_CONTENT: Record<string, { title: string; blocks: { h: string; p: string }[] }> = {
+  '/': {
+    title: 'Serpely — Agentic SEO for the AI-First Web',
+    blocks: [
+      { h: 'Agentic SEO, built for the AI-first web', p: 'A daily AI audit that tracks whether you are cited across ChatGPT, Perplexity, and Google AI Overviews, and tells you exactly what to fix next. Start your free trial now.' },
+      { h: 'Track AI citations across every answer engine', p: 'See exactly where your brand appears in ChatGPT, Claude, Gemini, Google AI Mode, and Perplexity. Know when you are cited, when you are missing, and how to close the gap.' },
+      { h: 'Daily AI audits and citation monitoring', p: 'Every page is scored 0–100 for AI visibility and citation eligibility. Continuous tracking, content gap analysis, and prioritized fix queues.' },
+      { h: 'GEO and agentic SEO made simple', p: 'Agentic SEO platform built for the AI-first web. Dashboard analytics, AI audits, E-E-A-T signals, and technical SEO all in one platform.' },
+    ],
+  },
+  '/features': {
+    title: 'Features — Serpely',
+    blocks: [
+      { h: 'Rank higher in AI search', p: 'Track keyword rankings across Google and AI-driven search result engines including LLM answer engines. Real-time visibility shifts with intelligent alerts.' },
+      { h: 'AI citation tracking', p: 'Monitor whether ChatGPT, Claude, Gemini, Perplexity, and Google AI Overviews cite your content, and see exactly where your brand appears.' },
+      { h: 'Technical site audit', p: 'Continuously audit Core Web Vitals, crawl issues, indexing gaps, and schema errors, and prioritize fixes that directly impact AI visibility.' },
+      { h: 'Content gaps and topic clusters', p: 'Discover missed opportunities with topic clusters, E-E-A-T signal tracking, and SERP intent analysis powered by agentic SEO.' },
+    ],
+  },
+  '/pricing': {
+    title: 'Pricing — Serpely',
+    blocks: [
+      { h: 'The right plan for every team', p: 'All plans include a 14-day free trial with no credit card required. Choose monthly or annual billing and scale as you grow.' },
+      { h: 'AI visibility monitoring for every budget', p: 'Track citations in ChatGPT, Perplexity, and Google AI Overviews, run daily AI audits, and get everything you need for agentic SEO.' },
+    ],
+  },
+  '/how-it-works': {
+    title: 'How It Works — Serpely',
+    blocks: [
+      { h: 'Agentic SEO in 4 simple steps', p: 'Discover how Serpely transforms your SEO workflow from manual effort to automated growth with an AI-powered continuous audit loop.' },
+      { h: 'From audit to action automatically', p: 'Serpely audits your site daily, scores every page for AI visibility and citation eligibility, and tells you exactly what to fix next.' },
+    ],
+  },
+  '/product-tour': {
+    title: 'Product Tour — Serpely',
+    blocks: [
+      { h: 'See Serpely in action', p: 'A full walkthrough of the agentic SEO platform: dashboard, AI audits, rank tracking, citation monitoring, and technical SEO tools.' },
+      { h: 'One-click CMS integration', p: 'Connect WordPress, Webflow, and more with automatic setup, sitemap detection, and no coding required.' },
+    ],
+  },
+  '/integrations': {
+    title: 'Integrations — Serpely',
+    blocks: [
+      { h: 'Works with your entire SEO stack', p: 'Connect Serpely with WordPress, Webflow, Google Search Console, GA4, Ahrefs, Semrush, and the tools your marketing team already uses.' },
+      { h: 'Get AI visibility data everywhere', p: 'Pull citation and rank data into your dashboards and reporting workflows across all major channels.' },
+    ],
+  },
+  '/about': {
+    title: 'About — Serpely',
+    blocks: [
+      { h: 'Building the future of organic search', p: 'Serpely is an agentic SEO platform built for the AI-first web, helping brands stay visible as search shifts to AI answer engines.' },
+      { h: 'Our mission', p: 'Give every brand real-time clarity on where they appear in AI search, and the tools to win those citations.' },
+    ],
+  },
+  '/faq': {
+    title: 'FAQ — Serpely',
+    blocks: [
+      { h: 'Frequently asked questions', p: 'Answers about AI search visibility, daily audits, citation tracking across ChatGPT, Perplexity, and Google AI Overviews, and how Serpely compares to traditional SEO tools.' },
+      { h: 'How is Serpely different from Semrush or Ahrefs?', p: 'Semrush and Ahrefs are data libraries. Serpely is a continuous workflow that audits daily, scores every page for AI visibility, monitors citations, and tells you exactly what to fix next.' },
+    ],
+  },
+  '/contact': {
+    title: 'Contact — Serpely',
+    blocks: [
+      { h: 'Get in touch', p: 'Contact the Serpely team about AI search visibility, agentic SEO, or a demo of the platform.' },
+    ],
+  },
+  '/changelog': {
+    title: 'What\'s New — Serpely',
+    blocks: [
+      { h: 'Product updates and changelog', p: 'Track the latest Serpely features, improvements, and fixes as we ship the agentic SEO platform.' },
+    ],
+  },
+  '/compare': {
+    title: 'Compare — Serpely',
+    blocks: [
+      { h: 'Serpely vs the competition', p: 'Compare Serpely against Semrush, Ahrefs, Moz, SE Ranking, Surfer SEO, and other SEO tools for the AI-first web.' },
+      { h: 'Made for AI visibility, not just keywords', p: 'Only Serpely tracks your presence inside ChatGPT, Perplexity, Gemini, and Google AI Overviews with daily AI audits.' },
+    ],
+  },
+};
+
+const SSRCSS = '.seo-article{max-width:760px;margin:0 auto;padding:24px;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a;line-height:1.7}.seo-article h1{font-size:32px;line-height:1.15;letter-spacing:-.02em;margin:0 0 10px}.seo-article .seo-byline{font-size:13px;color:#64748b;margin:0 0 16px}.seo-article h2{font-size:22px;font-weight:700;margin:28px 0 8px}.seo-article p{margin:0 0 14px}.seo-article a{color:#00A868}.seo-article ul{margin:0 0 14px}.seo-article li{list-style:disc;margin-left:20px}';
+
+function buildStaticSsr(path: string): string {
+  const content = STATIC_SEO_CONTENT[path];
+  if (!content) return '';
+  const blocks = content.blocks.map(b => `<h2>${escapeHtml(b.h)}</h2><p>${escapeHtml(b.p)}</p>`).join('');
+  return `<div class="seo-article"><h1>${escapeHtml(content.title.split(' — ')[0])}</h1>${blocks}</div>`;
+}
+
+async function buildBlogListSsr(): Promise<string> {
+  try {
+    const posts = await BlogPost.find({ published: true }, { title: 1, slug: 1, excerpt: 1 }).sort({ publishedAt: -1 }).limit(20).lean();
+    const items = posts.map(p => {
+      const raw = (p as any);
+      const excerpt = raw.excerpt || '';
+      return `<li><a href="/blog/${raw.slug}"><h2>${escapeHtml(raw.title || '')}</h2></a>${excerpt ? `<p>${escapeHtml(excerpt)}</p>` : ''}</li>`;
+    }).join('');
+    return `<div class="seo-article"><h1>Serpely Blog — AI Search & SEO Insights</h1><p>Latest articles about AI search visibility, citation tracking, and agentic SEO.</p><ul style="list-style:none;margin:0;padding:0">${items}</ul></div>`;
+  } catch {
+    return '';
+  }
+}
+
+function buildBlogPostSsr(post: BlogPageData): string {
+  const body = sanitizeBodyHtml(post.body || '');
+  const date = post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0, 10) : '';
+  const byline = [post.author, date].filter(Boolean).join(' · ');
+  const faq = (post.faq || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+    .map(f => `<h2>${escapeHtml(f.question)}</h2><p>${escapeHtml(f.answer)}</p>`).join('');
+  return `<div class="seo-article">
+  <h1>${escapeHtml(post.title)}</h1>
+  ${byline ? `<p class="seo-byline">${escapeHtml(byline)}</p>` : ''}
+  <ul style="list-style:none;margin:0 0 18px;padding:0"><li><a href="/blog">Serpely Blog</a></li></ul>
+  ${post.excerpt ? `<p><strong>${escapeHtml(post.excerpt)}</strong></p>` : ''}
+  ${body}
+  ${faq ? `<section><h2>Frequently Asked Questions</h2>${faq}</section>` : ''}
+</div>`;
+}
+
+const CRAWLER_RE = /googlebot|bingbot|duckduckbot|baiduspider|yandexbot|yandex|slurp|petalbot|semrushbot|ahrefsbot|majestic|rogerbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|gptbot|chatgpt-user|perplexitybot|claudebot|anthropic-ai|google-extended|ccbot|bingpreview|embedly|quora|pinterest|buffer|tumblr|isindex|gtmetrix|pingdom|screaming frog|sitebulb|google-sites-verification|googleinspectiontool/i;
+
 app.use(async (req, res, next) => {
-  if (req.method !== 'GET') return next();
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api/')) return next();
   if (req.path.startsWith('/uploads/')) return next();
 
-  // Detect /blog/:slug (not /blog itself or nested routes)
+  const previewMatch = req.path.startsWith('/blog/preview/');
+  const adminMatch = req.path.startsWith('/sp-super-admin');
   const blogMatch = req.path.match(/^\/blog\/([a-z0-9-]+)$/);
+  const isBlogList = req.path === '/blog' || req.path === '/blog/';
+  const isCrawler = CRAWLER_RE.test(req.headers['user-agent'] || '');
 
   try {
     let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+    let serverSsr = '';
 
-    // Inject blog post OG tags for crawlers
-    if (blogMatch) {
-      const og = await getBlogOgData(blogMatch[1]);
-      if (og) {
-        html = replaceMeta(html, og);
+    // Inject blog post OG meta (everyone) + full content (crawlers)
+    if (blogMatch && !previewMatch) {
+      const post = await getBlogPageData(blogMatch[1]);
+      if (post) {
+        html = replaceMeta(html, post);
+        if (isCrawler) serverSsr = buildBlogPostSsr(post);
       }
+    } else if (isBlogList && isCrawler) {
+      serverSsr = await buildBlogListSsr();
+    } else if (isCrawler && !adminMatch && !previewMatch) {
+      serverSsr = buildStaticSsr(req.path);
+    }
+
+    if (serverSsr) {
+      html = html.replace('<div id="root"></div>', `<div id="root">${serverSsr}</div>`);
+      html = html.replace('</head>', `<style>${SSRCSS}</style>\n</head>`);
     }
 
     const code = await getCustomHeadCode();
