@@ -4,6 +4,7 @@ import BlogPost from '../models/BlogPost';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 import { pick } from '../lib/utils';
+import { pingSearchEngines } from '../lib/searchEngines';
 
 const router = Router();
 
@@ -109,6 +110,7 @@ router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
     const post = new BlogPost(data);
     if (post.published && !post.publishedAt) post.publishedAt = new Date();
     await post.save();
+    if (post.published) void pingSearchEngines([post.slug]);
     res.status(201).json(post);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Server error';
@@ -123,6 +125,7 @@ router.put('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
     data.updatedAt = new Date();
     const post = await BlogPost.findByIdAndUpdate(req.params.id, data, { new: true });
     if (!post) { res.status(404).json({ error: 'Post not found' }); return; }
+    if (post.published) void pingSearchEngines([post.slug]);
     res.json(post);
   } catch {
     res.status(500).json({ error: 'Server error' });
@@ -148,6 +151,10 @@ router.patch('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
     const update: Record<string, unknown> = { published, updatedAt: new Date() };
     if (published) update.publishedAt = new Date();
     await BlogPost.updateMany({ _id: { $in: ids } }, update);
+    if (published) {
+      const slugs = (await BlogPost.find({ _id: { $in: ids }, published: true }).select('slug')).map(p => p.slug);
+      void pingSearchEngines(slugs);
+    }
     await logAction(req, 'update', 'blog', `bulk:${ids.length} published:${published}`);
     res.json({ success: true, count: ids.length });
   } catch {

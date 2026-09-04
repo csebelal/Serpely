@@ -41,6 +41,7 @@ import sitemapRouter from './routes/sitemap';
 import AdminUser from './models/AdminUser';
 import SiteSettings from './models/SiteSettings';
 import BlogPost from './models/BlogPost';
+import { getIndexNowKey } from './lib/searchEngines';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -82,6 +83,16 @@ app.use('/api/keys', apiKeysRouter);
 
 app.use('/api', sitemapRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+
+// IndexNow key-proof file (https://serpely.com/<key>.txt) — required by Bing
+app.get('/:key.txt', (req, res) => {
+  const key = getIndexNowKey();
+  if (req.params.key === key) {
+    res.type('text/plain').send(key);
+  } else {
+    res.status(404).send('');
+  }
+});
 
 // ─── Frontend: Serve index.html with injected custom head code ──────────
 const frontendDist = path.resolve(__dirname, '../../app/dist');
