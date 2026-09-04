@@ -24,17 +24,12 @@ export async function pingSearchEngines(slugs: string[]): Promise<void> {
   };
 
   const pings: Promise<unknown>[] = [
-    // Bing IndexNow (also read by Google)
+    // Bing IndexNow (also read by Google) — the single standard submission point.
     fetch('https://api.indexnow.org/indexnow', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify(indexNowBody),
     }).then(r => { console.log(`[IndexNow] ${r.status} for ${unique.length} url(s)`); return r; }),
-
-    // Google lightweight sitemap ping (best-effort nudge)
-    fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(`${BASE_URL}/api/sitemap.xml`)}`)
-      .then(r => console.log(`[GooglePing] ${r.status}`))
-      .catch(() => {}),
   ];
 
   // Fire-and-forget: never block or throw into the request handler.
