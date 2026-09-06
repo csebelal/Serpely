@@ -376,6 +376,32 @@ function buildBlogPostHeadSchema(post: BlogPageData): string {
 
 const CRAWLER_RE = /googlebot|bingbot|duckduckbot|baiduspider|yandexbot|yandex|slurp|petalbot|semrushbot|ahrefsbot|majestic|rogerbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|gptbot|chatgpt-user|perplexitybot|claudebot|anthropic-ai|google-extended|ccbot|bingpreview|embedly|quora|pinterest|buffer|tumblr|isindex|gtmetrix|pingdom|screaming frog|sitebulb|google-sites-verification|googleinspectiontool/i;
 
+// Real HTTP 404 page for genuinely-missing blog slugs (prevents Google soft-404 verdicts)
+const NOT_FOUND_HTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>404 — Page Not Found | Serpely</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #e5e7eb; display: flex; align-items: center; justify-content: center; min-height: 80vh; margin: 0; padding: 24px; text-align: center; }
+      .wrap { max-width: 480px; }
+      h1 { font-size: 72px; margin: 0; color: #6366f1; }
+      p { font-size: 18px; line-height: 1.6; color: #9ca3af; }
+      a { display: inline-block; margin-top: 24px; color: #fff; background: #6366f1; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>404</h1>
+      <p>This page doesn't exist or was removed.</p>
+      <a href="/">Back to Serpely</a>
+    </div>
+  </body>
+</html>
+`;
+
 app.use(async (req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   if (req.path.startsWith('/api/')) return next();
@@ -400,6 +426,10 @@ app.use(async (req, res, next) => {
           serverSsr = buildBlogPostSsr(post);
           html = html.replace('</head>', buildBlogPostHeadSchema(post) + '\n</head>');
         }
+      } else {
+        // Genuinely-missing slug → real 404, not soft-404 (avoids Google "soft 404" verdict)
+        res.status(404).type('html').send(NOT_FOUND_HTML);
+        return;
       }
     } else if (isBlogList && isCrawler) {
       serverSsr = await buildBlogListSsr();
