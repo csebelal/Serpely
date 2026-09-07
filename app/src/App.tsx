@@ -1,58 +1,70 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
-import { Profile } from './pages/auth/Profile';
-import { Home } from './pages/Home';
-import { About } from './pages/About';
-import { Features } from './pages/Features';
-import { Pricing } from './pages/Pricing';
-import { Contact } from './pages/Contact';
-import { Blog } from './pages/Blog';
-import { BlogPost } from './pages/BlogPost';
-import { PreviewBlogPost } from './pages/PreviewBlogPost';
-import { FAQ } from './pages/FAQ';
-import { ProductTour } from './pages/ProductTour';
-import { Integrations } from './pages/Integrations';
-import { HowItWorks } from './pages/HowItWorks';
-import { Compare } from './pages/Compare';
-import { CompareVs } from './pages/CompareVs';
-import { Changelog } from './pages/Changelog';
 import { getSettings, trackPageView } from './lib/api';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PopupRenderer } from './components/PopupRenderer';
-
-
-// Admin
-import { AdminLogin } from './pages/admin/Login';
-import { Dashboard } from './pages/admin/Dashboard';
-import { NavbarEditor } from './pages/admin/NavbarEditor';
-import { FooterEditor } from './pages/admin/FooterEditor';
-import { BlogManager } from './pages/admin/BlogManager';
-import { BlogPostEditor } from './pages/admin/BlogPostEditor';
-import { PricingEditor } from './pages/admin/PricingEditor';
-import { TestimonialsManager } from './pages/admin/TestimonialsManager';
-import { FAQManager } from './pages/admin/FAQManager';
-import { MediaLibrary } from './pages/admin/MediaLibrary';
-import { Settings } from './pages/admin/Settings';
-import { Users } from './pages/admin/Users';
-import { AboutEditor } from './pages/admin/AboutEditor';
-import { IntegrationsEditor } from './pages/admin/IntegrationsEditor';
-import { FeaturesEditor } from './pages/admin/FeaturesEditor';
-import { CompareEditor } from './pages/admin/CompareEditor';
-import { HomeEditor } from './pages/admin/HomeEditor';
-import { ContactInbox } from './pages/admin/ContactInbox';
-import { SubscribersManager } from './pages/admin/SubscribersManager';
-import { PopupManager } from './pages/admin/PopupManager';
-import { ChangelogManager } from './pages/admin/ChangelogManager';
-import { SEOManager } from './pages/admin/SEOManager';
-import { AuditLogPage } from './pages/admin/AuditLogPage';
-import { APIKeysManager } from './pages/admin/APIKeysManager';
-import { AdminLayout } from './components/admin/AdminLayout';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
+
+// Public pages — code-split per route
+const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
+const Profile = lazy(() => import('./pages/auth/Profile').then(m => ({ default: m.Profile })));
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const About = lazy(() => import('./pages/About').then(m => ({ default: m.About })));
+const Features = lazy(() => import('./pages/Features').then(m => ({ default: m.Features })));
+const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
+const Contact = lazy(() => import('./pages/Contact').then(m => ({ default: m.Contact })));
+const Blog = lazy(() => import('./pages/Blog').then(m => ({ default: m.Blog })));
+const BlogPost = lazy(() => import('./pages/BlogPost').then(m => ({ default: m.BlogPost })));
+const PreviewBlogPost = lazy(() => import('./pages/PreviewBlogPost').then(m => ({ default: m.PreviewBlogPost })));
+const FAQ = lazy(() => import('./pages/FAQ').then(m => ({ default: m.FAQ })));
+const ProductTour = lazy(() => import('./pages/ProductTour').then(m => ({ default: m.ProductTour })));
+const Integrations = lazy(() => import('./pages/Integrations').then(m => ({ default: m.Integrations })));
+const HowItWorks = lazy(() => import('./pages/HowItWorks').then(m => ({ default: m.HowItWorks })));
+const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
+const CompareVs = lazy(() => import('./pages/CompareVs').then(m => ({ default: m.CompareVs })));
+const Changelog = lazy(() => import('./pages/Changelog').then(m => ({ default: m.Changelog })));
+
+// Admin pages — code-split per route
+const AdminLogin = lazy(() => import('./pages/admin/Login').then(m => ({ default: m.AdminLogin })));
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const Dashboard = lazy(() => import('./pages/admin/Dashboard').then(m => ({ default: m.Dashboard })));
+const NavbarEditor = lazy(() => import('./pages/admin/NavbarEditor').then(m => ({ default: m.NavbarEditor })));
+const FooterEditor = lazy(() => import('./pages/admin/FooterEditor').then(m => ({ default: m.FooterEditor })));
+const BlogManager = lazy(() => import('./pages/admin/BlogManager').then(m => ({ default: m.BlogManager })));
+const BlogPostEditor = lazy(() => import('./pages/admin/BlogPostEditor').then(m => ({ default: m.BlogPostEditor })));
+const PricingEditor = lazy(() => import('./pages/admin/PricingEditor').then(m => ({ default: m.PricingEditor })));
+const TestimonialsManager = lazy(() => import('./pages/admin/TestimonialsManager').then(m => ({ default: m.TestimonialsManager })));
+const FAQManager = lazy(() => import('./pages/admin/FAQManager').then(m => ({ default: m.FAQManager })));
+const MediaLibrary = lazy(() => import('./pages/admin/MediaLibrary').then(m => ({ default: m.MediaLibrary })));
+const Settings = lazy(() => import('./pages/admin/Settings').then(m => ({ default: m.Settings })));
+const Users = lazy(() => import('./pages/admin/Users').then(m => ({ default: m.Users })));
+const AboutEditor = lazy(() => import('./pages/admin/AboutEditor').then(m => ({ default: m.AboutEditor })));
+const IntegrationsEditor = lazy(() => import('./pages/admin/IntegrationsEditor').then(m => ({ default: m.IntegrationsEditor })));
+const FeaturesEditor = lazy(() => import('./pages/admin/FeaturesEditor').then(m => ({ default: m.FeaturesEditor })));
+const CompareEditor = lazy(() => import('./pages/admin/CompareEditor').then(m => ({ default: m.CompareEditor })));
+const HomeEditor = lazy(() => import('./pages/admin/HomeEditor').then(m => ({ default: m.HomeEditor })));
+const ContactInbox = lazy(() => import('./pages/admin/ContactInbox').then(m => ({ default: m.ContactInbox })));
+const SubscribersManager = lazy(() => import('./pages/admin/SubscribersManager').then(m => ({ default: m.SubscribersManager })));
+const PopupManager = lazy(() => import('./pages/admin/PopupManager').then(m => ({ default: m.PopupManager })));
+const ChangelogManager = lazy(() => import('./pages/admin/ChangelogManager').then(m => ({ default: m.ChangelogManager })));
+const SEOManager = lazy(() => import('./pages/admin/SEOManager').then(m => ({ default: m.SEOManager })));
+const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
+const APIKeysManager = lazy(() => import('./pages/admin/APIKeysManager').then(m => ({ default: m.APIKeysManager })));
+
+function PageLoader() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
+        <span className="w-4 h-4 rounded-full border-2 border-current animate-spin" style={{ borderTopColor: 'transparent', opacity: 0.6 }} />
+        Loading…
+      </div>
+    </div>
+  );
+}
 
 function MaintenancePage() {
   return (
@@ -127,45 +139,47 @@ function App() {
       <Router>
         <ScrollToTop />
         <AnalyticsTracker />
-        <Routes>
-          {/* Admin routes — no Navbar/Footer */}
-          <Route path="/sp-super-admin/login" element={<AdminLogin />} />
-          <Route
-            path="/sp-super-admin"
-            element={
-              <ProtectedRoute>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="home-editor" element={<HomeEditor />} />
-            <Route path="about" element={<AboutEditor />} />
-            <Route path="integrations-editor" element={<IntegrationsEditor />} />
-            <Route path="features-editor" element={<FeaturesEditor />} />
-            <Route path="compare-editor" element={<CompareEditor />} />
-            <Route path="navbar" element={<NavbarEditor />} />
-            <Route path="footer" element={<FooterEditor />} />
-            <Route path="blog" element={<BlogManager />} />
-            <Route path="blog/:id" element={<BlogPostEditor />} />
-            <Route path="pricing" element={<PricingEditor />} />
-            <Route path="testimonials" element={<TestimonialsManager />} />
-            <Route path="faq" element={<FAQManager />} />
-            <Route path="media" element={<MediaLibrary />} />
-            <Route path="users" element={<Users />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="contact" element={<ContactInbox />} />
-            <Route path="subscribers" element={<SubscribersManager />} />
-            <Route path="popups" element={<PopupManager />} />
-            <Route path="changelog" element={<ChangelogManager />} />
-            <Route path="seo" element={<SEOManager />} />
-            <Route path="audit" element={<AuditLogPage />} />
-            <Route path="api-keys" element={<APIKeysManager />} />
-          </Route>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Admin routes — no Navbar/Footer */}
+            <Route path="/sp-super-admin/login" element={<AdminLogin />} />
+            <Route
+              path="/sp-super-admin"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="home-editor" element={<HomeEditor />} />
+              <Route path="about" element={<AboutEditor />} />
+              <Route path="integrations-editor" element={<IntegrationsEditor />} />
+              <Route path="features-editor" element={<FeaturesEditor />} />
+              <Route path="compare-editor" element={<CompareEditor />} />
+              <Route path="navbar" element={<NavbarEditor />} />
+              <Route path="footer" element={<FooterEditor />} />
+              <Route path="blog" element={<BlogManager />} />
+              <Route path="blog/:id" element={<BlogPostEditor />} />
+              <Route path="pricing" element={<PricingEditor />} />
+              <Route path="testimonials" element={<TestimonialsManager />} />
+              <Route path="faq" element={<FAQManager />} />
+              <Route path="media" element={<MediaLibrary />} />
+              <Route path="users" element={<Users />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="contact" element={<ContactInbox />} />
+              <Route path="subscribers" element={<SubscribersManager />} />
+              <Route path="popups" element={<PopupManager />} />
+              <Route path="changelog" element={<ChangelogManager />} />
+              <Route path="seo" element={<SEOManager />} />
+              <Route path="audit" element={<AuditLogPage />} />
+              <Route path="api-keys" element={<APIKeysManager />} />
+            </Route>
 
-          {/* Public routes — maintenance mode aware */}
-          <Route path="*" element={<PublicShell />} />
-        </Routes>
+            {/* Public routes — maintenance mode aware */}
+            <Route path="*" element={<PublicShell />} />
+          </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );
