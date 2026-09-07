@@ -17,6 +17,7 @@ export function AdminLogin() {
     try {
       const { data } = await login(email, password);
       localStorage.setItem('serpely_token', data.token);
+      localStorage.setItem('serpely_login_time', Date.now().toString());
       navigate('/sp-super-admin');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
