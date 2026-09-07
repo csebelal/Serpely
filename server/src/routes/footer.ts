@@ -3,7 +3,7 @@ import FooterConfig from '../models/FooterConfig';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { pick } from '../lib/utils';
 
-const FOOTER_FIELDS = ['columns', 'socialLinks', 'bottomText'] as const;
+const FOOTER_FIELDS = ['tagline', 'columns', 'socialLinks', 'productHuntUrl', 'productHuntBtnText', 'askAiPrompt', 'copyright', 'systemStatus', 'lightLogo', 'darkLogo', 'cieloOpsLightLogo', 'cieloOpsDarkLogo'] as const;
 
 const router = Router();
 

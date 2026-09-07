@@ -1,6 +1,6 @@
 ﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { blogPosts, type BlogPostData as Article } from '@/data/blogPosts';
-import { getPosts, getFeaturedPosts } from '@/lib/api';
+import { getPosts, getFeaturedPosts, subscribe } from '@/lib/api';
 import { Link } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
 /* ─── Inline Styles ─── */
@@ -752,6 +752,21 @@ export function Blog() {
   const [prevDisabled, setPrevDisabled] = useState(true);
   const [nextDisabled, setNextDisabled] = useState(false);
 
+  /* Newsletter */
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterState, setNewsletterState] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const handleNewsletterSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim() || newsletterState === "submitting") return;
+    setNewsletterState("submitting");
+    try {
+      await subscribe(newsletterEmail.trim(), "blog");
+      setNewsletterState("success");
+    } catch {
+      setNewsletterState("error");
+    }
+  }, [newsletterEmail, newsletterState]);
+
   /* Theme init */
   useEffect(() => {
     try {
@@ -855,7 +870,7 @@ export function Blog() {
       {/* ═══ NAVBAR ═══ */}
       <nav id="navbar" className={scrolled ? "scrolled" : ""}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="serpely-homepage-v4.html" className="flex items-center flex-shrink-0">
+          <a href="/" className="flex items-center flex-shrink-0">
             <img
               src="/Serpely Logo PNG/Serpely - Logo_Logo - Main.png"
               alt="Serpely"
@@ -879,26 +894,26 @@ export function Blog() {
                 <div className="mega-grid">
                   <div className="mega-col">
                     <div className="mega-title">Explore</div>
-                    <a className="mega-link" href="serpely-homepage-v4.html#how-it-works">
+                    <a className="mega-link" href="/how-it-works">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M12 3v4"/><path d="M12 17v4"/><path d="M3 12h4"/><path d="M17 12h4"/><circle cx="12" cy="12" r="3.5"/></svg></div>
                       <div className="dd-text"><strong>How It Works</strong><span>Continuous SEO workflow</span></div>
                     </a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features">
+                    <a className="mega-link" href="/features">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7l5-2 6 2 5-2v12l-5 2-6-2-5 2z"/><path d="M9 5v12"/><path d="M15 7v12"/></svg></div>
                       <div className="dd-text"><strong>Product Roadmap</strong><span>What's coming next</span></div>
                     </a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#testimonials">
+                    <a className="mega-link" href="/#testimonials">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.47L21 9.4l-4.5 4.39L17.54 21 12 18.1 6.46 21l1.04-7.21L3 9.4l6.3-.93z"/></svg></div>
                       <div className="dd-text"><strong>Customer Stories</strong><span>Real results from real teams</span></div>
                     </a>
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Compare</div>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Semrush</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Ahrefs</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Surfer SEO</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Clearscope</strong></div></a>
-                    <a className="mega-footer" href="#">See all comparisons <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Semrush</strong></div></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Ahrefs</strong></div></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Surfer SEO</strong></div></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Clearscope</strong></div></a>
+                    <a className="mega-footer" href="/compare">See all comparisons <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
                   </div>
                 </div>
               </div>
@@ -919,27 +934,27 @@ export function Blog() {
                 <div className="mega-grid">
                   <div className="mega-col">
                     <div className="mega-title">Features</div>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features">
+                    <a className="mega-link" href="/features">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg></div>
                       <div className="dd-text"><strong>AI Rank Tracking</strong><span>Track Google, AI Overviews, and LLM visibility from one workspace.</span></div>
                     </a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features">
+                    <a className="mega-link" href="/features">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18"/></svg></div>
                       <div className="dd-text"><strong>GEO Monitoring</strong><span>See citation visibility and brand presence across AI search surfaces.</span></div>
                     </a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features">
+                    <a className="mega-link" href="/features">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div>
                       <div className="dd-text"><strong>Technical Site Audit</strong><span>Continuously monitor crawl issues, vitals, and schema health.</span></div>
                     </a>
-                    <a className="mega-link" href="serpely-homepage-v4.html#features">
+                    <a className="mega-link" href="/features">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12h8"/><path d="M12 8v8"/><path d="M4.93 19.07a10 10 0 1 1 14.14 0"/></svg></div>
                       <div className="dd-text"><strong>Content Prioritization Queue</strong><span>Know which pages to update first with AI-ranked recommendations.</span></div>
                     </a>
-                    <a className="mega-footer" href="serpely-homepage-v4.html#features">See All Features →</a>
+                    <a className="mega-footer" href="/features">See All Features →</a>
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Integrations</div>
-                    <a className="mega-link simple" href="#">
+                    <a className="mega-link simple" href="/integrations">
                       <div className="dd-icon">
                         <svg viewBox="0 0 24 24" className="no-invert" fill="none">
                           <path d="M10 4a6 6 0 0 1 6 6h-6V4z" fill="#EA4335"/>
@@ -952,19 +967,19 @@ export function Blog() {
                       </div>
                       <div className="dd-text"><strong>Google Search Console</strong></div>
                     </a>
-                    <a className="mega-link simple" href="#">
+                    <a className="mega-link simple" href="/integrations">
                       <div className="dd-icon"><img src="/Other Logos/Logo_Google_Analytics.svg.png" alt="GA4" /></div>
                       <div className="dd-text"><strong>Google Analytics 4</strong></div>
                     </a>
-                    <a className="mega-link simple" href="#">
+                    <a className="mega-link simple" href="/integrations">
                       <div className="dd-icon"><img src="/Other Logos/dataforseo.webp" alt="DataForSEO" /></div>
                       <div className="dd-text"><strong>DataForSEO</strong></div>
                     </a>
-                    <a className="mega-link simple" href="#">
+                    <a className="mega-link simple" href="/integrations">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12h8"/><path d="M12 8v8"/><path d="M4 12a8 8 0 0 1 8-8"/><path d="M20 12a8 8 0 0 1-8 8"/></svg></div>
                       <div className="dd-text"><strong>OpenAI / LLM Connectors</strong></div>
                     </a>
-                    <a className="mega-footer" href="#">All Integrations →</a>
+                    <a className="mega-footer" href="/integrations">All Integrations →</a>
                   </div>
                 </div>
               </div>
@@ -982,23 +997,23 @@ export function Blog() {
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
               </button>
               <div className="dropdown-menu">
-                <a href="serpely-blog.html"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div><div className="dd-text">Blog<span>SEO & GEO insights</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4"/><path d="M4 7h5l2 2h3l2-2h4"/><path d="M4 17h16"/></svg></div><div className="dd-text">Affiliate Program<span>Earn 30% recurring</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div><div className="dd-text">FAQ<span>Common questions answered</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></div><div className="dd-text">Technical Docs<span>API & integration guides</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div className="dd-text">Feedback<span>Shape the product</span></div></a>
+                <a href="/blog"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div><div className="dd-text">Blog<span>SEO & GEO insights</span></div></a>
+                <a href="/register"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4"/><path d="M4 7h5l2 2h3l2-2h4"/><path d="M4 17h16"/></svg></div><div className="dd-text">Affiliate Program<span>Earn 30% recurring</span></div></a>
+                <a href="/faq"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div><div className="dd-text">FAQ<span>Common questions answered</span></div></a>
+                <a href="/integrations"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></div><div className="dd-text">Technical Docs<span>API & integration guides</span></div></a>
+                <a href="/contact"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div className="dd-text">Feedback<span>Shape the product</span></div></a>
                 <div className="dropdown-divider" />
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M9 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M9 14h6"/><path d="M9 10h6"/></svg></div><div className="dd-text">Terms of Service<span>Legal & privacy</span></div></a>
+                <a href="/contact"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M9 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M9 14h6"/><path d="M9 10h6"/></svg></div><div className="dd-text">Terms of Service<span>Legal & privacy</span></div></a>
               </div>
             </div>
 
-            <a href="#" className="btn-audit ml-1">
+            <a href="/pricing" className="btn-audit ml-1">
               <span className="audit-pulse" />
               Free Site Audit
             </a>
 
             <a
-              href="serpely-homepage-v4.html#pricing"
+              href="/pricing"
               className="px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors"
               style={{ color: "var(--text-soft)", letterSpacing: "-0.012em" }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; (e.currentTarget as HTMLElement).style.background = "var(--bg-subtle)"; }}
@@ -1019,7 +1034,7 @@ export function Blog() {
               <svg className="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             </button>
             <a
-              href="#"
+              href="/login"
               className="hidden sm:block text-[14px] font-semibold transition-colors px-3 py-2"
               style={{ color: "var(--text-soft)", letterSpacing: "-0.012em" }}
               onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; }}
@@ -1027,7 +1042,7 @@ export function Blog() {
             >
               Login
             </a>
-            <a href="#" className="btn-accent" style={{ padding: "9px 16px", fontSize: "13.5px" }}>
+            <a href="/register" className="btn-accent" style={{ padding: "9px 16px", fontSize: "13.5px" }}>
               Start Free Trial
               <ArrowSvg />
             </a>
@@ -1190,15 +1205,15 @@ export function Blog() {
                   <h2 className="font-display text-2xl lg:text-3xl" style={{ fontWeight: 900 }}>Lead magnets for AI search and website growth.</h2>
                 </div>
                 <div className="grid sm:grid-cols-3 gap-3 lg:min-w-[650px]">
-                  <a href="#" className="resource-chip">
+                  <a href="#newsletter" className="resource-chip">
                     <span className="resource-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></span>
                     <span className="text-[14px] font-black">GEO Checklist</span>
                   </a>
-                  <a href="#" className="resource-chip">
+                  <a href="#newsletter" className="resource-chip">
                     <span className="resource-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
                     <span className="text-[14px] font-black">AEO Content Brief</span>
                   </a>
-                  <a href="#" className="resource-chip">
+                  <a href="#newsletter" className="resource-chip">
                     <span className="resource-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg></span>
                     <span className="text-[14px] font-black">Technical SEO Audit</span>
                   </a>
@@ -1219,14 +1234,24 @@ export function Blog() {
             <p className="mb-8 leading-relaxed font-medium" style={{ color: "var(--text-soft)" }}>
               Get one practical insight every week on Agentic SEO, GEO, and AI visibility.
             </p>
-            <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onSubmit={(e) => e.preventDefault()}>
-              <input type="email" placeholder="Enter your work email" className="flex-1 px-4 py-3 rounded-xl text-sm transition-all" />
-              <button className="btn-accent whitespace-nowrap" type="submit">
-                Get Weekly Insights
+            <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onSubmit={handleNewsletterSubmit}>
+              <input
+                type="email"
+                required
+                placeholder="Enter your work email"
+                className="flex-1 px-4 py-3 rounded-xl text-sm transition-all"
+                value={newsletterEmail}
+                onChange={e => setNewsletterEmail(e.target.value)}
+              />
+              <button className="btn-accent whitespace-nowrap" type="submit" disabled={newsletterState === "submitting"}>
+                {newsletterState === "submitting" ? "Subscribing..." : "Get Weekly Insights"}
                 <ArrowSvg />
               </button>
             </form>
-            <p className="text-[12px] mt-3 font-semibold" style={{ color: "var(--text-faint)" }}>No spam. Unsubscribe anytime.</p>
+            {newsletterState === "success"
+              ? <p className="text-[12px] mt-3 font-semibold" style={{ color: "#00C27A" }}>Subscribed! Check your inbox for confirmation.</p>
+              : <p className="text-[12px] mt-3 font-semibold" style={{ color: "var(--text-faint)" }}>No spam. Unsubscribe anytime.</p>}
+            {newsletterState === "error" && <p className="text-[12px] mt-1 font-semibold" style={{ color: "#E5484D" }}>Something went wrong. Please try again.</p>}
           </div>
         </section>
       </main>

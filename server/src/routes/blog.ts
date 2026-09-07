@@ -132,6 +132,19 @@ router.put('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// DELETE /api/blog/bulk (auth) — bulk delete (registered before /:id so 'bulk' isn't matched as an id)
+router.delete('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    const { ids } = req.body as { ids: string[] };
+    if (!ids?.length) { res.status(400).json({ error: 'ids required' }); return; }
+    await BlogPost.deleteMany({ _id: { $in: ids } });
+    await logAction(req, 'delete', 'blog', `bulk:${ids.length}`);
+    res.json({ success: true, count: ids.length });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // DELETE /api/blog/:id  (auth)
 router.delete('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
@@ -156,19 +169,6 @@ router.patch('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
       void pingSearchEngines(slugs);
     }
     await logAction(req, 'update', 'blog', `bulk:${ids.length} published:${published}`);
-    res.json({ success: true, count: ids.length });
-  } catch {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// DELETE /api/blog/bulk (auth) — bulk delete
-router.delete('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
-  try {
-    const { ids } = req.body as { ids: string[] };
-    if (!ids?.length) { res.status(400).json({ error: 'ids required' }); return; }
-    await BlogPost.deleteMany({ _id: { $in: ids } });
-    await logAction(req, 'delete', 'blog', `bulk:${ids.length}`);
     res.json({ success: true, count: ids.length });
   } catch {
     res.status(500).json({ error: 'Server error' });

@@ -48,24 +48,24 @@ router.patch('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/subscribers/:id (auth)
-router.delete('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
-  try {
-    await Subscriber.findByIdAndDelete(req.params.id);
-    await logAction(req, 'delete', 'subscriber', `id:${req.params.id}`);
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// DELETE /api/subscribers/bulk (auth)
+// DELETE /api/subscribers/bulk (auth) — registered before /:id so 'bulk' isn't matched as an id
 router.delete('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { ids } = req.body as { ids: string[] };
     if (!ids?.length) { res.status(400).json({ error: 'ids required' }); return; }
     await Subscriber.deleteMany({ _id: { $in: ids } });
     await logAction(req, 'delete', 'subscriber', `bulk:${ids.length}`);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/subscribers/:id (auth)
+router.delete('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
+  try {
+    await Subscriber.findByIdAndDelete(req.params.id);
+    await logAction(req, 'delete', 'subscriber', `id:${req.params.id}`);
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });

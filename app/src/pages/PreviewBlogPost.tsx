@@ -222,7 +222,7 @@ export function PreviewBlogPost() {
           <nav className="breadcrumb" aria-label="Breadcrumb">
             <span className="bc-item"><Link to="/blog">Blog</Link></span>
             <span className="bc-sep">›</span>
-            <span className="bc-item"><a href="#">{data.tagLabel}</a></span>
+            <span className="bc-item"><a href="/blog">{data.tagLabel}</a></span>
             <span className="bc-sep">›</span>
             <span className="bc-item bc-current">{data.title}</span>
           </nav>

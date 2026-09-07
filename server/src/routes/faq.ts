@@ -3,7 +3,7 @@ import FaqItem from '../models/FaqItem';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { pick } from '../lib/utils';
 
-const FAQ_FIELDS = ['question', 'answer', 'section', 'order', 'isVisible'] as const;
+const FAQ_FIELDS = ['question', 'answer', 'category', 'section', 'order', 'isVisible'] as const;
 
 const router = Router();
 

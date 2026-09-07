@@ -36,6 +36,7 @@ const colHrefs: Record<string, string> = {
 export function Footer() {
   const [isDark, setIsDark] = useState(false);
   const [socialHrefs, setSocialHrefs] = useState<Record<string, string>>({});
+  const [productHuntUrl, setProductHuntUrl] = useState('https://www.producthunt.com');
 
   useEffect(() => {
     // Sync after all sibling effects (e.g. Navbar localStorage restore) have run
@@ -52,6 +53,7 @@ export function Footer() {
       const map: Record<string, string> = {};
       (r.data.socialLinks || []).forEach(s => { map[s.platform] = s.href; });
       setSocialHrefs(map);
+      if (r.data.productHuntUrl && r.data.productHuntUrl !== '#') setProductHuntUrl(r.data.productHuntUrl);
     }).catch(() => {});
   }, []);
 
@@ -132,7 +134,7 @@ export function Footer() {
             </div>
 
             {/* Product Hunt */}
-            <a href="#" className="inline-flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
+            <a href={productHuntUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
               style={{ border: '1px solid hsl(var(--border))', background: 'var(--card-bg)', color: 'var(--text-soft)' }}
               onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#00A868'; el.style.borderColor = '#00C27A'; }}
               onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text-soft)'; el.style.borderColor = 'hsl(var(--border))'; }}>

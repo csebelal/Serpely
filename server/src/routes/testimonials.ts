@@ -3,7 +3,7 @@ import Testimonial from '../models/Testimonial';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { pick } from '../lib/utils';
 
-const TESTIMONIAL_FIELDS = ['name', 'role', 'company', 'avatar', 'content', 'rating', 'isVisible', 'order'] as const;
+const TESTIMONIAL_FIELDS = ['quote', 'name', 'role', 'initial', 'isVisible', 'order'] as const;
 
 const router = Router();
 

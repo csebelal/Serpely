@@ -161,7 +161,7 @@ interface IntegrationCategory { category:string; items:IntegrationItem[]; }
 
 const defaultIntegrations: IntegrationCategory[] = [
   { category:'Analytics', items:[
-    { name:'Google Analytics',      description:'Track website traffic and user behavior',    img:'/Other Logos/Google_Analytics_Logo_2019.svg.png', abbr:'GA', color:'#E37400', connected:true  },
+    { name:'Google Analytics',      description:'Track website traffic and user behavior',    img:'/processed-logos/ribbon-ga4.png', abbr:'GA', color:'#E37400', connected:true  },
     { name:'Google Search Console', description:'Monitor search performance and indexing',    img:'/processed-logos/ribbon-gsc.png',                  abbr:'SC', color:'#4285F4', connected:true  },
     { name:'Adobe Analytics',       description:'Enterprise analytics and reporting',         img:'',                                                 abbr:'AA', color:'#E34220', connected:false },
   ]},
@@ -172,7 +172,7 @@ const defaultIntegrations: IntegrationCategory[] = [
     { name:'Contentful', description:'Headless CMS for modern websites',      img:'',                                     abbr:'CF', color:'#2478CC', connected:false },
   ]},
   { category:'Communication', items:[
-    { name:'Slack',           description:'Get alerts and reports in Slack',  img:'/Other Logos/Slack-logo.png', abbr:'SL', color:'#4A154B', connected:false },
+    { name:'Slack',           description:'Get alerts and reports in Slack',  img:'', abbr:'SL', color:'#4A154B', connected:false },
     { name:'Microsoft Teams', description:'Collaborate with your team',       img:'',                            abbr:'MT', color:'#4B53BC', connected:false },
     { name:'Discord',         description:'Community and team communication', img:'',                            abbr:'DC', color:'#5865F2', connected:false },
   ]},

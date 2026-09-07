@@ -3,7 +3,7 @@ import NavItem from '../models/NavItem';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { pick } from '../lib/utils';
 
-const NAV_FIELDS = ['label', 'href', 'order', 'children'] as const;
+const NAV_FIELDS = ['label', 'href', 'order', 'isCta', 'isVisible', 'dropdownItems'] as const;
 
 const router = Router();
 

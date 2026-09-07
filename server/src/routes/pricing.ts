@@ -3,7 +3,7 @@ import PricingPlan from '../models/PricingPlan';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { pick } from '../lib/utils';
 
-const PRICING_FIELDS = ['name', 'price', 'period', 'description', 'features', 'ctaText', 'ctaHref', 'featured', 'order'] as const;
+const PRICING_FIELDS = ['name', 'badge', 'description', 'monthlyPrice', 'annualPrice', 'annualBilledAs', 'features', 'isFeatured', 'ctaLabel', 'order'] as const;
 
 const router = Router();
 

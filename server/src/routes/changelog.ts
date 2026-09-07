@@ -4,7 +4,7 @@ import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 import { pick } from '../lib/utils';
 
-const CHANGELOG_FIELDS = ['title', 'slug', 'body', 'published', 'publishedAt', 'tags'] as const;
+const CHANGELOG_FIELDS = ['title', 'slug', 'body', 'type', 'published', 'publishedAt'] as const;
 
 const router = Router();
 

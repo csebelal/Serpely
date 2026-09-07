@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getPricing, getFaq } from '@/lib/api';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -101,6 +102,7 @@ const faqs = [
 ];
 
 export function Pricing() {
+  const navigate = useNavigate();
   useSEOMeta('pricing', { title: 'Pricing — Serpely', description: 'Simple, transparent pricing for agencies, startups, and enterprise SEO teams.' });
   const [isAnnual, setIsAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -363,6 +365,7 @@ export function Pricing() {
 
                   {/* CTA */}
                   <button
+                    onClick={() => navigate('/register')}
                     style={{
                       display: 'flex', width: '100%', justifyContent: 'center', alignItems: 'center',
                       marginTop: 'auto',

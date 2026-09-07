@@ -115,6 +115,7 @@ export function Contact() {
   useSEOMeta('contact', { title: 'Contact Serpely', description: 'Get in touch with the Serpely team. We\'d love to hear from you.' });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState('');
   const [formData, setFormData] = useState({ name: '', email: '', company: '', website: '', message: '' });
   const pageRef = useRef<HTMLDivElement>(null);
@@ -151,12 +152,12 @@ export function Contact() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setSubmitError(null);
     try {
       await submitContact({ ...formData, topic: selectedTopic || undefined });
       setIsSubmitted(true);
     } catch {
-      // still show success to user even if API fails
-      setIsSubmitted(true);
+      setSubmitError('Something went wrong. Please try again or email us directly.');
     } finally {
       setSubmitting(false);
     }
@@ -338,6 +339,12 @@ export function Contact() {
                       </>
                     )}
                   </button>
+
+                  {submitError && (
+                    <p className="text-center text-xs font-bold" style={{ color: '#E5484D' }}>
+                      {submitError}
+                    </p>
+                  )}
 
                   <p className="text-center text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
                     By submitting, you agree to our{' '}

@@ -1,6 +1,6 @@
 ﻿import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { getPost, getPosts, type BlogPostData as ApiPost } from '@/lib/api';
+import { getPost, getPosts, subscribe, type BlogPostData as ApiPost } from '@/lib/api';
 import { injectSchema, removeSchema } from '@/lib/schema';
 
 function extractHeadings(html: string): { level: 2 | 3; text: string; id: string }[] {
@@ -251,12 +251,18 @@ export function BlogPost() {
     const form = e.currentTarget;
     const input = form.querySelector<HTMLInputElement>('input[type="email"]');
     const btn = form.querySelector<HTMLButtonElement>("button");
-    if (btn) {
-      btn.textContent = "✓ You're in!";
-      btn.style.background = "#00a868";
-    }
+    const email = (input?.value || "").trim();
+    if (!email) return;
+    if (btn) { btn.textContent = "Subscribing…"; btn.disabled = true; }
     if (input) input.disabled = true;
-    if (btn) btn.disabled = true;
+    subscribe(email, "blog").then(() => {
+      if (btn) { btn.textContent = "✓ You're in!"; btn.style.background = "#00a868"; }
+    }).catch(() => {
+      if (btn) { btn.textContent = "Subscribe Free"; btn.disabled = false; }
+      if (input) input.disabled = false;
+      if (input) input.value = "";
+      if (input) { input.placeholder = "Something went wrong — try again"; input.style.borderColor = "#E5484D"; }
+    });
   }
 
   if (loading) {
@@ -744,10 +750,10 @@ export function BlogPost() {
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Compare</div>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Semrush</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Ahrefs</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Surfer SEO</strong></div></a>
-                    <a className="mega-footer" href="#">See all comparisons<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Semrush</strong></div></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Ahrefs</strong></div></a>
+                    <a className="mega-link simple" href="/compare"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></div><div className="dd-text"><strong>Serpely vs Surfer SEO</strong></div></a>
+                    <a className="mega-footer" href="/compare">See all comparisons<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
                   </div>
                 </div>
               </div>
@@ -772,10 +778,10 @@ export function BlogPost() {
                   </div>
                   <div className="mega-col">
                     <div className="mega-title">Integrations</div>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><svg viewBox="0 0 24 24" className="no-invert" fill="none"><path d="M10 4a6 6 0 0 1 6 6h-6V4z" fill="#EA4335"/><path d="M16 10a6 6 0 0 1-6 6v-6h6z" fill="#FBBC04"/><path d="M10 16a6 6 0 0 1-6-6h6v6z" fill="#34A853"/><path d="M4 10a6 6 0 0 1 6-6v6H4z" fill="#4285F4"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/><path d="M14.5 14.5l5.5 5.5" stroke="#5F6368" strokeWidth="2.2" strokeLinecap="round"/></svg></div><div className="dd-text"><strong>Google Search Console</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><img src="/Other Logos/Logo_Google_Analytics.svg.png" alt="GA4"/></div><div className="dd-text"><strong>Google Analytics 4</strong></div></a>
-                    <a className="mega-link simple" href="#"><div className="dd-icon"><img src="/Other Logos/dataforseo.webp" alt="DataForSEO"/></div><div className="dd-text"><strong>DataForSEO</strong></div></a>
-                    <a className="mega-footer" href="#">All Integrations →</a>
+                    <a className="mega-link simple" href="/integrations"><div className="dd-icon"><svg viewBox="0 0 24 24" className="no-invert" fill="none"><path d="M10 4a6 6 0 0 1 6 6h-6V4z" fill="#EA4335"/><path d="M16 10a6 6 0 0 1-6 6v-6h6z" fill="#FBBC04"/><path d="M10 16a6 6 0 0 1-6-6h6v6z" fill="#34A853"/><path d="M4 10a6 6 0 0 1 6-6v6H4z" fill="#4285F4"/><circle cx="10" cy="10" r="2" fill="#FFFFFF"/><path d="M14.5 14.5l5.5 5.5" stroke="#5F6368" strokeWidth="2.2" strokeLinecap="round"/></svg></div><div className="dd-text"><strong>Google Search Console</strong></div></a>
+                    <a className="mega-link simple" href="/integrations"><div className="dd-icon"><img src="/Other Logos/Logo_Google_Analytics.svg.png" alt="GA4"/></div><div className="dd-text"><strong>Google Analytics 4</strong></div></a>
+                    <a className="mega-link simple" href="/integrations"><div className="dd-icon"><img src="/Other Logos/dataforseo.webp" alt="DataForSEO"/></div><div className="dd-text"><strong>DataForSEO</strong></div></a>
+                    <a className="mega-footer" href="/integrations">All Integrations →</a>
                   </div>
                 </div>
               </div>
@@ -791,14 +797,14 @@ export function BlogPost() {
               </button>
               <div className="dropdown-menu">
                 <a href="/blog"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div><div className="dd-text">Blog<span>SEO &amp; GEO insights</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4"/><path d="M4 7h5l2 2h3l2-2h4"/><path d="M4 17h16"/></svg></div><div className="dd-text">Affiliate Program<span>Earn 30% recurring</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div><div className="dd-text">FAQ<span>Common questions answered</span></div></a>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></div><div className="dd-text">Technical Docs<span>API &amp; integration guides</span></div></a>
+                <a href="/register"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4"/><path d="M4 7h5l2 2h3l2-2h4"/><path d="M4 17h16"/></svg></div><div className="dd-text">Affiliate Program<span>Earn 30% recurring</span></div></a>
+                <a href="/faq"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9.09 9a3 3 0 1 1 5.82 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div><div className="dd-text">FAQ<span>Common questions answered</span></div></a>
+                <a href="/integrations"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></div><div className="dd-text">Technical Docs<span>API &amp; integration guides</span></div></a>
                 <div className="dropdown-divider"></div>
-                <a href="#"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div className="dd-text">Feedback<span>Shape the product</span></div></a>
+                <a href="/contact"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div className="dd-text">Feedback<span>Shape the product</span></div></a>
               </div>
             </div>
-            <a href="#" className="btn-audit ml-1"><span className="audit-pulse"></span>Free Site Audit</a>
+            <a href="/pricing" className="btn-audit ml-1"><span className="audit-pulse"></span>Free Site Audit</a>
             <a
               href="/pricing"
               className="px-4 py-2 rounded-lg text-[14px] font-semibold transition-colors"
@@ -812,8 +818,8 @@ export function BlogPost() {
               <svg className="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
               <svg className="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             </button>
-            <a href="#" className="hidden sm:block text-[14px] font-semibold transition-colors px-3 py-2" style={{ color: "var(--text-soft)", letterSpacing: "-0.012em" }} onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; }} onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-soft)"; }}>Login</a>
-            <a href="#" className="btn-accent" style={{ padding: "9px 16px", fontSize: "13.5px" }}>Start Free Trial<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+            <a href="/login" className="hidden sm:block text-[14px] font-semibold transition-colors px-3 py-2" style={{ color: "var(--text-soft)", letterSpacing: "-0.012em" }} onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text)"; }} onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-soft)"; }}>Login</a>
+            <a href="/register" className="btn-accent" style={{ padding: "9px 16px", fontSize: "13.5px" }}>Start Free Trial<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
           </div>
         </div>
       </nav>
@@ -826,7 +832,7 @@ export function BlogPost() {
           <nav className="breadcrumb" aria-label="Breadcrumb">
             <span className="bc-item"><Link to="/blog">Blog</Link></span>
             <span className="bc-sep">›</span>
-            <span className="bc-item"><a href="#">{data.tagLabel}</a></span>
+            <span className="bc-item"><a href="/blog">{data.tagLabel}</a></span>
             <span className="bc-sep">›</span>
             <span className="bc-item bc-current">{data.title}</span>
           </nav>
@@ -1009,21 +1015,21 @@ export function BlogPost() {
                 <div className="sidebar-cta-badge">Free Tool</div>
                 <div className="sidebar-cta-heading">See how visible you are in AI search</div>
                 <p className="sidebar-cta-sub">Serpely tracks your brand mentions across ChatGPT, Claude, Gemini, and Perplexity — so you know exactly where you stand.</p>
-                <a href="#" className="sidebar-cta-btn">Audit Your AI Visibility →</a>
+                <a href="/register" className="sidebar-cta-btn">Audit Your AI Visibility →</a>
               </div>
 
               {/* Topics / Tags */}
               <div className="sidebar-card">
                 <div className="sidebar-card-title">Topics</div>
                 <div className="sidebar-tags-cloud">
-                  <a href="#" className="stag stag-green">GEO</a>
-                  <a href="#" className="stag stag-green">AI Search</a>
-                  <a href="#" className="stag">AEO</a>
-                  <a href="#" className="stag">LLM Visibility</a>
-                  <a href="#" className="stag">SEO Strategy</a>
-                  <a href="#" className="stag">Content Marketing</a>
-                  <a href="#" className="stag">Structured Data</a>
-                  <a href="#" className="stag">Entity SEO</a>
+                  <a href="/blog" className="stag stag-green">GEO</a>
+                  <a href="/blog" className="stag stag-green">AI Search</a>
+                  <a href="/blog" className="stag">AEO</a>
+                  <a href="/blog" className="stag">LLM Visibility</a>
+                  <a href="/blog" className="stag">SEO Strategy</a>
+                  <a href="/blog" className="stag">Content Marketing</a>
+                  <a href="/blog" className="stag">Structured Data</a>
+                  <a href="/blog" className="stag">Entity SEO</a>
                 </div>
               </div>
 

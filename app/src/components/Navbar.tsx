@@ -183,9 +183,9 @@ export function Navbar() {
               style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))', boxShadow: '0 24px 60px rgba(10,10,10,0.12)', minWidth: '220px' }}>
               {[
                 { label: 'Blog', desc: 'SEO & GEO insights', href: '/blog' },
-                { label: 'Affiliate Program', desc: 'Earn 30% recurring', href: '#' },
+                { label: 'Affiliate Program', desc: 'Earn 30% recurring', href: '/register' },
                 { label: 'FAQ', desc: 'Common questions answered', href: '/faq' },
-                { label: 'Technical Docs', desc: 'API & integration guides', href: '#' },
+                { label: 'Technical Docs', desc: 'API & integration guides', href: '/integrations' },
               ].map(item => (
                 <Link key={item.label} to={item.href} className="nav-drop-item">
                   <div>
@@ -198,13 +198,13 @@ export function Navbar() {
           </div>
 
           {/* Free Site Audit btn */}
-          <a href="#" className="flex items-center gap-2 ml-1 px-3.5 py-2 rounded-lg text-sm font-bold"
+          <Link to="/register" className="flex items-center gap-2 ml-1 px-3.5 py-2 rounded-lg text-sm font-bold"
             style={{ background: 'var(--card-bg)', border: '1px solid var(--text)', color: 'var(--text)', letterSpacing: '-0.012em', transition: 'background 0.15s, color 0.15s, transform 0.15s' }}
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'var(--text)'; el.style.color = 'var(--bg)'; el.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'var(--card-bg)'; el.style.color = 'var(--text)'; el.style.transform = ''; }}>
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-audit-pulse flex-shrink-0" />
             Free Site Audit
-          </a>
+          </Link>
 
           <Link to="/pricing" className={`nav-link-pill${isActive('/pricing') ? ' active' : ''}`}>
             Pricing
