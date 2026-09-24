@@ -130,17 +130,17 @@ export function HeroSection() {
               <span className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-faint)', letterSpacing: '0.18em' }}>Trusted on</span>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl" style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))' }}>
                 <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg">
-                  <img src="Other Logos/5-Star-TrustPilot.webp" alt="Trustpilot" className="h-4 w-auto object-contain" />
+                  <img src="Other Logos/5-Star-TrustPilot.webp" alt="Trustpilot 4.8 rating for Serpely" loading="lazy" decoding="async" width="80" height="16" className="h-4 w-auto object-contain" />
                   <span className="text-xs font-black" style={{ color: 'var(--text)' }}>4.8</span>
                 </div>
                 <div className="w-px h-4 flex-shrink-0" style={{ background: 'hsl(var(--border))' }} />
                 <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg">
-                  <img src="Other Logos/g2-seeklogo.png" alt="G2" className="h-4 w-auto object-contain" />
+                  <img src="Other Logos/g2-seeklogo.png" alt="G2 4.9 rating for Serpely" loading="lazy" decoding="async" width="32" height="16" className="h-4 w-auto object-contain" />
                   <span className="text-xs font-black" style={{ color: 'var(--text)' }}>4.9</span>
                 </div>
                 <div className="w-px h-4 flex-shrink-0" style={{ background: 'hsl(var(--border))' }} />
                 <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg">
-                  <img src="Other Logos/capterra-seeklogo.png" alt="Capterra" className="h-4 w-auto object-contain" />
+                  <img src="Other Logos/capterra-seeklogo.png" alt="Capterra 4.7 rating for Serpely" loading="lazy" decoding="async" width="64" height="16" className="h-4 w-auto object-contain" />
                   <span className="text-xs font-black" style={{ color: 'var(--text)' }}>4.7</span>
                 </div>
               </div>
@@ -162,7 +162,7 @@ export function HeroSection() {
             <div className="relative">
               {heroImage ? (
                 <div className="dash-mock-s overflow-hidden" style={{ borderRadius: 18 }}>
-                  <img src={heroImage} alt="Hero" style={{ width: '100%', maxHeight: 540, objectFit: 'cover', display: 'block' }} />
+                  <img src={heroImage} alt="Serpely GEO dashboard tracking AI citations across ChatGPT and Perplexity" loading="eager" fetchPriority="high" decoding="async" width="1080" height="720" style={{ width: '100%', maxHeight: 540, objectFit: 'cover', display: 'block' }} />
                 </div>
               ) : (
               <div className="dash-mock-s relative">

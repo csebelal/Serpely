@@ -1,8 +1,23 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
-Disallow: /api/
+Disallow: /sp-super-admin/
+Disallow: /blog/preview/
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+Disallow: /api/auth/
+Disallow: /api/audit/
+Disallow: /api/backup/
+Disallow: /api/upload/
+Disallow: /api/keys/
+Disallow: /api/subscribers/
+Disallow: /api/contact/
+Disallow: /api/users/
 Allow: /api/sitemap.xml
+Allow: /llms.txt
+Allow: /pricing.md
+Allow: /ai.txt
+Allow: /.well-known/ai-plugin.json
 
 # AI search bots — explicitly allowed for citation
 User-agent: GPTBot

@@ -224,7 +224,7 @@ export function About() {
             style={{ transition: 'transform 0.25s, box-shadow 0.25s' }}
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-4px)'; el.style.boxShadow = 'var(--shadow-hover)'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = ''; el.style.boxShadow = ''; }}>
-            <img src="/team-photo.jpg" alt="The Serpely Team" className="w-full h-full object-cover" style={{ minHeight: 320, display: 'block' }} />
+            <img src="/team-photo.jpg" alt="Serpely team building agentic SEO for AI search" loading="lazy" decoding="async" width="1200" height="800" className="w-full h-full object-cover" style={{ minHeight: 320, display: 'block' }} />
           </div>
         </div>
       </section>

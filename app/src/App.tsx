@@ -26,7 +26,9 @@ const Integrations = lazy(() => import('./pages/Integrations').then(m => ({ defa
 const HowItWorks = lazy(() => import('./pages/HowItWorks').then(m => ({ default: m.HowItWorks })));
 const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
 const CompareVs = lazy(() => import('./pages/CompareVs').then(m => ({ default: m.CompareVs })));
+const Audit = lazy(() => import('./pages/Audit').then(m => ({ default: m.Audit })));
 const Changelog = lazy(() => import('./pages/Changelog').then(m => ({ default: m.Changelog })));
+const ChatWidget = lazy(() => import('./components/ChatWidget').then(m => ({ default: m.ChatWidget })));
 
 // Admin pages — code-split per route
 const AdminLogin = lazy(() => import('./pages/admin/Login').then(m => ({ default: m.AdminLogin })));
@@ -114,14 +116,18 @@ function PublicShell() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/category/:category" element={<Blog />} />
           <Route path="/blog/preview/:token" element={<PreviewBlogPost />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/author/:author" element={<Blog />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/product-tour" element={<ProductTour />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/compare/:slug" element={<CompareVs />} />
+          <Route path="/audit" element={<Audit />} />
+          <Route path="/audit/:id" element={<Audit />} />
           <Route path="/changelog" element={<Changelog />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -129,6 +135,9 @@ function PublicShell() {
         </Routes>
       </main>
       <Footer />
+      <Suspense fallback={null}>
+        <ChatWidget />
+      </Suspense>
     </div>
   );
 }

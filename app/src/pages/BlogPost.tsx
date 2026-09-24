@@ -842,7 +842,7 @@ export function BlogPost() {
             <div className="hero-split">
               <div className="hero-img-wrap">
                 {data.coverImage ? (
-                  <img src={data.coverImage} alt={data.title} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
+                  <img src={data.coverImage} alt={data.title} fetchPriority="high" decoding="async" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
                 ) : (
                   <>
                     <div className="hero-img-grid"></div>
@@ -1052,7 +1052,7 @@ export function BlogPost() {
                 <Link to={`/blog/${p.slug}`} className="related-card-img-wrap">
                   <div className="related-card-img" style={{ background: 'linear-gradient(135deg,#0a0a0a,#1a1a2e)' }}>
                     {p.coverImage
-                      ? <img src={p.coverImage} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={p.coverImage} alt={p.title} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#fff', fontSize: 32 }}>&#128203;</div>
                     }
                   </div>

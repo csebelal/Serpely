@@ -1,7 +1,7 @@
 ﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { blogPosts, type BlogPostData as Article } from '@/data/blogPosts';
 import { getPosts, getFeaturedPosts, subscribe } from '@/lib/api';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
 /* ─── Inline Styles ─── */
 const globalStyles = `
@@ -702,6 +702,7 @@ const ArrowSvg = () => (
 
 /* ─── Main Component ─── */
 export function Blog() {
+  const { category: categoryParam, author: authorParam } = useParams<{ category?: string; author?: string }>();
   useSEOMeta('blog', { title: 'Serpely Blog — AI SEO Insights', description: 'Expert insights on agentic SEO, GEO, LLM visibility, and AI-first search.' });
   const [articles, setArticles] = useState<Article[]>(blogPosts);
   const [featuredPosts, setFeaturedPosts] = useState<Article[]>([]);
@@ -746,8 +747,13 @@ export function Blog() {
     }).catch(() => {});
   }, []);
   const [scrolled, setScrolled] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState(categoryParam || "all");
+  const [searchQuery, setSearchQuery] = useState(authorParam ? decodeURIComponent(authorParam).replace(/-/g, ' ') : "");
+  useEffect(() => {
+    if (categoryParam) setActiveFilter(categoryParam);
+    else if (!authorParam) setActiveFilter("all");
+    if (authorParam) setSearchQuery(decodeURIComponent(authorParam).replace(/-/g, ' '));
+  }, [categoryParam, authorParam]);
   const heroRailRef = useRef<HTMLDivElement>(null);
   const [prevDisabled, setPrevDisabled] = useState(true);
   const [nextDisabled, setNextDisabled] = useState(false);
@@ -1109,7 +1115,7 @@ export function Blog() {
                       <div className="featured-visual" style={{
                         background: a.coverImage ? 'transparent' : 'linear-gradient(135deg, #071a10 0%, #0d3b26 100%)',
                       }}>
-                        {a.coverImage && <img src={a.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                        {a.coverImage && <img src={a.coverImage} alt={a.title} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />}
                       </div>
                       <div className="p-7 lg:p-8">
                         <h2 className="font-display" style={{ fontWeight: 900, lineHeight: 1.15 }}>{a.title}</h2>
@@ -1160,7 +1166,7 @@ export function Blog() {
                   <div className="article-thumb">
                     <span className={`tag${a.tagAccent ? " tag-accent" : ""} thumb-tag`}>{a.tagLabel}</span>
                     {a.coverImage ? (
-                      <img src={a.coverImage} alt={a.title} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2 }} />
+                      <img src={a.coverImage} alt={a.title} loading="lazy" decoding="async" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2 }} />
                     ) : (
                       <span className="thumb-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"

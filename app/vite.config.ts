@@ -13,4 +13,30 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          charts: ['recharts'],
+          editor: ['@tiptap/react', '@tiptap/starter-kit'],
+          motion: ['gsap', '@gsap/react'],
+        },
+      },
+    },
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+      '/chatbot': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (p: string) => p.replace(/^\/chatbot/, ''),
+      },
+    },
+  },
 });

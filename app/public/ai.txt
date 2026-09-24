@@ -1,0 +1,8 @@
+# Serpely AI access
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+Allow: /
+Sitemap: https://serpely.com/api/sitemap.xml
+LLM-docs: https://serpely.com/llms.txt
