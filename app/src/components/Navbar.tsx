@@ -198,7 +198,7 @@ export function Navbar() {
           </div>
 
           {/* Free Site Audit btn */}
-          <Link to="/register" className="flex items-center gap-2 ml-1 px-3.5 py-2 rounded-lg text-sm font-bold"
+          <Link to="/audit" className="flex items-center gap-2 ml-1 px-3.5 py-2 rounded-lg text-sm font-bold"
             style={{ background: 'var(--card-bg)', border: '1px solid var(--text)', color: 'var(--text)', letterSpacing: '-0.012em', transition: 'background 0.15s, color 0.15s, transform 0.15s' }}
             onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'var(--text)'; el.style.color = 'var(--bg)'; el.style.transform = 'translateY(-1px)'; }}
             onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'var(--card-bg)'; el.style.color = 'var(--text)'; el.style.transform = ''; }}>
@@ -289,6 +289,7 @@ export function Navbar() {
               { label: 'Blog', href: '/blog' },
               { label: 'FAQ', href: '/faq' },
               { label: 'Compare', href: '/compare' },
+              { label: 'Free Site Audit', href: '/audit' },
               { label: 'About', href: '/about' },
               { label: 'Contact', href: '/contact' },
             ].map(item => (
