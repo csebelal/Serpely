@@ -1,12 +1,11 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-N7V8SHH7');</script>
+    <!-- Google Tag Manager — deferred until browser idle so it never blocks first paint -->
+    <script>(function(w,i){var d=false;function l(){if(d)return;d=true;w.dataLayer=w.dataLayer||[];w.dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=document.getElementsByTagName('script')[0],j=document.createElement('script');j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i;f.parentNode.insertBefore(j,f);}
+function soon(fn){if('requestIdleCallback' in window){requestIdleCallback(fn,{timeout:6000})}else{setTimeout(fn,2500)}}
+soon(l);window.addEventListener('load',function(){setTimeout(l,1500)});
+['scroll','pointerdown','touchstart','keydown'].forEach(function(e){window.addEventListener(e,l,{once:true,passive:true})});})(window,'GTM-N7V8SHH7');</script>
     <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

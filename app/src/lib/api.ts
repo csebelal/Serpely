@@ -320,6 +320,26 @@ export const bulkUpdatePosts = (ids: string[], published: boolean) =>
 export const bulkDeletePosts = (ids: string[]) =>
   api.delete('/api/blog/bulk', { data: { ids } });
 
+// ── Public Audit (free Get Audit page) ──────────────────────────────────────
+// Uses RELATIVE /api so it works via the Vite dev proxy (see vite.config.ts)
+// and same-origin in production — no VITE_API_URL needed.
+const publicApi = axios.create();
+export interface PublicAuditIssue {
+  code: string; category: string; severity: string;
+  title: string; evidence: string; fix: string;
+  impact: number; effort: string; passed: boolean;
+}
+export interface PublicAuditReport {
+  _id: string; url: string; normalizedUrl: string;
+  scores: Record<string, number>; overall: number;
+  forecast: { now: number; quickWins: number; allFixes: number };
+  issues: PublicAuditIssue[]; meta: Record<string, string>; createdAt: string;
+}
+export const runPublicAudit = (url: string) =>
+  publicApi.post<{ id: string; cached: boolean; overall: number }>('/api/public-audit/run', { url });
+export const getPublicAudit = (id: string) =>
+  publicApi.get<PublicAuditReport>(`/api/public-audit/${id}`);
+
 // ── API Keys ──────────────────────────────────────────────────────────────────
 export interface APIKeyData {
   _id: string; name: string; prefix: string; active: boolean;

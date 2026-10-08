@@ -348,7 +348,7 @@ export function Contact() {
 
                   <p className="text-center text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
                     By submitting, you agree to our{' '}
-                    <a href="#" style={{ color: 'var(--text-soft)', textDecoration: 'underline' }}>Privacy Policy</a>.
+                    <a href="/privacy" style={{ color: 'var(--text-soft)', textDecoration: 'underline' }}>Privacy Policy</a>.
                   </p>
                 </form>
               </>

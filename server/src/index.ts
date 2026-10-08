@@ -3,6 +3,7 @@ import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
@@ -39,6 +40,7 @@ import backupRouter from './routes/backup';
 import apiKeysRouter from './routes/apikeys';
 import sitemapRouter from './routes/sitemap';
 import publicAuditRouter from './routes/publicAudit';
+import mcpRouter from './routes/mcp';
 import AdminUser from './models/AdminUser';
 import SiteSettings from './models/SiteSettings';
 import BlogPost from './models/BlogPost';
@@ -85,8 +87,12 @@ app.use(cors({
   },
   credentials: true,
 }));
+// gzip + brotli for text assets (JS/CSS/HTML/JSON/SVG). Images/fonts are
+// skipped automatically (non-compressible types). Must run before static + routes.
+app.use(compression({ threshold: 1024 }));
 app.use(express.json({ limit: '10mb' }));
-app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads')));
+// Upload filenames are unique per upload (timestamp + random) → safe to cache immutably.
+app.use('/uploads', express.static(path.resolve(__dirname, '..', 'uploads'), { maxAge: '1y', immutable: true }));
 
 app.use('/api/auth', authRouter);
 app.use('/api/sections', sectionsRouter);
@@ -109,6 +115,7 @@ app.use('/api/audit', auditRouter);
 app.use('/api/backup', backupRouter);
 app.use('/api/keys', apiKeysRouter);
 app.use('/api/public-audit', publicAuditRouter);
+app.use('/mcp', mcpRouter);
 
 app.use('/api', sitemapRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
@@ -724,7 +731,7 @@ app.use(async (req, res, next) => {
         }
       } else {
         // Genuinely-missing slug → real 404, not soft-404 (avoids Google "soft 404" verdict)
-        res.status(404).type('html').send(NOT_FOUND_HTML);
+        res.status(404).set('Cache-Control', 'no-store').type('html').send(NOT_FOUND_HTML);
         return;
       }
     } else if (isBlogList) {
@@ -801,9 +808,11 @@ app.use(async (req, res, next) => {
       html = html.replace('</head>', code + '\n</head>');
     }
     res.setHeader('Link', '<https://serpely.com/llms.txt>; rel="alternate"; type="text/plain"; title="LLM docs"');
-    res.type('html').send(html);
+    // Fresh HTML on every visit (no-cache + Express auto-ETag → 304 revalidation),
+    // while hashed /assets stay immutable for a year (see express.static above).
+    res.set('Cache-Control', 'public, no-cache').type('html').send(html);
   } catch {
-    res.sendFile(indexHtmlPath);
+    res.set('Cache-Control', 'public, no-cache').sendFile(indexHtmlPath);
   }
 });
 

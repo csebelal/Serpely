@@ -159,32 +159,80 @@ function HeroCanvas({ integrations }:{ integrations:IntegrationCategory[] }) {
 interface IntegrationItem { name:string; description:string; img:string; abbr:string; color:string; connected:boolean; }
 interface IntegrationCategory { category:string; items:IntegrationItem[]; }
 
+// ── Canonical logo per integration — fixes empty/wrong img from DB or defaults ──
+const LOGO_BY_NAME: Record<string,string> = {
+  'adobe analytics': '/integration-logos/adobe.svg',
+  'shopify': '/integration-logos/shopify.svg',
+  'contentful': '/integration-logos/contentful.svg',
+  'slack': '/integration-logos/slack.svg',
+  'microsoft teams': '/integration-logos/microsoftteams.svg',
+  'discord': '/integration-logos/discord.svg',
+  'jira': '/integration-logos/jira.svg',
+  'asana': '/integration-logos/asana.svg',
+  'trello': '/integration-logos/trello.svg',
+  'google data studio': '/integration-logos/googledatastudio.svg',
+  'tableau': '/integration-logos/tableau.svg',
+  'zapier': '/integration-logos/zapier.svg',
+};
+const BROKEN_IMG = ['Other Logos/Google_Analytics_Logo_2019.svg.png', 'Other Logos/Slack-logo.png'];
+function normalizeIntegrations(cats: IntegrationCategory[]): IntegrationCategory[] {
+  return cats.map(c=>({...c, items:c.items.map(it=>{
+    let img = it.img.startsWith('/integrations/') ? it.img.replace('/integrations/', '/integration-logos/') : it.img;
+    const fix = LOGO_BY_NAME[it.name.trim().toLowerCase()];
+    if(fix && (!img || BROKEN_IMG.some(b=>img.includes(b)))) img = fix;
+    return img === it.img ? it : {...it, img};
+  })}));
+}
+
+// Logo with white well (monochrome SVGs stay visible in dark+light) + abbr fallback
+function IntegrationLogo({ item }:{ item:IntegrationItem }) {
+  const [failed,setFailed] = useState(false);
+  if(!item.img || failed) {
+    return (
+      <div style={{width:44,height:44,borderRadius:12,background:item.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:'#fff',letterSpacing:'-0.02em'}}>
+        {item.abbr}
+      </div>
+    );
+  }
+  return (
+    <div style={{background:'#fff',borderRadius:10,padding:'6px 14px',display:'flex',alignItems:'center',justifyContent:'center',maxWidth:'100%'}}>
+      <img src={item.img} alt={item.name} loading="lazy" onError={()=>setFailed(true)}
+        style={{maxWidth:'100%',maxHeight:32,width:'auto',height:'auto',objectFit:'contain',display:'block'}} />
+    </div>
+  );
+}
+
 const defaultIntegrations: IntegrationCategory[] = [
+  { category:'AI / MCP', items:[
+    { name:'Serpely MCP Server', description:'Connect Claude / Cursor to Serpely via /mcp — SEO, blog & audit tools. No extra VPS.', img:'', abbr:'MCP', color:'#00C27A', connected:true  },
+    { name:'Claude Desktop', description:'Paste serpely MCP JSON into claude_desktop_config.json', img:'', abbr:'CL', color:'#D97757', connected:false },
+    { name:'Cursor', description:'Add serpely MCP to ~/.cursor/mcp.json with your API key', img:'', abbr:'CU', color:'#4353FF', connected:false },
+  ]},
   { category:'Analytics', items:[
     { name:'Google Analytics',      description:'Track website traffic and user behavior',    img:'/processed-logos/ribbon-ga4.png', abbr:'GA', color:'#E37400', connected:true  },
     { name:'Google Search Console', description:'Monitor search performance and indexing',    img:'/processed-logos/ribbon-gsc.png',                  abbr:'SC', color:'#4285F4', connected:true  },
-    { name:'Adobe Analytics',       description:'Enterprise analytics and reporting',         img:'',                                                 abbr:'AA', color:'#E34220', connected:false },
+    { name:'Adobe Analytics',       description:'Enterprise analytics and reporting',         img:'/integration-logos/adobe.svg',            abbr:'AA', color:'#E34220', connected:false },
   ]},
   { category:'CMS', items:[
     { name:'WordPress',  description:"The world's most popular CMS",          img:'/processed-logos/ribbon-wordpress.png', abbr:'WP', color:'#21759B', connected:true  },
-    { name:'Shopify',    description:'E-commerce platform for online stores', img:'',                                     abbr:'SH', color:'#96BF48', connected:false },
+    { name:'Shopify',    description:'E-commerce platform for online stores', img:'/integration-logos/shopify.svg',             abbr:'SH', color:'#96BF48', connected:false },
     { name:'Webflow',    description:'Visual website builder',                img:'/processed-logos/ribbon-webflow.png',  abbr:'WF', color:'#4353FF', connected:false },
-    { name:'Contentful', description:'Headless CMS for modern websites',      img:'',                                     abbr:'CF', color:'#2478CC', connected:false },
+    { name:'Contentful', description:'Headless CMS for modern websites',      img:'/integration-logos/contentful.svg',          abbr:'CF', color:'#2478CC', connected:false },
   ]},
   { category:'Communication', items:[
-    { name:'Slack',           description:'Get alerts and reports in Slack',  img:'', abbr:'SL', color:'#4A154B', connected:false },
-    { name:'Microsoft Teams', description:'Collaborate with your team',       img:'',                            abbr:'MT', color:'#4B53BC', connected:false },
-    { name:'Discord',         description:'Community and team communication', img:'',                            abbr:'DC', color:'#5865F2', connected:false },
+    { name:'Slack',           description:'Get alerts and reports in Slack',  img:'/integration-logos/slack.svg',          abbr:'SL', color:'#4A154B', connected:false },
+    { name:'Microsoft Teams', description:'Collaborate with your team',       img:'/integration-logos/microsoftteams.svg', abbr:'MT', color:'#4B53BC', connected:false },
+    { name:'Discord',         description:'Community and team communication', img:'/integration-logos/discord.svg',         abbr:'DC', color:'#5865F2', connected:false },
   ]},
   { category:'Project Management', items:[
-    { name:'Jira',   description:'Track SEO tasks and projects', img:'', abbr:'JI', color:'#0052CC', connected:false },
-    { name:'Asana',  description:'Manage SEO workflows',         img:'', abbr:'AS', color:'#F06A6A', connected:false },
-    { name:'Trello', description:'Visual project management',    img:'', abbr:'TR', color:'#0079BF', connected:false },
+    { name:'Jira',   description:'Track SEO tasks and projects', img:'/integration-logos/jira.svg',   abbr:'JI', color:'#0052CC', connected:false },
+    { name:'Asana',  description:'Manage SEO workflows',         img:'/integration-logos/asana.svg',  abbr:'AS', color:'#F06A6A', connected:false },
+    { name:'Trello', description:'Visual project management',    img:'/integration-logos/trello.svg', abbr:'TR', color:'#0079BF', connected:false },
   ]},
   { category:'Data & Reporting', items:[
-    { name:'Google Data Studio', description:'Create custom SEO dashboards', img:'', abbr:'DS', color:'#669DF6', connected:false },
-    { name:'Tableau',            description:'Advanced data visualization',  img:'', abbr:'TB', color:'#E97627', connected:false },
-    { name:'Zapier',             description:'Automate workflows',           img:'', abbr:'ZP', color:'#FF4A00', connected:false },
+    { name:'Google Data Studio', description:'Create custom SEO dashboards', img:'/integration-logos/googledatastudio.svg', abbr:'DS', color:'#669DF6', connected:false },
+    { name:'Tableau',            description:'Advanced data visualization',  img:'/integration-logos/tableau.svg',            abbr:'TB', color:'#E97627', connected:false },
+    { name:'Zapier',             description:'Automate workflows',           img:'/integration-logos/zapier.svg',             abbr:'ZP', color:'#FF4A00', connected:false },
   ]},
 ];
 
@@ -202,13 +250,29 @@ export function Integrations() {
   const [apiFeatures,setApiFeatures]       = useState(['RESTful API with comprehensive documentation','Webhook support for real-time updates','SDKs for popular programming languages','Rate limits that scale with your plan']);
   const [apiButtonText,setApiButtonText]   = useState('View API Documentation');
   const [apiButtonHref,setApiButtonHref]   = useState('#');
+  const [guideItem,setGuideItem]           = useState<IntegrationItem|null>(null);
+  const [mcpKey,setMcpKey]                 = useState('');
+  const [mcpUrl,setMcpUrl]                 = useState('https://serpely.com/mcp');
+  const [copied,setCopied]                 = useState<string|null>(null);
+
+  function copyText(id:string, text:string){
+    navigator.clipboard?.writeText(text).then(()=>{ setCopied(id); setTimeout(()=>setCopied(null),1600); }).catch(()=>{});
+  }
+  function mcpCursorJson(){
+    const key = mcpKey.trim() || 'sk_live_PASTE_YOUR_KEY';
+    return JSON.stringify({ mcpServers: { serpely: { url: mcpUrl, headers: { Authorization: `Bearer ${key}` } } } }, null, 2);
+  }
+  function mcpClaudeJson(){
+    const key = mcpKey.trim() || 'sk_live_PASTE_YOUR_KEY';
+    return JSON.stringify({ mcpServers: { serpely: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${key}` } } } }, null, 2);
+  }
 
   useEffect(()=>{
     getSection('integrations').then(r=>{
       const d=r.data.data as Record<string,unknown>;
       if(typeof d.heroHeadline==='string')   setHeroHeadline(d.heroHeadline);
       if(typeof d.heroSubtext==='string')    setHeroSubtext(d.heroSubtext);
-      if(Array.isArray(d.integrations))      setIntegrations(d.integrations as IntegrationCategory[]);
+      if(Array.isArray(d.integrations))      setIntegrations(normalizeIntegrations(d.integrations as IntegrationCategory[]));
       if(typeof d.apiHeadline==='string')    setApiHeadline(d.apiHeadline);
       if(typeof d.apiBody==='string')        setApiBody(d.apiBody);
       if(Array.isArray(d.apiFeatures))       setApiFeatures(d.apiFeatures as string[]);
@@ -400,18 +464,7 @@ export function Integrations() {
                           </div>
                         )}
                         {item.img ? (
-                          <img
-                            src={item.img}
-                            alt={item.name}
-                            style={{
-                              maxWidth:'100%',
-                              maxHeight:36,
-                              width:'auto',
-                              height:'auto',
-                              objectFit:'contain',
-                              opacity:0.85,
-                            }}
-                          />
+                          <IntegrationLogo item={item} />
                         ) : (
                           <div style={{
                             width:44,height:44,borderRadius:12,
@@ -447,6 +500,7 @@ export function Integrations() {
                           }}
                             onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background=item.color;el.style.color='#fff';el.style.borderColor=item.color;}}
                             onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background=item.connected?'transparent':item.color+'0d';el.style.color=item.connected?'var(--text-soft)':item.color;el.style.borderColor=item.connected?'hsl(var(--border))':item.color+'50';}}
+                            onClick={()=>setGuideItem(item)}
                           >
                             {item.connected?'Configure':'Connect'}
                           </button>
@@ -555,6 +609,64 @@ export function Integrations() {
           </div>
         </div>
       </section>
+
+      {/* ── Guide Modal ─────────────────────────────────────────────────── */}
+      {guideItem && (
+        <div onClick={()=>setGuideItem(null)} style={{position:'fixed',inset:0,zIndex:80,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:560,maxHeight:'90vh',overflow:'auto',borderRadius:16,background:'var(--card-bg)',border:'1px solid hsl(var(--border))',boxShadow:'0 24px 80px rgba(0,0,0,0.5)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,padding:'16px 20px',borderBottom:'1px solid hsl(var(--border))',position:'sticky',top:0,background:'var(--card-bg)',zIndex:2}}>
+              <div style={{width:36,height:36,borderRadius:10,background:guideItem.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,color:'#fff'}}>{guideItem.abbr}</div>
+              <div style={{flex:1}}>
+                <p style={{fontWeight:800,fontSize:14,margin:0}}>{guideItem.name} — Setup Guide</p>
+                <p style={{fontSize:11.5,color:'var(--text-faint)',margin:'2px 0 0'}}>Connect in 3 steps, no VPS required</p>
+              </div>
+              <button onClick={()=>setGuideItem(null)} style={{border:'1px solid hsl(var(--border))',background:'transparent',color:'var(--text-soft)',borderRadius:8,width:28,height:28,cursor:'pointer',fontSize:14}}>✕</button>
+            </div>
+            <div style={{padding:'18px 20px 22px',display:'flex',flexDirection:'column',gap:14}}>
+              <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px 14px'}}>
+                <p style={{fontWeight:700,fontSize:12,margin:'0 0 8px'}}>Step 1 — MCP URL</p>
+                <div style={{display:'flex',gap:8}}>
+                  <input value={mcpUrl} onChange={e=>setMcpUrl(e.target.value)} placeholder="https://serpely.com/mcp" style={{flex:1,border:'1px solid hsl(var(--border))',borderRadius:8,background:'var(--bg)',color:'var(--text)',fontSize:12,padding:'8px 10px',outline:'none',fontFamily:'monospace'}} />
+                  <button onClick={()=>copyText('url', mcpUrl)} style={{fontSize:11,fontWeight:700,padding:'8px 12px',borderRadius:8,border:'1px solid #00C27A',background:copied==='url'?'#00C27A':'transparent',color:copied==='url'?'#fff':'#00C27A',cursor:'pointer'}}>{copied==='url'?'Copied':'Copy'}</button>
+                </div>
+              </div>
+              <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px 14px'}}>
+                <p style={{fontWeight:700,fontSize:12,margin:'0 0 8px'}}>Step 2 — API Key <span style={{fontWeight:500,color:'var(--text-faint)'}}>(Get it from Profile → API Keys)</span></p>
+                <div style={{display:'flex',gap:8}}>
+                  <input value={mcpKey} onChange={e=>setMcpKey(e.target.value)} placeholder="sk_live_..." type="password" style={{flex:1,border:'1px solid hsl(var(--border))',borderRadius:8,background:'var(--bg)',color:'var(--text)',fontSize:12,padding:'8px 10px',outline:'none',fontFamily:'monospace'}} />
+                  <button onClick={()=>copyText('keytest', `${mcpUrl}/health`)} style={{fontSize:11,fontWeight:700,padding:'8px 12px',borderRadius:8,border:'1px solid hsl(var(--border))',background:'transparent',color:'var(--text-soft)',cursor:'pointer'}}>{copied==='keytest'?'Copied':'Copy URL'}</button>
+                </div>
+                <p style={{fontSize:11,color:'var(--text-faint)',margin:'8px 0 0'}}>Public tools work without a key. An API key is required for <b>audit_get</b>.</p>
+              </div>
+              <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,overflow:'hidden'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',background:'var(--tag-bg)',borderBottom:'1px solid hsl(var(--border))'}}>
+                  <p style={{fontWeight:700,fontSize:12,margin:0}}>{guideItem.name==='Cursor' ? 'Step 3 — Paste into ~/.cursor/mcp.json' : guideItem.name==='Claude Desktop' ? 'Step 3 — Paste into claude_desktop_config.json' : 'Step 3 — Cursor / Claude config'}</p>
+                  <button onClick={()=>copyText('json', guideItem.name==='Cursor' ? mcpCursorJson() : mcpClaudeJson())} style={{fontSize:11,fontWeight:700,padding:'6px 12px',borderRadius:7,border:'none',background:'#00C27A',color:'#fff',cursor:'pointer'}}>{copied==='json'?'Copied ✓':'Copy JSON'}</button>
+                </div>
+                <pre style={{margin:0,padding:'14px',fontSize:11.5,lineHeight:1.65,background:'#0d1117',color:'#e6edf3',fontFamily:"'Fira Code',monospace",whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{guideItem.name==='Cursor' ? mcpCursorJson() : mcpClaudeJson()}</pre>
+              </div>
+              {guideItem.name!=='Cursor' && guideItem.name!=='Claude Desktop' && (
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px'}}>
+                    <p style={{fontWeight:700,fontSize:12,margin:'0 0 6px'}}>Cursor</p>
+                    <pre style={{margin:'0 0 8px',fontSize:10.5,background:'#0d1117',color:'#e6edf3',padding:8,borderRadius:8,whiteSpace:'pre-wrap',wordBreak:'break-word',fontFamily:'monospace'}}>{mcpCursorJson().slice(0,160)}...</pre>
+                    <button onClick={()=>copyText('c2', mcpCursorJson())} style={{fontSize:11,fontWeight:700,padding:'6px 10px',borderRadius:7,border:'1px solid #4353FF',background:'transparent',color:'#4353FF',cursor:'pointer',width:'100%'}}>{copied==='c2'?'Copied':'Copy Cursor JSON'}</button>
+                  </div>
+                  <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px'}}>
+                    <p style={{fontWeight:700,fontSize:12,margin:'0 0 6px'}}>Claude</p>
+                    <pre style={{margin:'0 0 8px',fontSize:10.5,background:'#0d1117',color:'#e6edf3',padding:8,borderRadius:8,whiteSpace:'pre-wrap',wordBreak:'break-word',fontFamily:'monospace'}}>{mcpClaudeJson().slice(0,160)}...</pre>
+                    <button onClick={()=>copyText('c3', mcpClaudeJson())} style={{fontSize:11,fontWeight:700,padding:'6px 10px',borderRadius:7,border:'1px solid #D97757',background:'transparent',color:'#D97757',cursor:'pointer',width:'100%'}}>{copied==='c3'?'Copied':'Copy Claude JSON'}</button>
+                  </div>
+                </div>
+              )}
+              <div style={{border:'1px dashed hsl(var(--border))',borderRadius:10,padding:'12px 14px',fontSize:12,color:'var(--text-soft)',lineHeight:1.7}}>
+                <b>Verify:</b> Restart Cursor → look for the green dot next to <b>serpely</b> in MCP tools → type in chat <i>“Use serpely tools to list my blogs”</i>.<br/>
+                Health check: <span style={{fontFamily:'monospace',fontSize:11}}>{mcpUrl}/health</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

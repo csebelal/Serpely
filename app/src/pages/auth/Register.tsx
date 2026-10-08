@@ -77,8 +77,8 @@ export function Register() {
 
         <p className="text-center text-xs mt-4 font-medium" style={{ color: 'var(--text-faint)' }}>
           By creating an account you agree to our{' '}
-          <Link to="#" style={{ color: 'var(--text-soft)' }}>Terms of Service</Link> and{' '}
-          <Link to="#" style={{ color: 'var(--text-soft)' }}>Privacy Policy</Link>
+          <Link to="/terms" style={{ color: 'var(--text-soft)' }}>Terms of Service</Link> and{' '}
+          <Link to="/privacy" style={{ color: 'var(--text-soft)' }}>Privacy Policy</Link>
         </p>
       </div>
     </div>

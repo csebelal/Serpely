@@ -28,6 +28,8 @@ const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Com
 const CompareVs = lazy(() => import('./pages/CompareVs').then(m => ({ default: m.CompareVs })));
 const Audit = lazy(() => import('./pages/Audit').then(m => ({ default: m.Audit })));
 const Changelog = lazy(() => import('./pages/Changelog').then(m => ({ default: m.Changelog })));
+const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
+const Terms = lazy(() => import('./pages/Terms').then(m => ({ default: m.Terms })));
 const ChatWidget = lazy(() => import('./components/ChatWidget').then(m => ({ default: m.ChatWidget })));
 
 // Admin pages — code-split per route
@@ -56,6 +58,41 @@ const ChangelogManager = lazy(() => import('./pages/admin/ChangelogManager').the
 const SEOManager = lazy(() => import('./pages/admin/SEOManager').then(m => ({ default: m.SEOManager })));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
 const APIKeysManager = lazy(() => import('./pages/admin/APIKeysManager').then(m => ({ default: m.APIKeysManager })));
+
+// Chat loads only when the browser is idle (or on first interaction) —
+// its markdown parser (~167KB) must not compete with first paint.
+function DeferredChatWidget() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      setReady(true);
+    };
+    const t = setTimeout(go, 8000);
+    let idleId = 0;
+    if ('requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(go, { timeout: 9000 });
+    }
+    window.addEventListener('pointerdown', go, { once: true, passive: true });
+    window.addEventListener('scroll', go, { once: true, passive: true });
+    window.addEventListener('keydown', go, { once: true, passive: true });
+    return () => {
+      clearTimeout(t);
+      if (idleId && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+      window.removeEventListener('pointerdown', go);
+      window.removeEventListener('scroll', go);
+      window.removeEventListener('keydown', go);
+    };
+  }, []);
+  if (!ready) return null;
+  return (
+    <Suspense fallback={null}>
+      <ChatWidget />
+    </Suspense>
+  );
+}
 
 function PageLoader() {
   return (
@@ -129,15 +166,15 @@ function PublicShell() {
           <Route path="/audit" element={<Audit />} />
           <Route path="/audit/:id" element={<Audit />} />
           <Route path="/changelog" element={<Changelog />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
         </Routes>
       </main>
       <Footer />
-      <Suspense fallback={null}>
-        <ChatWidget />
-      </Suspense>
+      <DeferredChatWidget />
     </div>
   );
 }

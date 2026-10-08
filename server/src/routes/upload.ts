@@ -5,6 +5,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import MediaFile from '../models/MediaFile';
+import { generateVariants, deleteVariants } from '../lib/images';
 
 const router = Router();
 
@@ -49,7 +50,9 @@ router.post('/', verifyJWT, upload.single('file'), async (req: AuthRequest, res:
       size: req.file.size,
     });
     await media.save();
-    res.json({ url, publicId, _id: media._id });
+    // Responsive WebP variants for the frontend srcSet (never fails the upload).
+    const variants = await generateVariants(path.join(UPLOADS_DIR, filename));
+    res.json({ url, publicId, _id: media._id, variants: variants.map(v => `${origin}/uploads/${path.basename(v)}`) });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Upload failed';
     res.status(500).json({ error: msg });
@@ -75,6 +78,7 @@ router.delete('/', verifyJWT, async (req: AuthRequest, res: Response) => {
       res.status(400).json({ error: 'Invalid file path' }); return;
     }
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    deleteVariants(filePath);
 
     await MediaFile.findOneAndDelete({ publicId });
     res.json({ success: true });

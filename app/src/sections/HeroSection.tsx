@@ -1,6 +1,21 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { getSection } from '@/lib/api';
+import { uploadSrcSet } from '@/lib/responsiveImage';
 import { gsap } from 'gsap';
+
+function HeroImg({ src }: { src: string }) {
+  const srcSet = uploadSrcSet(src);
+  const img = (
+    <img src={src} alt="Serpely GEO dashboard tracking AI citations across ChatGPT and Perplexity" loading="eager" fetchPriority="high" decoding="async" width="1080" height="720" style={{ width: '100%', maxHeight: 540, objectFit: 'cover', display: 'block' }} />
+  );
+  if (!srcSet) return img;
+  return (
+    <picture>
+      <source type="image/webp" srcSet={srcSet} sizes="(max-width: 768px) 100vw, 1080px" />
+      {img}
+    </picture>
+  );
+}
 
 export function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -162,7 +177,7 @@ export function HeroSection() {
             <div className="relative">
               {heroImage ? (
                 <div className="dash-mock-s overflow-hidden" style={{ borderRadius: 18 }}>
-                  <img src={heroImage} alt="Serpely GEO dashboard tracking AI citations across ChatGPT and Perplexity" loading="eager" fetchPriority="high" decoding="async" width="1080" height="720" style={{ width: '100%', maxHeight: 540, objectFit: 'cover', display: 'block' }} />
+                  <HeroImg src={heroImage} />
                 </div>
               ) : (
               <div className="dash-mock-s relative">

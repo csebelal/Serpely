@@ -31,42 +31,42 @@ const DEFAULT: IntegrationsData = {
     {
       category: 'Analytics',
       items: [
-        { name: 'Google Analytics',      description: 'Track website traffic and user behavior',    img: '/Other Logos/Google_Analytics_Logo_2019.svg.png', abbr: 'GA', color: '#E37400', connected: true  },
-        { name: 'Google Search Console', description: 'Monitor search performance and indexing',    img: '/processed-logos/ribbon-gsc.png',                  abbr: 'SC', color: '#4285F4', connected: true  },
-        { name: 'Adobe Analytics',       description: 'Enterprise analytics and reporting',         img: '',                                                 abbr: 'AA', color: '#E34220', connected: false },
+        { name: 'Google Analytics',      description: 'Track website traffic and user behavior',    img: '/processed-logos/ribbon-ga4.png', abbr: 'GA', color: '#E37400', connected: true  },
+        { name: 'Google Search Console', description: 'Monitor search performance and indexing',    img: '/processed-logos/ribbon-gsc.png', abbr: 'SC', color: '#4285F4', connected: true  },
+        { name: 'Adobe Analytics',       description: 'Enterprise analytics and reporting',         img: '/integration-logos/adobe.svg',            abbr: 'AA', color: '#E34220', connected: false },
       ],
     },
     {
       category: 'CMS',
       items: [
         { name: 'WordPress',   description: "The world's most popular CMS",       img: '/processed-logos/ribbon-wordpress.png', abbr: 'WP', color: '#21759B', connected: true  },
-        { name: 'Shopify',     description: 'E-commerce platform for online stores', img: '',                                   abbr: 'SH', color: '#96BF48', connected: false },
+        { name: 'Shopify',     description: 'E-commerce platform for online stores', img: '/integration-logos/shopify.svg',            abbr: 'SH', color: '#96BF48', connected: false },
         { name: 'Webflow',     description: 'Visual website builder',             img: '/processed-logos/ribbon-webflow.png',  abbr: 'WF', color: '#4353FF', connected: false },
-        { name: 'Contentful',  description: 'Headless CMS for modern websites',   img: '',                                     abbr: 'CF', color: '#2478CC', connected: false },
+        { name: 'Contentful',  description: 'Headless CMS for modern websites',   img: '/integration-logos/contentful.svg',          abbr: 'CF', color: '#2478CC', connected: false },
       ],
     },
     {
       category: 'Communication',
       items: [
-        { name: 'Slack',            description: 'Get alerts and reports in Slack',   img: '/Other Logos/Slack-logo.png', abbr: 'SL', color: '#4A154B', connected: false },
-        { name: 'Microsoft Teams',  description: 'Collaborate with your team',        img: '',                            abbr: 'MT', color: '#4B53BC', connected: false },
-        { name: 'Discord',          description: 'Community and team communication',  img: '',                            abbr: 'DC', color: '#5865F2', connected: false },
+        { name: 'Slack',            description: 'Get alerts and reports in Slack',   img: '/integration-logos/slack.svg',          abbr: 'SL', color: '#4A154B', connected: false },
+        { name: 'Microsoft Teams',  description: 'Collaborate with your team',        img: '/integration-logos/microsoftteams.svg', abbr: 'MT', color: '#4B53BC', connected: false },
+        { name: 'Discord',          description: 'Community and team communication',  img: '/integration-logos/discord.svg',         abbr: 'DC', color: '#5865F2', connected: false },
       ],
     },
     {
       category: 'Project Management',
       items: [
-        { name: 'Jira',   description: 'Track SEO tasks and projects', img: '', abbr: 'JI', color: '#0052CC', connected: false },
-        { name: 'Asana',  description: 'Manage SEO workflows',         img: '', abbr: 'AS', color: '#F06A6A', connected: false },
-        { name: 'Trello', description: 'Visual project management',    img: '', abbr: 'TR', color: '#0079BF', connected: false },
+        { name: 'Jira',   description: 'Track SEO tasks and projects', img: '/integration-logos/jira.svg',   abbr: 'JI', color: '#0052CC', connected: false },
+        { name: 'Asana',  description: 'Manage SEO workflows',         img: '/integration-logos/asana.svg',  abbr: 'AS', color: '#F06A6A', connected: false },
+        { name: 'Trello', description: 'Visual project management',    img: '/integration-logos/trello.svg', abbr: 'TR', color: '#0079BF', connected: false },
       ],
     },
     {
       category: 'Data & Reporting',
       items: [
-        { name: 'Google Data Studio', description: 'Create custom SEO dashboards', img: '', abbr: 'DS', color: '#669DF6', connected: false },
-        { name: 'Tableau',            description: 'Advanced data visualization',  img: '', abbr: 'TB', color: '#E97627', connected: false },
-        { name: 'Zapier',             description: 'Automate workflows',           img: '', abbr: 'ZP', color: '#FF4A00', connected: false },
+        { name: 'Google Data Studio', description: 'Create custom SEO dashboards', img: '/integration-logos/googledatastudio.svg', abbr: 'DS', color: '#669DF6', connected: false },
+        { name: 'Tableau',            description: 'Advanced data visualization',  img: '/integration-logos/tableau.svg',            abbr: 'TB', color: '#E97627', connected: false },
+        { name: 'Zapier',             description: 'Automate workflows',           img: '/integration-logos/zapier.svg',             abbr: 'ZP', color: '#FF4A00', connected: false },
       ],
     },
   ],
@@ -103,13 +103,37 @@ export function IntegrationsEditor() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
 
+  // Same canonical map as public page — heals empty/broken img coming from DB
+  function heal(list: IntegrationCategory[]): IntegrationCategory[] {
+    const fix: Record<string,string> = {
+      'adobe analytics': '/integration-logos/adobe.svg',
+      'shopify': '/integration-logos/shopify.svg',
+      'contentful': '/integration-logos/contentful.svg',
+      'slack': '/integration-logos/slack.svg',
+      'microsoft teams': '/integration-logos/microsoftteams.svg',
+      'discord': '/integration-logos/discord.svg',
+      'jira': '/integration-logos/jira.svg',
+      'asana': '/integration-logos/asana.svg',
+      'trello': '/integration-logos/trello.svg',
+      'google data studio': '/integration-logos/googledatastudio.svg',
+      'tableau': '/integration-logos/tableau.svg',
+      'zapier': '/integration-logos/zapier.svg',
+    };
+    return list.map(c=>({...c, items:c.items.map(it=>{
+      let img = it.img.startsWith('/integrations/') ? it.img.replace('/integrations/', '/integration-logos/') : it.img;
+      const f = fix[it.name.trim().toLowerCase()];
+      if(f && (!img || img.includes('Other Logos/Google_Analytics_Logo_2019') || img.includes('Other Logos/Slack-logo'))) img = f;
+      return img === it.img ? it : {...it, img};
+    })}));
+  }
+
   useEffect(() => {
     getSection('integrations').then(r => {
       const d = r.data.data as Partial<IntegrationsData>;
       setData({
         heroHeadline:  d.heroHeadline  ?? DEFAULT.heroHeadline,
         heroSubtext:   d.heroSubtext   ?? DEFAULT.heroSubtext,
-        integrations:  d.integrations  ?? DEFAULT.integrations,
+        integrations:  Array.isArray(d.integrations) ? heal(d.integrations as IntegrationCategory[]) : DEFAULT.integrations,
         apiHeadline:   d.apiHeadline   ?? DEFAULT.apiHeadline,
         apiBody:       d.apiBody       ?? DEFAULT.apiBody,
         apiFeatures:   d.apiFeatures   ?? DEFAULT.apiFeatures,
@@ -247,7 +271,7 @@ export function IntegrationsEditor() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px auto auto', gap: 10, alignItems: 'flex-end' }}>
                     <div>
                       <label style={s.label}>Logo URL</label>
-                      <input style={s.inp} value={item.img} onChange={e => updateItem(ci, ii, { img: e.target.value })} placeholder="/Other Logos/logo.png" />
+                      <input style={s.inp} value={item.img} onChange={e => updateItem(ci, ii, { img: e.target.value })} placeholder="/integration-logos/slack.svg" />
                     </div>
                     <div>
                       <label style={s.label}>Abbr</label>

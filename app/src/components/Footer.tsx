@@ -4,7 +4,7 @@ import { getFooter } from '../lib/api';
 
 const cols = {
   Product: ['Features', 'Product Tour', 'Integrations', 'Rank Tracker', 'GEO Monitoring', 'Technical Audit', 'White-Label', 'Changelog'],
-  Company: ['About Us', 'Blog', 'Careers', 'Affiliate Program', 'Contact', 'Privacy Policy', 'Terms of Service'],
+  Company: ['About Us', 'Contact', 'Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Refund & Cancellation Policy', 'Security Policy'],
   Resources: ['SEO Blog', 'GEO Guide', 'API Docs', 'FAQ', 'Help Center', 'Feedback', 'Technical Docs', 'Serpely Brand Kit'],
   Compare: ['Serpely vs Semrush', 'Serpely vs Ahrefs', 'Serpely vs Nightwatch', 'Serpely vs Rankability', 'Serpely vs SE Ranking', 'Serpely vs Surfer SEO', 'Serpely vs SERPStat', 'Serpely vs Moz'],
 };
@@ -16,8 +16,9 @@ const colHrefs: Record<string, string> = {
   'Technical Audit': '/features', 'White-Label': '/features',
   Changelog: '/changelog',
   // Company
-  'About Us': '/about', Blog: '/blog', Contact: '/contact',
-  'Privacy Policy': '#', 'Terms of Service': '#', Careers: '#', 'Affiliate Program': '#',
+  'About Us': '/about', Contact: '/contact',
+  'Privacy Policy': '/privacy', 'Terms of Service': '/terms',
+  'Cookie Policy': '#', 'Refund & Cancellation Policy': '#', 'Security Policy': '#',
   // Resources
   FAQ: '/faq', 'SEO Blog': '/blog',
   'GEO Guide': '#', 'API Docs': '#', 'Help Center': '#',

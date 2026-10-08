@@ -1009,7 +1009,7 @@ export function Blog() {
                 <a href="/integrations"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></div><div className="dd-text">Technical Docs<span>API & integration guides</span></div></a>
                 <a href="/contact"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div className="dd-text">Feedback<span>Shape the product</span></div></a>
                 <div className="dropdown-divider" />
-                <a href="/contact"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M9 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M9 14h6"/><path d="M9 10h6"/></svg></div><div className="dd-text">Terms of Service<span>Legal & privacy</span></div></a>
+                <a href="/terms"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M9 6H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3"/><path d="M9 14h6"/><path d="M9 10h6"/></svg></div><div className="dd-text">Terms of Service<span>Legal & privacy</span></div></a>
               </div>
             </div>
 
