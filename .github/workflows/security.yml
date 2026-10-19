@@ -1,0 +1,101 @@
+name: Security & Build
+
+# Regression gate: no production dependency vulnerability, no type error, no
+# broken build, and the API still passes every check in server/scripts/security-check.mjs.
+#
+# Known dev-only advisories (braces via chokidar, postcss-selector-parser via
+# Tailwind 3) are intentionally NOT gated: they are build-tooling only and have
+# no fix without a Tailwind 4 migration. Production deps must stay at 0.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      MONGO_URI: mongodb://127.0.0.1:27017/serpely_ci
+      JWT_SECRET: ci-only-jwt-secret-that-is-at-least-32-characters-long
+      PORT: 4000
+      ADMIN_EMAIL: ci-admin@serpely.test
+      ADMIN_PASSWORD: CiOnlyPassword123
+      API_BASE: http://127.0.0.1:4000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            app/package-lock.json
+
+      - name: Write server/.env for the checks
+        working-directory: server
+        run: |
+          cat > .env <<EOF
+          MONGO_URI=${MONGO_URI}
+          JWT_SECRET=${JWT_SECRET}
+          PORT=${PORT}
+          ADMIN_EMAIL=${ADMIN_EMAIL}
+          ADMIN_PASSWORD=${ADMIN_PASSWORD}
+          EOF
+
+      - name: Server — install, typecheck, build
+        working-directory: server
+        run: |
+          npm ci
+          npm run build
+
+      - name: Server — production dependency audit
+        working-directory: server
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Seed the CI database (creates the admin user)
+        working-directory: server
+        run: npm run seed
+
+      - name: Start the API
+        working-directory: server
+        run: |
+          node dist/index.js > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf "$API_BASE/api/health" > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "API did not become healthy"; cat server.log; exit 1
+
+      - name: Security regression checks
+        working-directory: server
+        run: node scripts/security-check.mjs
+
+      - name: App — install, audit, build
+        working-directory: app
+        run: |
+          npm ci
+          npm audit --omit=dev --audit-level=high
+          npm run build
+
+      - name: Upload server log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-log
+          path: server/server.log
