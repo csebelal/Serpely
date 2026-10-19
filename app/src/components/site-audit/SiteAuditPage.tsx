@@ -1,5 +1,5 @@
 /**
- * Redesigned Site Audit page (the `/audit-preview/:id` host).
+ * Redesigned Site Audit page (served at `/audit/:id` and `/audit-preview/:id`).
  *
  * Loads a real `PublicAuditReport` by its public share token and renders the
  * ported prototype UI. All state that has to survive a drawer round-trip

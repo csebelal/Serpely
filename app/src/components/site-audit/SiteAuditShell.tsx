@@ -1,12 +1,16 @@
 /**
  * Site Audit page chrome — topbar, hero, summary and footer.
  *
- * The markup is ported verbatim from the prototype (see
- * AuditShell.generated.tsx, the faithful static conversion) and is being rewired
- * to real report data. The findings table and the detail drawer are separate
- * components.
+ * The markup is ported verbatim from the prototype and rewired to real report
+ * data. The findings table and the detail drawer are separate components.
+ *
+ * Two affordances that the prototype left as no-ops are wired to real routes:
+ * the brand links home and “Run new audit” links to `/audit`. The rest of the
+ * prototype's inert chrome (nav links, Export report, Help/Settings) is left
+ * untouched on purpose — see the notes on the cutover commit.
  */
 import type { CSSProperties } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import SiteAuditFindings from './SiteAuditFindings';
 import SiteAuditDrawer from './SiteAuditDrawer';
 import type { AuditViewModel, CategoryId, ReportFinding, Tone } from './report';
@@ -37,6 +41,7 @@ export default function SiteAuditShell({
   openFinding,
   shareToken,
 }: Props) {
+  const navigate = useNavigate();
   const overallScore = vm.overall ?? 0;
   const passRate = vm.counts.all > 0 ? Math.round((vm.counts.pass / vm.counts.all) * 100) : 0;
   const scoreLabel =
@@ -48,12 +53,12 @@ export default function SiteAuditShell({
   return (
     <div className="sa-root">
       <header className="topbar" role="banner"> 
-        <a href="#" className="brand" aria-label="Serpely home"> 
+        <Link to="/" className="brand" aria-label="Serpely home"> 
           <span className="brand-icon" aria-hidden="true">S
           </span> 
           <span>serpely
           </span> 
-        </a> 
+        </Link> 
         <nav className="nav" aria-label="Primary"> 
           <a href="#">Overview
           </a> 
@@ -120,7 +125,7 @@ export default function SiteAuditShell({
               Export report
 
             </button> 
-            <button className="btn primary" id="runAudit" type="button"> 
+            <button className="btn primary" id="runAudit" type="button" onClick={() => navigate('/audit')}> 
               <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="23 4 23 10 17 10" />
                 <polyline points="1 20 1 14 7 14" />

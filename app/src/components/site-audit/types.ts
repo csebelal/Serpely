@@ -1,5 +1,5 @@
 /**
- * Shared types for the Site Audit redesign (`/audit-preview/:id`).
+ * Shared types for the Site Audit redesign (`/audit/:id`, `/audit-preview/:id`).
  *
  * Mirrors the shape the prototype's `genUrlDetail()` produces, but every field is
  * nullable because in production the values come from a real crawl and may be
