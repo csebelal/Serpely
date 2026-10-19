@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import express from 'express';
+import crypto from 'crypto';
+import express, { type ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -8,10 +9,16 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import dns from 'dns';
-
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+import { sanitizeBlogHtml } from './lib/sanitize';
+import { ensureAdminRoles } from './lib/roles';
+import { ADMIN_COOKIE } from './middleware/auth';
 
 dotenv.config();
+
+// DNS: use the host resolver by default. Set DNS_SERVERS (comma-separated) to
+// override instead of hardcoding a public resolver for every deployment.
+const dnsServers = (process.env.DNS_SERVERS || '').split(',').map(s => s.trim()).filter(Boolean);
+if (dnsServers.length) dns.setServers(dnsServers);
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   console.error('FATAL: JWT_SECRET must be set and be at least 32 characters');
@@ -40,6 +47,8 @@ import backupRouter from './routes/backup';
 import apiKeysRouter from './routes/apikeys';
 import sitemapRouter from './routes/sitemap';
 import publicAuditRouter from './routes/publicAudit';
+import sitemapCheckRouter from './routes/sitemapCheck';
+import googleRouter from './routes/google';
 import mcpRouter from './routes/mcp';
 import AdminUser from './models/AdminUser';
 import SiteSettings from './models/SiteSettings';
@@ -55,38 +64,103 @@ app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
     directives: {
+      // Baseline for non-HTML responses. HTML requests get a per-request nonce
+      // instead (see the CSP middleware + buildCsp below), which is what lets us
+      // drop 'unsafe-inline' for scripts.
       'script-src': [
         "'self'",
-        "'unsafe-inline'",
+        "'strict-dynamic'",
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
         'https://www.googleadservices.com',
         'https://googleads.g.doubleclick.net',
+        'https://challenges.cloudflare.com',
       ],
+      'script-src-attr': ["'none'"],
+      'object-src': ["'none'"],
+      'base-uri': ["'self'"],
+      'form-action': ["'self'"],
       'connect-src': [
         "'self'",
+        'https://serpely.com',
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
         'https://stats.g.doubleclick.net',
         'https://*.google-analytics.com',
+        'https://challenges.cloudflare.com',
       ],
       'img-src': ["'self'", 'data:', 'https:'],
-      'frame-src': ["'self'", 'https://www.googletagmanager.com', 'https://www.youtube.com'],
+      'frame-src': ["'self'", 'https://www.googletagmanager.com', 'https://www.youtube.com', 'https://challenges.cloudflare.com'],
       'style-src': ["'self'", "'unsafe-inline'", 'https:', 'data:'],
       'font-src': ["'self'", 'https:', 'data:'],
-      'script-src-attr': ["'unsafe-inline'"],
     },
   },
 }));
-const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+
+/**
+ * HTML responses carry a fresh nonce. Inline scripts we emit (the GTM bootstrap
+ * in index.html, admin custom head code) receive it, and 'strict-dynamic' lets
+ * those scripts load their own dependencies — so 'unsafe-inline' is no longer
+ * needed anywhere.
+ */
+function buildCsp(nonce: string): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://www.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://challenges.cloudflare.com`,
+    "script-src-attr 'none'",
+    'style-src \'self\' \'unsafe-inline\' https: data:',
+    "img-src 'self' data: https:",
+    "font-src 'self' https: data:",
+    "connect-src 'self' https://serpely.com https://www.googletagmanager.com https://www.google-analytics.com https://stats.g.doubleclick.net https://*.google-analytics.com https://challenges.cloudflare.com",
+    "frame-src 'self' https://www.googletagmanager.com https://www.youtube.com https://challenges.cloudflare.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'self'",
+  ].join('; ');
+}
+
+app.use((req, res, next) => {
+  if (String(req.headers.accept || '').includes('text/html')) {
+    const nonce = crypto.randomBytes(16).toString('base64');
+    res.locals.cspNonce = nonce;
+    res.setHeader('Content-Security-Policy', buildCsp(nonce));
+  }
+  next();
+});
+
+/** Adds the request nonce to any <script> tag that does not already have one. */
+function applyScriptNonce(html: string, nonce: string): string {
+  if (!nonce) return html;
+  return html.replace(/<script(?![^>]*\bnonce=)/gi, `<script nonce="${nonce}"`);
+}
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5500,http://localhost:5173')
   .split(',').map(s => s.trim()).filter(Boolean);
+// Local dev can serve on any port (5173, 5500, …). Accept any loopback origin so
+// changing the dev-server port never breaks the API.
+const isLoopback = (origin: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(origin);
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) cb(null, true);
-    else cb(new Error(`CORS blocked: ${origin}`));
+    if (!origin || allowedOrigins.includes(origin) || isLoopback(origin)) cb(null, true);
+    // Reject silently (no CORS headers) instead of throwing a 500 that leaks
+    // internals. The browser blocks the response either way.
+    else cb(null, false);
   },
   credentials: true,
 }));
+// CSRF: a cookie-authenticated state change must originate from an allowed
+// origin. SameSite=Lax already blocks cross-site POSTs; this is the second lock
+// (it also covers older browsers and any future SameSite relaxation).
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  if (!req.headers.cookie?.includes(`${ADMIN_COOKIE}=`)) return next();
+  let origin = req.headers.origin || '';
+  if (!origin && req.headers.referer) {
+    try { origin = new URL(req.headers.referer).origin; } catch { origin = ''; }
+  }
+  if (!origin || allowedOrigins.includes(origin) || isLoopback(origin)) return next();
+  res.status(403).json({ error: 'Cross-site request blocked' });
+});
 // gzip + brotli for text assets (JS/CSS/HTML/JSON/SVG). Images/fonts are
 // skipped automatically (non-compressible types). Must run before static + routes.
 app.use(compression({ threshold: 1024 }));
@@ -115,12 +189,26 @@ app.use('/api/audit', auditRouter);
 app.use('/api/backup', backupRouter);
 app.use('/api/keys', apiKeysRouter);
 app.use('/api/public-audit', publicAuditRouter);
+app.use('/api/sitemap-check', sitemapCheckRouter);
+app.use('/api/google', googleRouter);
 app.use('/mcp', mcpRouter);
 
 app.use('/api', sitemapRouter);
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
-// IndexNow key-proof file (https://serpely.com/<key>.txt) — required by Bing
+// IndexNow key-proof file (https://serpely.com/<key>.txt) — required by Bing.
+// Registered AFTER express.static so it cannot shadow /robots.txt.
+
+// ─── Frontend: Serve index.html with injected custom head code ──────────
+const frontendDist = path.resolve(__dirname, '../../app/dist');
+const indexHtmlPath = path.join(frontendDist, 'index.html');
+// Serve built frontend assets directly (nginx also serves /assets/, this covers local/docker)
+app.use(express.static(frontendDist, { index: false, maxAge: '1y', immutable: true }));
+// .well-known is a dot-directory, which express.static ignores by default.
+app.use('/.well-known', express.static(path.join(frontendDist, '.well-known'), { dotfiles: 'allow', maxAge: '1h' }));
+
+// IndexNow key-proof file (https://serpely.com/<key>.txt) — required by Bing.
+// Must come after express.static, otherwise it shadows /robots.txt.
 app.get('/:key.txt', (req, res) => {
   const key = getIndexNowKey();
   if (req.params.key === key) {
@@ -129,12 +217,6 @@ app.get('/:key.txt', (req, res) => {
     res.status(404).send('');
   }
 });
-
-// ─── Frontend: Serve index.html with injected custom head code ──────────
-const frontendDist = path.resolve(__dirname, '../../app/dist');
-const indexHtmlPath = path.join(frontendDist, 'index.html');
-// Serve built frontend assets directly (nginx also serves /assets/, this covers local/docker)
-app.use(express.static(frontendDist, { index: false, maxAge: '1y', immutable: true }));
 
 interface SettingsCache { customHeadCode: string; updatedAt: number }
 let settingsCache: SettingsCache | null = null;
@@ -197,14 +279,6 @@ async function getBlogPageData(slug: string): Promise<BlogPageData | null> {
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function sanitizeBodyHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/\son\w+=["'][^"']*["']/gi, '')
-    .replace(/href="javascript:[^"]*"/gi, 'href="#"');
 }
 
 function replaceMeta(html: string, og: BlogPageData): string {
@@ -367,11 +441,43 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
     ],
   },
   '/audit': {
-    title: 'Free SEO & AI Visibility Audit: GEO, Core Web Vitals & Schema',
-    desc: 'Run a free SEO and AI visibility audit. Check technical SEO, Core Web Vitals, schema, mobile and ChatGPT/Perplexity citation readiness in seconds.',
+    title: 'Free Full-Site SEO & AI Visibility Audit: 300 Pages, PSI & Schema',
+    desc: 'Run a free full-site SEO audit: crawl up to 300 pages with Google lab data across Performance, Accessibility, Technical SEO, On-page and AI citation readiness.',
     blocks: [
-      { h: 'Get discovered wherever people search', p: 'Enter any website for an instant Technical SEO, Core Web Vitals, Security, Mobile and AI Visibility audit with a prioritized fix plan.' },
-      { h: 'From URL to action plan in seconds', p: 'Every audit scores 5 categories, forecasts score after quick wins, and shows exactly what to fix for ChatGPT, Perplexity and Google AI Overviews.' },
+      { h: 'Get discovered wherever people search', p: 'Enter any website for a full-site Technical SEO, Performance, Accessibility, On-page and AI Visibility audit with a prioritized fix plan.' },
+      { h: 'From URL to action plan in minutes', p: 'Every audit crawls up to 300 pages, adds Google lab data, and shows exactly what to fix for ChatGPT, Perplexity and Google AI Overviews.' },
+    ],
+  },
+  '/sitemap-checker': {
+    title: 'Free Sitemap Checker: Find Broken, Blocked & Redirected URLs',
+    desc: 'Paste any website to check its XML sitemap: broken links, redirects, blocked pages, missing canonicals and indexability for every URL.',
+    blocks: [
+      { h: 'Is your sitemap helping or hurting you?', p: 'Enter any website for an instant sitemap health check — every URL tested live for errors, redirects, blocks and Google listing readiness.' },
+      { h: 'Fix your sitemap before Google gives up on it', p: 'Broken, blocked and redirected URLs waste your crawl budget. This checker lists each one with a plain-language fix.' },
+    ],
+  },
+  '/privacy': {
+    title: 'Privacy Policy — Serpely',
+    desc: 'How Serpely collects, uses, discloses, and safeguards your information.',
+    blocks: [
+      { h: 'Privacy Policy', p: 'How Serpely collects, uses, discloses, and safeguards your information when you use our SEO and GEO platform.' },
+      { h: 'Your data, your rights', p: 'Contact privacy@serpely.com with any questions about your data, access requests, or deletion requests.' },
+    ],
+  },
+  '/cookie-policy': {
+    title: 'Cookie Policy — Serpely',
+    desc: 'The cookies and local storage Serpely uses, what each one is for, and how to change your choice.',
+    blocks: [
+      { h: 'Cookie Policy', p: 'What Serpely stores on your device, why we store it, and how to change your mind at any time.' },
+      { h: 'Strictly necessary cookies first', p: 'Only cookies required for the site and your account to work are set by default. Analytics is set only after you accept, and no advertising or retargeting pixels are loaded.' },
+    ],
+  },
+  '/terms': {
+    title: 'Terms and Conditions — Serpely',
+    desc: 'The terms governing your access to and use of the Serpely platform.',
+    blocks: [
+      { h: 'Terms and Conditions', p: 'The terms governing your access to and use of the Serpely platform, plans, and services.' },
+      { h: 'Fair use of the platform', p: 'By using Serpely you agree to use the platform lawfully, respect rate limits, and keep your account credentials secure.' },
     ],
   },
   '/compare/semrush': {
@@ -509,7 +615,7 @@ async function buildBlogListSsr(): Promise<string> {
 }
 
 function buildBlogPostSsr(post: BlogPageData): string {
-  const body = sanitizeBodyHtml(post.body || '');
+  const body = sanitizeBlogHtml(post.body);
   const date = post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0, 10) : '';
   const byline = [post.author, date].filter(Boolean).join(' · ');
   const faq = (post.faq || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -714,7 +820,7 @@ app.use(async (req, res, next) => {
   const blogMatch = normPath.match(/^\/blog\/([a-z0-9-]+)$/);
   const isBlogList = normPath === '/blog';
   const isCrawler = CRAWLER_RE.test(req.headers['user-agent'] || '');
-  const AUTH_PAGES = new Set(['/login', '/register', '/profile']);
+  const AUTH_PAGES = new Set(['/login', '/register', '/profile', '/dashboard']);
 
   try {
     let html = fs.readFileSync(indexHtmlPath, 'utf-8');
@@ -783,6 +889,10 @@ app.use(async (req, res, next) => {
         });
         html = html.replace(/<link rel="canonical" href="[^"]*"/, `<link rel="canonical" href="https://serpely.com${normPath}"`);
         if (isCrawler) serverSsr = await buildBlogListSsr();
+      } else if (/^\/(audit|sitemap-checker)\/[A-Za-z0-9]{8,64}$/.test(normPath)) {
+        // Shared report links (/audit/<shareToken>, /sitemap-checker/<shareToken>).
+        // Per-visitor results: render the SPA but never let crawlers index them.
+        html = html.replace(/<meta name="robots" content="[^"]*"/, '<meta name="robots" content="noindex,nofollow"');
       } else if (normPath.startsWith('/compare/') || normPath.startsWith('/blog/')) {
         // Unknown compare/author/category slug -> real 404 (frontend would redirect, avoid soft-404)
         res.status(404).type('html').send(NOT_FOUND_HTML);
@@ -807,14 +917,33 @@ app.use(async (req, res, next) => {
     if (code) {
       html = html.replace('</head>', code + '\n</head>');
     }
+    html = applyScriptNonce(html, String(res.locals.cspNonce || ''));
     res.setHeader('Link', '<https://serpely.com/llms.txt>; rel="alternate"; type="text/plain"; title="LLM docs"');
     // Fresh HTML on every visit (no-cache + Express auto-ETag → 304 revalidation),
     // while hashed /assets stay immutable for a year (see express.static above).
     res.set('Cache-Control', 'public, no-cache').type('html').send(html);
   } catch {
-    res.set('Cache-Control', 'public, no-cache').sendFile(indexHtmlPath);
+    try {
+      const fallback = applyScriptNonce(fs.readFileSync(indexHtmlPath, 'utf-8'), String(res.locals.cspNonce || ''));
+      res.set('Cache-Control', 'public, no-cache').type('html').send(fallback);
+    } catch {
+      res.set('Cache-Control', 'public, no-cache').sendFile(indexHtmlPath);
+    }
   }
 });
+
+// ─── Global error handler ────────────────────────────────────────────────
+// Never leak stack traces or internals to clients. Malformed JSON and other
+// client errors keep their 4xx status; everything else is a generic 500.
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  if (res.headersSent) return;
+  const status = Number((err as { status?: number; statusCode?: number })?.status
+    || (err as { statusCode?: number })?.statusCode) || 500;
+  const clientError = status >= 400 && status < 500;
+  if (!clientError) console.error('Unhandled error:', (err as Error)?.message);
+  res.status(clientError ? status : 500).json({ error: clientError ? 'Invalid request' : 'Server error' });
+};
+app.use(errorHandler);
 
 async function seedAdmin() {
   const existing = await AdminUser.findOne();
@@ -826,7 +955,7 @@ async function seedAdmin() {
       process.exit(1);
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    await AdminUser.create({ email, passwordHash });
+    await AdminUser.create({ email, passwordHash, role: 'owner' });
     console.log(`Admin user created: ${email}`);
   }
 }
@@ -836,6 +965,7 @@ mongoose
   .then(async () => {
     console.log('MongoDB connected');
     await seedAdmin();
+    await ensureAdminRoles();
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => {

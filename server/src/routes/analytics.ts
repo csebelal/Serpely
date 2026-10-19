@@ -15,10 +15,12 @@ const trackLimiter = rateLimit({
 // POST /api/analytics/track (public)
 router.post('/track', trackLimiter, async (req: Request, res: Response) => {
   try {
-    const { path, referrer } = req.body as { path: string; referrer?: string };
-    if (!path) { res.status(400).json({ error: 'path required' }); return; }
-    const ua = req.headers['user-agent'] || '';
-    await PageView.create({ path, referrer: referrer || '', ua });
+    const { path: rawPath, referrer: rawReferrer } = req.body as { path?: unknown; referrer?: unknown };
+    const path = typeof rawPath === 'string' ? rawPath.slice(0, 512) : '';
+    const referrer = typeof rawReferrer === 'string' ? rawReferrer.slice(0, 512) : '';
+    if (!path || !path.startsWith('/')) { res.status(400).json({ error: 'path required' }); return; }
+    const ua = String(req.headers['user-agent'] || '').slice(0, 512);
+    await PageView.create({ path, referrer, ua });
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });

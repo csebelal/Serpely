@@ -6,6 +6,13 @@ export const RESPONSIVE_WIDTHS = [480, 768, 1080];
 const WEBP_QUALITY = 80;
 
 /**
+ * Don't let libvips keep input files open: on Windows an open handle makes the
+ * later `fs.unlinkSync` in the media-delete route fail with EBUSY, so uploads
+ * could never be removed. Only the file cache is disabled, not the operations.
+ */
+sharp.cache({ files: 0 });
+
+/**
  * Generate responsive WebP variants (`<name>-480.webp` …) next to the original.
  * Always creates the full width set so frontend srcSets never 404.
  * Never throws — returns the files that exist afterwards.

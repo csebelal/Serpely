@@ -13,6 +13,9 @@ export interface IClientUser extends Document {
     auditAlerts: boolean;
   };
   apiKey: string;
+  emailVerified: boolean;
+  verifyToken: string;
+  verifyTokenExpires?: Date;
   createdAt: Date;
 }
 
@@ -29,6 +32,9 @@ const ClientUserSchema = new Schema<IClientUser>({
     auditAlerts: { type: Boolean, default: false },
   },
   apiKey: { type: String, default: '' },
+  emailVerified: { type: Boolean, default: false },
+  verifyToken: { type: String, default: '' },
+  verifyTokenExpires: { type: Date },
   createdAt: { type: Date, default: Date.now },
 });
 

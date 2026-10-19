@@ -13,6 +13,7 @@ export interface PsiField {
   cls?: number;
   inpMs?: number;
   ttfbMs?: number;
+  source?: 'psi' | 'crux-url' | 'crux-origin';
 }
 
 export interface PsiResult {
@@ -40,13 +41,18 @@ interface LhrAudit {
   score?: number | null;
   scoreDisplayMode?: string;
   title?: string;
+  details?: { items?: unknown[] };
 }
 
-/** Lighthouse SEO + Accessibility audits mapped into our issue categories.
- *  Skips duplicates of our own static checks (title, meta, canonical, alt, lang). */
+const ms = (v: number): string => `~${Math.round(v)}ms`;
+const kb = (v: number): string => `~${Math.round(v / 1024)}KB`;
+
+/** Lighthouse SEO / Accessibility / Security / CWV audits mapped into our issue categories.
+ *  Skips duplicates of our own static checks (title, meta, canonical, alt, lang, viewport, https). */
 const SEO_MAP: {
   id: string; code: string; title: string; category: AuditCategory;
   impact: number; severity: AuditSeverity; fix: string;
+  detail?: (v: number, a: LhrAudit) => string;
 }[] = [
   { id: 'crawlable-anchors', code: 'psi-crawl-anchors', title: 'Crawlable anchors', category: 'Technical SEO', impact: 3, severity: 'medium', fix: 'Make all links real <a href> anchors — crawlers and AI bots skip JS-only click handlers.' },
   { id: 'hreflang', code: 'psi-hreflang', title: 'Valid hreflang', category: 'Technical SEO', impact: 2, severity: 'low', fix: 'Fix invalid hreflang values; use ISO codes (e.g. en-GB, not en-UK) with self-referencing, reciprocal entries.' },
@@ -57,10 +63,33 @@ const SEO_MAP: {
   { id: 'font-size', code: 'psi-font-size', title: 'Legible font sizes', category: 'Mobile', impact: 2, severity: 'low', fix: 'Keep body text ≥12px (16px recommended) so mobile content stays readable and indexable.' },
   { id: 'tap-targets', code: 'psi-tap-targets', title: 'Tap targets sized', category: 'Mobile', impact: 3, severity: 'medium', fix: 'Size tap targets ≥48px with ≥8px spacing for mobile usability.' },
   // ── C. AI crawler budget: bots crawl with limited time — slow/broken pages get skipped ──
-  { id: 'server-response-time', code: 'psi-server-response', title: 'Fast server response', category: 'Core Web Vitals', impact: 4, severity: 'medium', fix: 'AI crawlers time out on slow servers — cut TTFB with CDN, edge caching and faster hosting.' },
-  { id: 'total-byte-weight', code: 'psi-byte-weight', title: 'Light page weight', category: 'Core Web Vitals', impact: 3, severity: 'medium', fix: 'Heavy pages exhaust AI crawler budgets — compress images, drop unused JS/CSS, stay lean.' },
+  { id: 'server-response-time', code: 'psi-server-response', title: 'Fast server response', category: 'Core Web Vitals', impact: 4, severity: 'medium', fix: 'AI crawlers time out on slow servers — cut TTFB with CDN, edge caching and faster hosting.', detail: v => `${ms(v)} server overhead` },
+  { id: 'total-byte-weight', code: 'psi-byte-weight', title: 'Light page weight', category: 'Core Web Vitals', impact: 3, severity: 'medium', fix: 'Heavy pages exhaust AI crawler budgets — compress images, drop unused JS/CSS, stay lean.', detail: v => `${kb(v)} transferred` },
   { id: 'uses-http2', code: 'psi-http2', title: 'HTTP/2 enabled', category: 'Core Web Vitals', impact: 2, severity: 'low', fix: 'Enable HTTP/2 (or HTTP/3) so crawlers fetch your assets in parallel instead of queuing.' },
   { id: 'errors-in-console', code: 'psi-console-errors', title: 'No browser errors', category: 'Technical SEO', impact: 3, severity: 'medium', fix: 'JS console errors can break rendering for crawlers and AI readers — fix them so the page renders clean.' },
+  // ── D. Wasted bytes & blocking work (lab-measured savings) ──
+  { id: 'render-blocking-resources', code: 'psi-render-blocking', title: 'No render-blocking resources', category: 'Core Web Vitals', impact: 4, severity: 'medium', fix: 'Defer non-critical scripts, inline critical CSS — every blocked millisecond delays content and crawler rendering.', detail: v => `${ms(v)} render delay` },
+  { id: 'unused-javascript', code: 'psi-unused-js', title: 'No unused JavaScript', category: 'Core Web Vitals', impact: 3, severity: 'medium', fix: 'Ship only the JS each page needs — split bundles, tree-shake, drop dead dependencies.', detail: v => `${kb(v)} unused` },
+  { id: 'unminified-css', code: 'psi-unminified-css', title: 'Minified CSS', category: 'Core Web Vitals', impact: 2, severity: 'low', fix: 'Minify stylesheets in the build step to shave bytes off every visit.', detail: v => `${kb(v)} minifiable` },
+  { id: 'unminified-javascript', code: 'psi-unminified-js', title: 'Minified JavaScript', category: 'Core Web Vitals', impact: 2, severity: 'low', fix: 'Minify scripts in the build step to shave bytes off every visit.', detail: v => `${kb(v)} minifiable` },
+  { id: 'modern-image-formats', code: 'psi-modern-images', title: 'Modern image formats', category: 'Core Web Vitals', impact: 3, severity: 'medium', fix: 'Serve WebP/AVIF with JPEG/PNG fallback — typically 25–35% smaller for the same quality.', detail: v => `${kb(v)} savable with WebP/AVIF` },
+  { id: 'uses-responsive-images', code: 'psi-responsive-images', title: 'Responsive images for every screen', category: 'Mobile', impact: 2, severity: 'low', fix: 'Use srcset/sizes so phones download small images instead of desktop-sized files.', detail: v => `${kb(v)} savable with responsive sizes` },
+  { id: 'uses-optimized-images', code: 'psi-optimized-images', title: 'Compressed images', category: 'Core Web Vitals', impact: 3, severity: 'medium', fix: 'Run images through a compressor (Squoosh, Sharp, image CDN) at quality ~80.', detail: v => `${kb(v)} savable with compression` },
+  { id: 'efficient-animated-content', code: 'psi-efficient-anim', title: 'Efficient animations', category: 'Core Web Vitals', impact: 2, severity: 'low', fix: 'Replace animated GIFs with muted looping video — far smaller and GPU-friendly.', detail: v => `${kb(v)} savable with video` },
+  { id: 'font-display', code: 'psi-font-display', title: 'Fonts show text fast', category: 'Core Web Vitals', impact: 2, severity: 'low', fix: 'Add font-display: swap so text appears instantly instead of invisible blank text.', detail: v => `${ms(v)} invisible text` },
+  { id: 'uses-text-compression', code: 'psi-text-compression', title: 'Text compression enabled', category: 'Core Web Vitals', impact: 3, severity: 'medium', fix: 'Enable gzip or Brotli for text assets on the server/CDN.', detail: v => `${kb(v)} savable with gzip/Brotli` },
+  { id: 'redirects', code: 'psi-redirects', title: 'No redirect chains', category: 'Technical SEO', impact: 2, severity: 'low', fix: 'Link directly to final URLs — every redirect hop costs time and leaks a little link equity.', detail: v => `${ms(v)} lost to redirects` },
+  // ── E. Accessibility (mobile users and AI readers hit these hardest) ──
+  { id: 'color-contrast', code: 'psi-contrast', title: 'Readable text contrast', category: 'Mobile', impact: 3, severity: 'medium', fix: 'Raise text/background contrast to 4.5:1+ so content stays readable in sunlight and for low-vision users.' },
+  { id: 'label', code: 'psi-form-labels', title: 'Labeled form fields', category: 'Mobile', impact: 2, severity: 'low', fix: 'Give every input a visible <label> — screen readers and autofill depend on it.' },
+  { id: 'button-name', code: 'psi-button-names', title: 'Buttons have names', category: 'Mobile', impact: 2, severity: 'low', fix: 'Give icon-only buttons discernible text or aria-labels so assistive tech can announce them.' },
+  { id: 'image-aspect-ratio', code: 'psi-img-ratio', title: 'Images keep aspect ratio', category: 'Core Web Vitals', impact: 2, severity: 'low', fix: 'Set width/height or aspect-ratio on images so layout does not jump while they load.' },
+  { id: 'notification-on-start', code: 'psi-no-notif-spam', title: 'No permission prompts on load', category: 'Mobile', impact: 1, severity: 'low', fix: 'Ask for notifications only after a user gesture — on-load prompts drive visitors away.' },
+  { id: 'geolocation-on-start', code: 'psi-no-geo-spam', title: 'No location prompts on load', category: 'Mobile', impact: 1, severity: 'low', fix: 'Request geolocation only when the user triggers a location feature.' },
+  // ── F. Security signals from the lab ──
+  { id: 'js-libraries', code: 'psi-js-libs', title: 'No vulnerable JavaScript libraries', category: 'Security & HTTPS', impact: 5, severity: 'high', fix: 'Update every flagged front-end library to a patched version — known CVEs get exploited automatically.', detail: (_v, a) => `${a.details?.items?.length ?? 0} third-party libraries found — update any flagged versions` },
+  { id: 'password-inputs-can-be-pasted', code: 'psi-paste-password', title: 'Password paste allowed', category: 'Security & HTTPS', impact: 2, severity: 'low', fix: 'Blocking paste pushes users toward weak, memorable passwords — allow password managers to work.' },
+  { id: 'external-anchors-use-rel', code: 'psi-external-rel', title: 'Safe external links', category: 'Security & HTTPS', impact: 3, severity: 'medium', fix: 'Add rel="noopener" to target=_blank links so opened pages cannot hijack the original tab.' },
 ];
 
 const PSI_URL = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
@@ -68,9 +97,10 @@ const PSI_URL = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
 function toIssue(
   code: string, title: string, evidence: string, fix: string,
   impact: number, severity: AuditSeverity, effort: 'quick' | 'normal', passed: boolean,
+  category: AuditCategory = 'Core Web Vitals',
 ): IAuditIssue {
   return {
-    code, category: 'Core Web Vitals' as AuditCategory, severity, title, evidence, fix,
+    code, category, severity, title, evidence, fix,
     impact: passed ? 0 : impact, effort, passed,
   };
 }
@@ -145,6 +175,7 @@ export async function fetchPsi(targetUrl: string, apiKey?: string): Promise<PsiR
       return typeof v === 'number' ? Math.round(v * 100) : undefined;
     };
     const perf = cat('performance') ?? 0;
+    const field = parseField(j.loadingExperience);
     const out: PsiResult = {
       score: perf,
       strategy: 'mobile',
@@ -154,25 +185,26 @@ export async function fetchPsi(targetUrl: string, apiKey?: string): Promise<PsiR
         bestPractices: cat('best-practices') ?? 0,
         seo: cat('seo') ?? 0,
       },
-      field: parseField(j.loadingExperience),
+      field,
     };
+    // Phase B: field TTFB was parsed but never exposed — copy it up so the
+    // server-response check below uses real-visitor data instead of never firing.
+    if (field?.ttfbMs !== undefined) out.ttfbMs = field.ttfbMs;
     const lcp = num('largest-contentful-paint');
     if (lcp !== undefined) out.lcpMs = Math.round(lcp);
     const cls = num('cumulative-layout-shift');
     if (cls !== undefined) out.cls = Math.round(cls * 1000) / 1000;
     const inpLab = num('interaction-to-next-paint');
     if (inpLab !== undefined) out.inpMs = Math.round(inpLab);
-    // Collect mapped SEO / Accessibility / crawler-budget audits (skip non-binary outcomes).
+    // Collect mapped audits (skip non-binary outcomes).
     const extra: SeoExtra[] = [];
     for (const m of SEO_MAP) {
       const a = lhr.audits?.[m.id];
       if (!a || typeof a.score !== 'number' || typeof a.scoreDisplayMode !== 'string') continue;
       if (['notApplicable', 'informative', 'manual', 'error'].includes(a.scoreDisplayMode)) continue;
       let detail: string | undefined;
-      if (m.id === 'server-response-time' && typeof a.numericValue === 'number') {
-        detail = `~${Math.round(a.numericValue)}ms server overhead`;
-      } else if (m.id === 'total-byte-weight' && typeof a.numericValue === 'number') {
-        detail = `~${Math.round(a.numericValue / 1024)}KB transferred`;
+      if (typeof a.numericValue === 'number' && m.detail) {
+        detail = m.detail(a.numericValue, a);
       }
       extra.push({ id: m.id, score: a.score, title: typeof a.title === 'string' && a.title ? a.title : m.title, detail });
     }
@@ -190,43 +222,76 @@ export async function fetchPsi(targetUrl: string, apiKey?: string): Promise<PsiR
 /** Real Core Web Vitals checks from PSI lab data. Skips a check when that metric is missing. */
 export function buildPsiIssues(psi: PsiResult): IAuditIssue[] {
   const out: IAuditIssue[] = [];
-  out.push(toIssue(
-    'psi-score', 'Performance score ≥ 90 (PSI lab)',
-    `PSI mobile lab score: ${psi.score}/100`,
-    'Fix render-blocking scripts, compress/convert images to WebP/AVIF, preload hero assets, cut unused JS.',
-    6, 'high', 'normal', psi.score >= 90,
-  ));
+  // score < 0 = synthetic result (PSI unavailable, field data only) — no lab verdict.
+  if (psi.score >= 0) {
+    out.push(toIssue(
+      'psi-score', 'Speed score of 90+ (phone test)',
+      `Phone speed test score: ${psi.score}/100`,
+      'Fix render-blocking scripts, compress/convert images to WebP/AVIF, preload hero assets, cut unused JS.',
+      6, 'high', 'normal', psi.score >= 90,
+    ));
+  }
   if (psi.lcpMs !== undefined) {
     out.push(toIssue(
-      'psi-lcp', 'LCP ≤ 2.5s (PSI lab)',
-      `LCP: ${(psi.lcpMs / 1000).toFixed(1)}s (mobile lab)`,
-      'Preload LCP image, reduce server response time, remove render-blocking resources above the fold.',
+      'psi-lcp', 'Main content shows within 2.5s',
+      `Shows after ${(psi.lcpMs / 1000).toFixed(1)}s on a phone test`,
+      'Preload the main image, reduce server response time, remove render-blocking resources above the fold.',
       5, 'high', 'normal', psi.lcpMs <= 2500,
     ));
   }
   if (psi.cls !== undefined) {
     out.push(toIssue(
-      'psi-cls', 'CLS ≤ 0.1 (PSI lab)',
-      `CLS: ${psi.cls} (mobile lab)`,
+      'psi-cls', 'Page stays stable while loading',
+      `Layout shift score: ${psi.cls} on a phone test`,
       'Set width/height on images and embeds, reserve space for ads/iframes, avoid late-injected content.',
       4, 'high', 'normal', psi.cls <= 0.1,
     ));
   }
   if (psi.inpMs !== undefined) {
     out.push(toIssue(
-      'psi-inp', 'INP ≤ 200ms (PSI)',
-      `INP: ${psi.inpMs}ms`,
+      'psi-inp', 'Page reacts to taps within 0.2s',
+      `Reaction delay: ${psi.inpMs}ms`,
       'Break up long JS tasks, defer non-critical scripts, reduce main-thread blocking.',
       3, 'medium', 'normal', psi.inpMs <= 200,
     ));
   }
   if (psi.ttfbMs !== undefined) {
     out.push(toIssue(
-      'psi-ttfb', 'TTFB < 800ms (field)',
-      `TTFB: ${psi.ttfbMs}ms (Chrome field data)`,
+      'psi-ttfb', 'Server answers within 0.8s',
+      `Server response: ${psi.ttfbMs}ms (measured from real visitors)`,
       'Use CDN + edge caching, faster hosting, cache dynamic HTML where possible.',
       2, 'low', 'normal', psi.ttfbMs < 800,
     ));
+  }
+  // Phase B: CrUX field data — what real visitors experience (not lab simulation).
+  // Only emitted when Chrome has enough traffic for this URL/origin.
+  const f = psi.field;
+  if (f && (f.lcpMs !== undefined || f.cls !== undefined || f.inpMs !== undefined)) {
+    const scope = f.source === 'crux-origin' ? ' (site-wide origin average)' : '';
+    if (f.lcpMs !== undefined) {
+      out.push(toIssue(
+        'psi-field-lcp', 'Real visitors see content within 2.5s',
+        `Real-user LCP: ${(f.lcpMs / 1000).toFixed(1)}s${f.overall ? ` (Chrome rates this URL ${f.overall})` : ''}${scope}`,
+        'Lab looks fine but users disagree — check slow geographies/devices, heavy ads, uncached HTML.',
+        5, 'high', 'normal', f.lcpMs <= 2500, 'Performance',
+      ));
+    }
+    if (f.cls !== undefined) {
+      out.push(toIssue(
+        'psi-field-cls', 'Real visitors see a stable page',
+        `Real-user CLS: ${f.cls}${scope}`,
+        'Reserve space for images/ads/embeds (width/height or aspect-ratio) so late loads never shift content.',
+        4, 'high', 'normal', f.cls <= 0.1, 'Performance',
+      ));
+    }
+    if (f.inpMs !== undefined) {
+      out.push(toIssue(
+        'psi-field-inp', 'Real visitors get fast taps',
+        `Real-user interaction delay: ${f.inpMs}ms${scope}`,
+        'Break up long JS tasks and defer third-party scripts that block the main thread on real devices.',
+        3, 'medium', 'normal', f.inpMs <= 200, 'Performance',
+      ));
+    }
   }
   // Google's own SEO / Accessibility verdicts, mapped into our categories.
   for (const m of SEO_MAP) {
@@ -234,9 +299,9 @@ export function buildPsiIssues(psi: PsiResult): IAuditIssue[] {
     if (!e) continue;
     const passed = e.score >= 0.9;
     out.push(toIssue(
-      m.code, `${m.title} (Google)`,
-      `Lighthouse audit "${e.title}": ${passed ? 'pass' : 'fail'} (score ${e.score})${e.detail ? ` — ${e.detail}` : ''}`,
-      m.fix, m.impact, m.severity, 'normal', passed,
+      m.code, m.title,
+      `Google's own check "${e.title}": ${passed ? 'passed' : 'needs work'}${e.detail ? ` — ${e.detail}` : ''}`,
+      m.fix, m.impact, m.severity, 'normal', passed, m.category,
     ));
   }
   return out;

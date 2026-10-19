@@ -1,18 +1,28 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import Subscriber from '../models/Subscriber';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 
 const router = Router();
 
+// Public signup: 5 / hour / IP.
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests — please try again later.' }),
+});
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 // POST /api/subscribers (public, upsert)
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', signupLimiter, async (req: Request, res: Response) => {
   try {
-    const { email, source } = req.body as { email: string; source?: string };
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase().slice(0, 200) : '';
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim().slice(0, 60) : 'website';
     if (!email) { res.status(400).json({ error: 'Email required' }); return; }
+    if (!EMAIL_RE.test(email)) { res.status(400).json({ error: 'Please enter a valid email address.' }); return; }
     await Subscriber.findOneAndUpdate(
-      { email: email.toLowerCase().trim() },
-      { $set: { active: true, source: source || 'website' }, $setOnInsert: { email: email.toLowerCase().trim() } },
+      { email },
+      { $set: { active: true, source }, $setOnInsert: { email } },
       { upsert: true, new: true },
     );
     res.status(201).json({ success: true });

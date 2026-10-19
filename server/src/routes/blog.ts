@@ -5,6 +5,7 @@ import { verifyJWT, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 import { pick } from '../lib/utils';
 import { pingSearchEngines } from '../lib/searchEngines';
+import { sanitizeBlogHtml } from '../lib/sanitize';
 
 const router = Router();
 
@@ -16,7 +17,9 @@ const PREVIEW_TTL = 30 * 60 * 1000; // 30 minutes
 router.post('/preview', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
     const token = crypto.randomBytes(16).toString('hex');
-    previewStore.set(token, { data: req.body, createdAt: Date.now() });
+    const data: Record<string, unknown> = { ...(req.body || {}) };
+    if (typeof data.body === 'string') data.body = sanitizeBlogHtml(data.body);
+    previewStore.set(token, { data, createdAt: Date.now() });
     // Cleanup expired tokens
     for (const [key, val] of previewStore) {
       if (Date.now() - val.createdAt > PREVIEW_TTL) previewStore.delete(key);
@@ -107,6 +110,7 @@ const BLOG_FIELDS = ['title', 'slug', 'excerpt', 'body', 'category', 'author', '
 router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
     const data = pick(req.body, BLOG_FIELDS) as Record<string, unknown>;
+    if (typeof data.body === 'string') data.body = sanitizeBlogHtml(data.body);
     const post = new BlogPost(data);
     if (post.published && !post.publishedAt) post.publishedAt = new Date();
     await post.save();
@@ -122,6 +126,7 @@ router.post('/', verifyJWT, async (req: AuthRequest, res: Response) => {
 router.put('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
     const data = pick(req.body, BLOG_FIELDS) as Record<string, unknown>;
+    if (typeof data.body === 'string') data.body = sanitizeBlogHtml(data.body);
     data.updatedAt = new Date();
     const post = await BlogPost.findByIdAndUpdate(req.params.id, data, { new: true });
     if (!post) { res.status(404).json({ error: 'Post not found' }); return; }

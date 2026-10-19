@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { verifyJWT, AuthRequest } from '../middleware/auth';
 import MediaFile from '../models/MediaFile';
@@ -12,18 +12,28 @@ const router = Router();
 const UPLOADS_DIR = path.resolve(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+// The stored extension is derived from the *validated* mime type, never from
+// the client-supplied filename. Otherwise an authenticated user could upload
+// "x.html" with a forged image/png mime type and get it served as HTML from
+// the API origin (stored XSS).
+const MIME_EXT: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/avif': '.avif',
+};
+
 const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const ext = MIME_EXT[file.mimetype];
+    if (!ext) { cb(new Error('File type not allowed. Images only.'), ''); return; }
     cb(null, `${Date.now()}-${crypto.randomBytes(12).toString('hex')}${ext}`);
   },
 });
 
-const ALLOWED_MIME = new Set([
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  'image/avif',
-]);
+const ALLOWED_MIME = new Set(Object.keys(MIME_EXT));
 
 const upload = multer({
   storage: diskStorage,
@@ -34,7 +44,19 @@ const upload = multer({
   },
 });
 
-router.post('/', verifyJWT, upload.single('file'), async (req: AuthRequest, res: Response) => {
+// Multer errors (bad type, too large) are client errors, not 500s.
+const uploadSingle = (req: Request, res: Response, next: NextFunction): void => {
+  upload.single('file')(req, res, (err: unknown) => {
+    if (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      res.status(message.toLowerCase().includes('too large') ? 413 : 400).json({ error: message });
+      return;
+    }
+    next();
+  });
+};
+
+router.post('/', verifyJWT, uploadSingle, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) { res.status(400).json({ error: 'No file provided' }); return; }
 

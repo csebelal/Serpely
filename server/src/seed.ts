@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import dns from 'dns';
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+const dnsServers = (process.env.DNS_SERVERS || '').split(',').map(s => s.trim()).filter(Boolean);
+if (dnsServers.length) dns.setServers(dnsServers);
 
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
@@ -16,6 +17,15 @@ import Testimonial from './models/Testimonial';
 import FaqItem from './models/FaqItem';
 import SiteSettings from './models/SiteSettings';
 
+function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v || v.length < 8) {
+    console.error(`FATAL: ${name} must be set (min 8 chars). Refusing to seed with a default password.`);
+    process.exit(1);
+  }
+  return v;
+}
+
 async function seed() {
   await mongoose.connect(process.env.MONGO_URI || '');
   console.log('Connected to MongoDB');
@@ -24,7 +34,8 @@ async function seed() {
   await AdminUser.deleteMany({});
   await AdminUser.create({
     email: process.env.ADMIN_EMAIL || 'admin@serpely.com',
-    passwordHash: await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10),
+    passwordHash: await bcrypt.hash(requireEnv('ADMIN_PASSWORD'), 10),
+    role: 'owner',
   });
   console.log('✓ Admin user');
 

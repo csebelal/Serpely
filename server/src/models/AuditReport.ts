@@ -1,7 +1,17 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type AuditSeverity = 'critical' | 'high' | 'medium' | 'low';
-export type AuditCategory = 'Technical SEO' | 'Security & HTTPS' | 'Mobile' | 'AI Visibility / GEO' | 'Core Web Vitals';
+export type AuditCategory =
+  | 'Technical SEO' | 'Security & HTTPS' | 'Mobile' | 'AI Visibility / GEO' | 'Core Web Vitals'
+  // Mockup v2 categories (new reports) — old values kept for backward compat
+  | 'Performance' | 'Accessibility' | 'On-page content' | 'AI citation readiness';
+
+export const AUDIT_V2_CATS = ['Performance', 'Accessibility', 'Technical SEO', 'On-page content', 'AI citation readiness'] as const;
+
+export interface IAffected {
+  count: number;
+  examples: string[];
+}
 
 export interface IAuditIssue {
   code: string;
@@ -13,17 +23,34 @@ export interface IAuditIssue {
   impact: number; // score points recoverable
   effort: 'quick' | 'normal';
   passed: boolean;
+  why?: string;
+  affected?: IAffected;
+}
+
+export interface IAiCrawler {
+  bot: string;
+  status: 'Allowed' | 'Blocked' | 'Missing';
+  detail: string;
 }
 
 export interface IAuditReport extends Document {
   url: string;
   normalizedUrl: string;
-  status: 'done' | 'failed';
+  origin: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  progress: { stage: string; pagesDone: number; pagesTotal: number };
+  pages: { crawled: number; discovered: number; errors: number };
+  aiCrawlers: IAiCrawler[];
+  summary: { critical: number; warning: number; notice: number; passed: number };
+  priority: { code: string; title: string; fix: string; impact: number } | null;
+  gsc: Record<string, unknown>;
   scores: Record<string, number>;
   overall: number;
   forecast: { now: number; quickWins: number; allFixes: number };
   issues: IAuditIssue[];
   meta: Record<string, string>;
+  /** Unguessable public id used in share links (Mongo _id is enumerable). */
+  shareToken?: string;
   createdAt: Date;
 }
 
@@ -38,6 +65,8 @@ const AuditIssueSchema = new Schema<IAuditIssue>(
     impact: { type: Number, default: 0 },
     effort: { type: String, default: 'normal' },
     passed: { type: Boolean, default: false },
+    why: { type: String, default: '' },
+    affected: { type: Schema.Types.Mixed, default: undefined },
   },
   { _id: false },
 );
@@ -45,12 +74,20 @@ const AuditIssueSchema = new Schema<IAuditIssue>(
 const AuditReportSchema = new Schema<IAuditReport>({
   url: { type: String, required: true },
   normalizedUrl: { type: String, required: true, index: true },
+  origin: { type: String, default: '', index: true },
   status: { type: String, default: 'done' },
+  progress: { type: Schema.Types.Mixed, default: { stage: 'done', pagesDone: 0, pagesTotal: 0 } },
+  pages: { type: Schema.Types.Mixed, default: { crawled: 0, discovered: 0, errors: 0 } },
+  aiCrawlers: { type: Schema.Types.Mixed, default: [] },
+  summary: { type: Schema.Types.Mixed, default: { critical: 0, warning: 0, notice: 0, passed: 0 } },
+  priority: { type: Schema.Types.Mixed, default: null },
+  gsc: { type: Schema.Types.Mixed, default: {} },
   scores: { type: Schema.Types.Mixed, default: {} },
   overall: { type: Number, default: 0 },
   forecast: { type: Schema.Types.Mixed, default: {} },
   issues: { type: [AuditIssueSchema], default: [] },
   meta: { type: Schema.Types.Mixed, default: {} },
+  shareToken: { type: String, index: true, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
 });
 

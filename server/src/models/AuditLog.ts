@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAuditLog extends Document {
   adminEmail: string;
-  action: 'create' | 'update' | 'delete';
+  action: 'create' | 'update' | 'delete' | 'restore';
   resource: string;
   detail: string;
   ip: string;
@@ -11,7 +11,7 @@ export interface IAuditLog extends Document {
 
 const AuditLogSchema = new Schema<IAuditLog>({
   adminEmail: { type: String, required: true },
-  action:     { type: String, enum: ['create','update','delete'], required: true },
+  action:     { type: String, enum: ['create','update','delete','restore'], required: true },
   resource:   { type: String, required: true },
   detail:     { type: String, default: '' },
   ip:         { type: String, default: '' },

@@ -9,7 +9,7 @@ function getIP(req: Request): string {
 
 export async function logAction(
   req: Request & { adminEmail?: string },
-  action: 'create' | 'update' | 'delete',
+  action: 'create' | 'update' | 'delete' | 'restore',
   resource: string,
   detail = '',
 ): Promise<void> {

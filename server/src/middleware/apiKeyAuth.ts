@@ -33,7 +33,7 @@ export async function verifyMCPKey(req: ReqLike & { apiKeyId?: string; apiKeyNam
       next();
       return;
     }
-    const keys = await APIKey.find({ active: true }).select('+keyHash').lean();
+    const keys = await APIKey.find({ active: true, prefix: raw.slice(0, 16) }).select('+keyHash').lean();
     for (const k of keys as any[]) {
       try {
         if (await bcrypt.compare(raw, k.keyHash)) {

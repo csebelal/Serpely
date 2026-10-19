@@ -1,94 +1,43 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import AuditReport from '../models/AuditReport';
-import { normalizeUrl, fetchPage, runChecks, scoreReport } from '../lib/publicAudit';
+import AuditSnapshot from '../models/AuditSnapshot';
+import { createJob, getJob, maybeRefreshStale } from '../lib/auditJobs';
+import { normalizeUrl, fetchPage, runChecks, scoreReportV2 } from '../lib/publicAudit';
 import { fetchPsi } from '../lib/pagespeed';
+import { fetchCrux } from '../lib/crux';
+import { guardTurnstile } from '../lib/turnstile';
 
 const router = Router();
 
-// Free tier: 10 audits / hour / IP — no auth, no VPS changes needed.
-const limiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+// Full crawl is heavy (~250 fetches + 1 PSI): 3 audits / hour / IP.
+const limiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many audits — full-site crawls are heavy. Please wait a bit and try again.' }),
+});
 
-// POST /api/public-audit/run { url }
+// POST /api/public-audit/run { url } → async, returns { jobId } fast
 router.post('/run', limiter, async (req: Request, res: Response) => {
   try {
-    const normalized = normalizeUrl(String(req.body?.url || ''));
-    const origin = new URL(normalized).origin;
-
-    // Fresh-cache 24h per URL to avoid refetch abuse
-    let cached = null;
-    try {
-      cached = await AuditReport.findOne({ normalizedUrl: normalized }).sort({ createdAt: -1 });
-    } catch (dbErr) {
-      console.error('[public-audit] cache lookup failed:', dbErr);
-    }
-    if (cached && Date.now() - cached.createdAt.getTime() < 24 * 3600 * 1000) {
-      res.json({ id: cached._id, cached: true, overall: cached.overall, scores: cached.scores, forecast: cached.forecast });
+    if (!(await guardTurnstile(req, res))) return;
+    const ip = String((req as unknown as { ip?: string }).ip || req.headers['x-forwarded-for'] || 'unknown');
+    const { job, cachedReportId } = await createJob(String(req.body?.url || ''), ip);
+    if (cachedReportId) {
+      res.json({ jobId: job.id, cached: true, reportId: cachedReportId, status: 'done' });
       return;
     }
-
-    let page;
-    try {
-      page = await fetchPage(normalized);
-    } catch (fetchErr) {
-      console.error('[public-audit] fetch failed for', normalized, fetchErr);
-      res.status(400).json({ error: 'Could not fetch that URL (timeout / DNS / blocked). Try the full https:// URL.' });
-      return;
-    }
-    if (!page.html || page.status >= 400) {
-      res.status(400).json({ error: `Target returned HTTP ${page.status}. Audit needs a public 200 page.` });
-      return;
-    }
-
-    // PSI lab fetch starts now so it runs in parallel with the static checks below.
-    const psiPromise = fetchPsi(normalized, process.env.PAGESPEED_API_KEY);
-    const { issues, meta } = await runChecks(page, normalized, psiPromise);
-    const { scores, overall, forecast } = scoreReport(issues);
-    const psi = await psiPromise;
-    if (psi !== null) {
-      const fieldShape = (f: typeof psi.field) => f ? {
-        overall: f.overall,
-        lcpS: f.lcpMs !== undefined ? Math.round((f.lcpMs / 1000) * 10) / 10 : undefined,
-        cls: f.cls,
-        inpMs: f.inpMs,
-        ttfbMs: f.ttfbMs,
-      } : null;
-      meta.psi = JSON.stringify({
-        score: psi.score,
-        lcpS: psi.lcpMs !== undefined ? Math.round((psi.lcpMs / 1000) * 10) / 10 : undefined,
-        cls: psi.cls,
-        inpMs: psi.inpMs,
-        strategy: psi.strategy,
-        scores: psi.scores,
-        field: fieldShape(psi.field),
-        origin: fieldShape(psi.originField),
-      });
-    }
-
-    let doc;
-    try {
-      doc = await AuditReport.create({
-        url: String(req.body.url),
-        normalizedUrl: normalized,
-        status: 'done',
-        scores,
-        overall,
-        forecast,
-        issues,
-        meta: { ...meta, finalUrl: page.finalUrl, origin },
-      });
-    } catch (dbErr) {
-      console.error('[public-audit] save failed:', dbErr);
-      res.status(500).json({ error: 'Audit ran but could not be saved (database error). Check server Mongo connection.' });
-      return;
-    }
-
-    res.json({ id: doc._id, cached: false, overall, scores, forecast });
+    res.status(202).json({ jobId: job.id, cached: false, status: job.status });
   } catch (e: unknown) {
-    console.error('[public-audit] unexpected error:', e);
     const msg = e instanceof Error ? e.message : 'Audit failed';
     res.status(400).json({ error: msg });
   }
+});
+
+// GET /api/public-audit/status/:jobId — poll every 2s
+router.get('/status/:jobId', async (req: Request, res: Response) => {
+  const job = getJob(String(req.params.jobId));
+  if (!job) { res.status(404).json({ error: 'Job not found or expired (server restarted). Please run a new audit.' }); return; }
+  res.json({ status: job.status, stage: job.stage, pagesDone: job.pagesDone, pagesTotal: job.pagesTotal, reportId: job.reportId, error: job.error });
 });
 
 // GET /api/public-audit/ping — proves the NEW audit code is loaded (keep before /:id)
@@ -96,15 +45,102 @@ router.get('/ping', (_req: Request, res: Response) => {
   res.json({ ok: true, route: 'public-audit', time: new Date().toISOString() });
 });
 
-// GET /api/public-audit/:id — full report (public, shareable)
-router.get('/:id', async (req: Request, res: Response) => {
+// Homepage-only compare is lighter than a full crawl but still costs up to
+// 4 PSI + 4 CrUX calls: 5 compares / hour / IP.
+const compareLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many comparisons — please wait a bit and try again.' }),
+});
+
+// POST /api/public-audit/compare { url, competitors: string[] } — sync, homepage-only.
+// Same engine as full audits (fetchPage + runChecks + PSI/CrUX) but no crawl,
+// no DB writes. Max 1 + 3 sites so it finishes inside proxy timeouts.
+router.post('/compare', compareLimiter, async (req: Request, res: Response) => {
   try {
-    const doc = await AuditReport.findById(req.params.id).lean();
+    if (!(await guardTurnstile(req, res))) return;
+    const raw = [String(req.body?.url || ''), ...((req.body?.competitors || []) as unknown[])];
+    const normalized: string[] = [];
+    const seen = new Set<string>();
+    for (const r of raw.slice(0, 4)) {
+      let n = '';
+      try { n = normalizeUrl(String(r || '')); } catch { continue; }
+      const key = new URL(n).origin.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      normalized.push(n);
+    }
+    if (normalized.length < 2) { res.status(400).json({ error: 'Enter your site plus at least one competitor.' }); return; }
+
+    const sites = await Promise.all(normalized.map(async (n) => {
+      try {
+        const page = await fetchPage(n);
+        const psiPromise = (async () => {
+          const [psi, cruxField] = await Promise.all([
+            fetchPsi(n, process.env.PAGESPEED_API_KEY),
+            fetchCrux(n, process.env.CRUX_API_KEY),
+          ]);
+          if (psi) {
+            if (!psi.field && cruxField) psi.field = cruxField;
+            if (psi.ttfbMs === undefined && cruxField?.ttfbMs !== undefined) psi.ttfbMs = cruxField.ttfbMs;
+            return psi;
+          }
+          if (cruxField) return { score: -1, strategy: 'mobile', field: cruxField, ttfbMs: cruxField.ttfbMs };
+          return null;
+        })();
+        const { issues } = await runChecks(page, n, psiPromise);
+        const psi = await psiPromise;
+        const { scores, overall, summary } = scoreReportV2(issues);
+        return {
+          url: n, origin: new URL(n).origin, overall, scores, summary,
+          psiScore: psi && psi.score >= 0 ? psi.score : undefined,
+          issueCount: issues.filter(i => !i.passed).length,
+        };
+      } catch (e: unknown) {
+        return { url: n, origin: '', overall: 0, scores: {}, summary: null, error: e instanceof Error ? e.message : 'Check failed' };
+      }
+    }));
+    res.json({ sites });
+  } catch {
+    res.status(500).json({ error: 'Comparison failed' });
+  }
+});
+
+// GET /api/public-audit/trend?origin=https://x — 30-day snapshots
+router.get('/trend', async (req: Request, res: Response) => {
+  try {
+    const origin = String(Array.isArray(req.query.origin) ? req.query.origin[0] : req.query.origin || '');
+    if (!origin) { res.status(400).json({ error: 'origin required' }); return; }
+    const snaps = await AuditSnapshot.find({ origin }).sort({ date: 1 }).limit(30).lean();
+    res.json({ origin, points: snaps.map(s => ({ date: s.date, overall: s.overall, scores: s.scores })) });
+  } catch { res.status(500).json({ error: 'Trend lookup failed' }); }
+});
+
+// Public read limiter — stops mass enumeration of report ids.
+const readLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many requests — slow down.' }),
+});
+
+// GET /api/public-audit/:id — full report (public, shareable).
+// Reports are addressed only by their random 32-hex shareToken. A Mongo _id is
+// semi-sequential, so answering one — even with a 410 — would confirm that a
+// given id is a real report.
+router.get('/:id', readLimiter, async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || '');
+    const doc = /^[a-f0-9]{32}$/i.test(id)
+      ? await AuditReport.findOne({ shareToken: id }).lean()
+      : null;
     if (!doc) {
       res.status(404).json({ error: 'Report not found' });
       return;
     }
-    res.json(doc);
+    const d = doc as unknown as { origin?: string; createdAt?: Date };
+    if (d.origin && d.createdAt) maybeRefreshStale(d.origin, new Date(d.createdAt));
+    const snaps = d.origin
+      ? await AuditSnapshot.find({ origin: d.origin }).sort({ date: 1 }).limit(30).lean().catch(() => [])
+      : [];
+    res.json({ ...(doc as object), trend: snaps.map(s => ({ date: s.date, overall: s.overall, scores: s.scores })) });
   } catch {
     res.status(400).json({ error: 'Invalid report id' });
   }
