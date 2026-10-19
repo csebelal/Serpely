@@ -15,6 +15,14 @@ server/dist/
 server/.env
 app/.env.local
 
+# Local credential helpers / debug scripts — NEVER commit these
+test-login.js
+check-login.sh
+check-admin*.js
+*-login.*
+_*.mjs
+_*.js
+
 # Logs
 *.log
 npm-debug.log*
@@ -29,6 +37,9 @@ Thumbs.db
 
 # Uploads (local only)
 server/uploads/
+
+# Pre-restore database snapshots (contain content, never commit)
+server/backups/
 
 # TypeScript cache
 *.tsbuildinfo
