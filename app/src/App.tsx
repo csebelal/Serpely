@@ -28,6 +28,7 @@ const HowItWorks = lazy(() => import('./pages/HowItWorks').then(m => ({ default:
 const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
 const CompareVs = lazy(() => import('./pages/CompareVs').then(m => ({ default: m.CompareVs })));
 const Audit = lazy(() => import('./pages/Audit').then(m => ({ default: m.Audit })));
+const AuditPreview = lazy(() => import('./pages/AuditPreview'));
 const SitemapChecker = lazy(() => import('./pages/SitemapChecker').then(m => ({ default: m.SitemapChecker })));
 const Changelog = lazy(() => import('./pages/Changelog').then(m => ({ default: m.Changelog })));
 const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
@@ -228,6 +229,11 @@ function App() {
               <Route path="audit" element={<AuditLogPage />} />
               <Route path="api-keys" element={<APIKeysManager />} />
             </Route>
+
+            {/* Site Audit redesign — own topbar/footer, so it sits outside the
+                public shell. Preview route until the design is approved. */}
+            <Route path="/audit-preview" element={<AuditPreview />} />
+            <Route path="/audit-preview/:id" element={<AuditPreview />} />
 
             {/* Public routes — maintenance mode aware */}
             <Route path="*" element={<PublicShell />} />

@@ -22,6 +22,9 @@ check-admin*.js
 *-login.*
 _*.mjs
 _*.js
+_*.txt
+# Scratch reference files staged in public/ for local visual comparison
+app/public/_*.html
 
 # Logs
 *.log

@@ -392,6 +392,8 @@ export interface PublicAuditIssue {
 export interface PublicAuditAiCrawler { bot: string; status: string; detail: string }
 export interface PublicAuditReport {
   _id: string; url: string; normalizedUrl: string; origin?: string;
+  /** Random 32-hex public id. Reports are addressed only by this. */
+  shareToken?: string;
   status?: string; progress?: { stage: string; pagesDone: number; pagesTotal: number };
   pages?: { crawled: number; discovered: number; errors: number };
   aiCrawlers?: PublicAuditAiCrawler[];
@@ -412,6 +414,24 @@ export const getAuditStatus = (jobId: string) =>
   publicApi.get<AuditJobStatus>(`/api/public-audit/status/${jobId}`);
 export const getPublicAudit = (id: string) =>
   publicApi.get<PublicAuditReport>(`/api/public-audit/${id}`);
+
+/**
+ * Raw PageSpeed Insights payload for one URL that already belongs to the report.
+ * The URL is validated server-side (403 otherwise) so this cannot be used as an
+ * open PSI proxy, and the Google API key never reaches the browser.
+ */
+export interface AuditUrlPsi {
+  lighthouseResult: Record<string, unknown>;
+  loadingExperience?: Record<string, unknown> | null;
+  originLoadingExperience?: Record<string, unknown> | null;
+  analysisUTCTimestamp?: string;
+  cached?: boolean;
+}
+export const getAuditUrlPsi = (shareToken: string, url: string, strategy: 'mobile' | 'desktop' = 'mobile') =>
+  publicApi.get<AuditUrlPsi>(`/api/public-audit/${shareToken}/psi`, {
+    params: { url, strategy },
+    timeout: 70000,
+  });
 export const getAuditTrend = (origin: string) =>
   publicApi.get<{ origin: string; points: { date: string; overall: number }[] }>('/api/public-audit/trend', { params: { origin } });
 export interface CompareSite {

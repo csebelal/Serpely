@@ -137,6 +137,70 @@ function parseField(loadingExperience: unknown): PsiField | null {
   };
 }
 
+export type PsiStrategy = 'mobile' | 'desktop';
+
+export interface PsiRawPayload {
+  lighthouseResult: Record<string, unknown>;
+  /** Field data (CrUX) for the requested URL, as returned by PSI. */
+  loadingExperience?: Record<string, unknown> | null;
+  /** Field data (CrUX) aggregated to the origin. */
+  originLoadingExperience?: Record<string, unknown> | null;
+  analysisUTCTimestamp?: string;
+}
+
+/**
+ * Raw PSI payload for the redesigned audit UI.
+ *
+ * `fetchPsi` reduces the response to a handful of numbers; the redesign needs the
+ * whole Lighthouse result (audits, diagnostics, timings) plus the CrUX field-data
+ * blocks. Kept separate so the existing scoring path is untouched.
+ *
+ * Returns null on quota/timeout/runtime errors. Never call this with an
+ * unvalidated URL — see the `/api/public-audit/:id/psi` route, which only allows
+ * URLs already present in the report.
+ */
+export async function fetchPsiRaw(
+  targetUrl: string,
+  strategy: PsiStrategy = 'mobile',
+  apiKey?: string,
+): Promise<PsiRawPayload | null> {
+  if (!apiKey) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 55000);
+  try {
+    const cats = ['performance', 'accessibility', 'best-practices', 'seo'].map(c => `&category=${c}`).join('');
+    const u = `${PSI_URL}?url=${encodeURIComponent(targetUrl)}&strategy=${strategy}${cats}&key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(u, { signal: ctrl.signal });
+    if (!res.ok) {
+      console.error('[psi-raw] HTTP', res.status, (await res.text().catch(() => '')).slice(0, 200));
+      return null;
+    }
+    const j = (await res.json()) as {
+      lighthouseResult?: Record<string, unknown>;
+      loadingExperience?: Record<string, unknown> | null;
+      originLoadingExperience?: Record<string, unknown> | null;
+      analysisUTCTimestamp?: string;
+    };
+    const lhr = j?.lighthouseResult;
+    if (!lhr) return null;
+    if (lhr.runtimeError) {
+      console.error('[psi-raw] lighthouse runtimeError');
+      return null;
+    }
+    return {
+      lighthouseResult: lhr,
+      loadingExperience: j.loadingExperience ?? null,
+      originLoadingExperience: j.originLoadingExperience ?? null,
+      analysisUTCTimestamp: j.analysisUTCTimestamp,
+    };
+  } catch (e) {
+    console.error('[psi-raw] failed', (e as Error)?.message);
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 /** Real lab metrics via Google PageSpeed Insights. Returns null on any failure (quota, timeout, Lighthouse error) — caller falls back to heuristic. */
 export async function fetchPsi(targetUrl: string, apiKey?: string): Promise<PsiResult | null> {
   if (!apiKey) return null;

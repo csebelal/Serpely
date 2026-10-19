@@ -12,8 +12,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  build: {
+  },build: {
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
@@ -29,11 +28,13 @@ export default defineConfig({
   server: {
     // 5173 falls inside a Windows reserved port range (5141-5240, Hyper-V/WSL),
     // which makes the bind fail with EACCES. Use a free port instead.
-    port: 5500,
+    port: Number(process.env.VITE_DEV_PORT ?? 5500),
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
+        // Overridable so the UI can be pointed at a remote API for review
+        // without touching this file. Dev-only — the production build ignores it.
+        target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:4000',
         changeOrigin: true,
       },
       '/chatbot': {

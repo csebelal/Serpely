@@ -1,0 +1,61 @@
+/* Shell-level fixes + containment for the Site Audit redesign.
+ *
+ * The prototype was a standalone page: it styled <body>, assumed block layout
+ * and owned the whole viewport. It now lives inside the Serpely app, whose
+ * global CSS (app/src/index.css) targets bare h1-h6 / nav / section / footer /
+ * header and paints a fixed grid overlay on <body>. Everything here is scoped
+ * to .sa-root so the rest of the site is untouched.
+ *
+ * Kept separate from the auto-generated audit-prototype.css so that file stays
+ * regenerable.
+ */
+
+.sa-root {
+  min-height: 100vh;
+  /* Prototype relied on <body> for the page canvas. */
+  position: relative;
+  /* index.css paints body::before/::after grid overlays at z-index 0; the
+     audit page has its own opaque background and must paint above them. */
+  z-index: 1;
+  /* Contain the prototype's internal z-indexes (topbar 50, drawer 210) so they
+     can never interact with app chrome. */
+  isolation: isolate;
+}
+
+/* ---------------------------------------------------------------------------
+ * Neutralise the app's global element rules *inside* the audit only.
+ *
+ * `:where()` contributes zero specificity, so these selectors land at (0,1,0)
+ * — from .sa-root — which:
+ *   - beats the app's bare-element rules (0,0,1)
+ *   - loses to every prototype rule, which is always `.sa-root <something>`
+ *     and therefore at least (0,1,1)
+ * ------------------------------------------------------------------------- */
+
+/* index.css: `h1,h2,h3,h4,h5,h6 { font-family:'Satoshi'; color:var(--text) }`
+   and `h1 { letter-spacing:-0.05em }`. The prototype inherits its font from
+   <body>, so re-establish inheritance here. */
+.sa-root :where(*) {
+  font-family: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+/* index.css: `nav,section,footer,header { position:relative; z-index:1 }` */
+.sa-root :where(header, footer, nav, section, article, aside, main) {
+  position: static;
+  z-index: auto;
+}
+
+/* Tailwind preflight: `img,video{max-width:100%;height:auto}` and
+   `svg{display:block;vertical-align:middle}` — the prototype sizes its own
+   media, so restore the prototype's box model. */
+.sa-root :where(img, svg) {
+  max-width: none;
+}
+
+/* The prototype's <body> was the scroll container; keep the footer off the
+   bottom edge the same way it did. */
+.sa-root main.container {
+  flex: 0 0 auto;
+}
