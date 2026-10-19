@@ -18,7 +18,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
+          vendor2: ['react', 'react-dom', 'react-router-dom'],
           charts: ['recharts'],
           editor: ['@tiptap/react', '@tiptap/starter-kit'],
           motion: ['gsap', '@gsap/react'],
@@ -27,6 +27,10 @@ export default defineConfig({
     },
   },
   server: {
+    // 5173 falls inside a Windows reserved port range (5141-5240, Hyper-V/WSL),
+    // which makes the bind fail with EACCES. Use a free port instead.
+    port: 5500,
+    strictPort: true,
     proxy: {
       '/api': {
         target: 'http://localhost:4000',

@@ -297,10 +297,10 @@ export function Privacy() {
           </Section>
 
           <Section id="cookies" num="06" title="Cookies and Tracking Technologies">
-            <p>The Platform uses cookies and similar tracking technologies to operate essential functions, remember your preferences, and analyze usage patterns. Types of cookies we use:</p>
+            <p>The Platform uses cookies and similar technologies to operate essential functions and remember your preferences. Types of cookies we use:</p>
             <ul style={ul}>
               <li><strong style={strong}>Essential Cookies:</strong> required for account authentication, session management, and core Platform functionality. These cannot be disabled without affecting Platform operation.</li>
-              <li><strong style={strong}>Analytics Cookies:</strong> used to understand how users navigate the Platform, which features are most used, and where technical issues occur. We use aggregated, de-identified data for these purposes.</li>
+              <li><strong style={strong}>Analytics (cookie-less):</strong> we measure aggregate page views to understand how the Platform is used — which features matter and where technical issues occur. This runs without cookies or persistent identifiers, using aggregated, de-identified data.</li>
               <li><strong style={strong}>Preference Cookies:</strong> remember your settings such as your chosen theme (light or dark mode), sidebar state, and notification preferences.</li>
             </ul>
             <p style={{ marginBottom: 0 }}>You can manage cookie preferences through your browser settings. Please note that disabling certain cookies may impair Platform functionality. We do not use advertising or cross-site tracking cookies.</p>

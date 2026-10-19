@@ -1,0 +1,42 @@
+/* Audit report → PDF (window.print). Only the report prints: nav, footer,
+   hero form, action buttons and marketing CTAs are hidden. */
+/* Visible only on paper/PDF — report title for the exported document. */
+.print-only {
+  display: none;
+}
+/* Headings inside the audit report stay dark in both modes.
+   (Global `h1..h6 { color: var(--text) }` would otherwise turn them white in dark mode.) */
+.audit-report h1,
+.audit-report h2,
+.audit-report h3,
+.audit-report h4 {
+  color: #0B1411;
+}
+@media print {
+  #navbar,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  main, #root {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  section {
+    padding-top: 0 !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  /* Keep cards from splitting awkwardly across pages */
+  table, tr, img, svg {
+    break-inside: avoid;
+  }
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}

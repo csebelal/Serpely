@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   clientUpdateMe, clientChangePassword, clientUpdateWebsites,
   clientUpdateNotifications, clientGenerateApiKey, clientDeleteAccount,
-  type ClientUserNotifications,
+  googleConnectUrl, googleStatus, googleDisconnect, googleGscSummary, googleGaSessions,
+  type ClientUserNotifications, type GoogleStatus, type GscSummary, type GaSessions,
 } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 
 const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Professional', business: 'Business' };
 const PLAN_COLORS: Record<string, string> = { starter: '#64748b', pro: '#00A868', business: '#7c3aed' };
@@ -106,6 +108,74 @@ export function Profile() {
   // Delete account
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Google (GSC + GA4)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [gStatus, setGStatus] = useState<GoogleStatus | null>(null);
+  const [gLoading, setGLoading] = useState(false);
+  const [gMsg, setGMsg] = useState('');
+  const [gSummary, setGSummary] = useState<GscSummary | null>(null);
+  const [gSessions, setGSessions] = useState<GaSessions | null>(null);
+  const [gDataLoading, setGDataLoading] = useState(false);
+
+  useEffect(() => {
+    const flag = searchParams.get('google');
+    if (flag === 'connected') setGMsg('✓ Google connected — search data unlocked');
+    else if (flag === 'error') setGMsg(searchParams.get('msg') || 'Google connection failed');
+    if (flag) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('google'); next.delete('msg');
+      setSearchParams(next, { replace: true });
+      const t = setTimeout(() => setGMsg(''), 6000);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    googleStatus().then(r => {
+      setGStatus(r.data);
+      if (r.data.connected) void loadGooglePreview();
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadGooglePreview() {
+    setGDataLoading(true);
+    try {
+      const [s, g] = await Promise.all([
+        googleGscSummary().catch(() => null),
+        googleGaSessions().catch(() => null),
+      ]);
+      if (s) setGSummary(s.data);
+      if (g) setGSessions(g.data);
+    } finally {
+      setGDataLoading(false);
+    }
+  }
+
+  async function handleGoogleConnect() {
+    setGLoading(true); setGMsg('');
+    try {
+      const { data } = await googleConnectUrl();
+      window.location.href = data.url;
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to start Google sign-in';
+      setGMsg(msg); setGLoading(false);
+    }
+  }
+
+  async function handleGoogleDisconnect() {
+    if (!confirm('Disconnect Google? Search Console and Analytics data will no longer sync.')) return;
+    setGLoading(true);
+    try {
+      const { data } = await googleDisconnect();
+      setGStatus(data); setGSummary(null); setGSessions(null);
+      setGMsg('Google disconnected');
+    } catch { setGMsg('Failed to disconnect'); }
+    setGLoading(false);
+    setTimeout(() => setGMsg(''), 3000);
+  }
 
   const plan = user?.plan || 'starter';
   const limits = PLAN_LIMITS[plan];
@@ -237,6 +307,8 @@ export function Profile() {
           </div>
         </div>
 
+        <VerifyEmailBanner />
+
         {/* Plan & Usage */}
         <Card title="Plan & Usage">
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -321,6 +393,67 @@ export function Profile() {
           </div>
         </Card>
 
+        {/* Google Connection (Search Console + Analytics) */}
+        <Card title="Google Connection">
+          {!gStatus ? (
+            <p className="text-sm font-medium" style={{ color: 'var(--text-faint)' }}>Checking connection…</p>
+          ) : !gStatus.connected ? (
+            <div>
+              <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-soft)' }}>
+                Connect your Google account to pull Search Console (impressions, clicks, CTR, indexed pages) and GA4 sessions into Serpely. Read-only access.
+              </p>
+              <button onClick={handleGoogleConnect} disabled={gLoading} className="btn-accent-s" style={{ fontSize: 13, padding: '8px 16px' }}>
+                {gLoading ? 'Opening Google…' : 'Connect Google'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between rounded-xl px-4 py-3 mb-3 flex-wrap gap-2"
+                style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))' }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#00C27A' }} />
+                  <div>
+                    <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{gStatus.email || 'Google connected'}</div>
+                    <div className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>
+                      {[gStatus.gscSite && `GSC: ${gStatus.gscSite}`, gStatus.gaPropertyId && `GA4: ${gStatus.gaPropertyId}`].filter(Boolean).join(' · ') || 'Property auto-detect pending'}
+                    </div>
+                  </div>
+                </div>
+                <button onClick={handleGoogleDisconnect} disabled={gLoading} className="text-xs font-bold px-2 py-1 rounded-lg"
+                  style={{ color: '#ef4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                  Disconnect
+                </button>
+              </div>
+              {gDataLoading ? (
+                <p className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>Loading search data…</p>
+              ) : (gSummary || gSessions) ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 8 }}>
+                  {[
+                    { label: 'Impressions', value: gSummary ? gSummary.totals.impressions.toLocaleString() : '—' },
+                    { label: 'Clicks', value: gSummary ? gSummary.totals.clicks.toLocaleString() : '—' },
+                    { label: 'Avg CTR', value: gSummary ? `${(gSummary.totals.ctr * 100).toFixed(1)}%` : '—' },
+                    { label: 'Avg Position', value: gSummary ? gSummary.totals.position.toFixed(1) : '—' },
+                    { label: 'Sessions', value: gSessions ? gSessions.sessions.toLocaleString() : '—' },
+                  ].map(s => (
+                    <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))' }}>
+                      <div className="text-base font-black" style={{ color: 'var(--text)' }}>{s.value}</div>
+                      <div className="text-[10px] font-bold uppercase" style={{ color: 'var(--text-faint)', letterSpacing: '0.05em' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>Connected — no search data yet (new property or API delay).</p>
+              )}
+            </div>
+          )}
+          {gMsg && <div className="text-sm font-medium mt-3" style={{ color: gMsg.startsWith('✓') ? '#00A868' : '#ef4444' }}>{gMsg}</div>}
+          {gStatus?.connected && (
+            <a href="/dashboard" className="inline-block text-sm font-bold mt-3" style={{ color: '#00A868', textDecoration: 'none' }}>
+              Open full search dashboard →
+            </a>
+          )}
+        </Card>
+
         {/* Notifications */}
         <Card title="Notifications">
           <Toggle label="Weekly Digest" desc="Summary of rankings and GEO score changes every Monday"
@@ -396,7 +529,7 @@ export function Profile() {
         <Card title="Change Password">
           <form onSubmit={handlePwChange} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <InputField label="Current Password" value={pwForm.current} onChange={v => setPwForm(f => ({ ...f, current: v }))} type="password" />
-            <InputField label="New Password" value={pwForm.newPw} onChange={v => setPwForm(f => ({ ...f, newPw: v }))} type="password" placeholder="Min 6 characters" />
+            <InputField label="New Password" value={pwForm.newPw} onChange={v => setPwForm(f => ({ ...f, newPw: v }))} type="password" placeholder="Min 8 characters" />
             <InputField label="Confirm New Password" value={pwForm.confirm} onChange={v => setPwForm(f => ({ ...f, confirm: v }))} type="password" />
             {pwMsg && <p className="text-sm font-medium" style={{ color: pwMsg.startsWith('✓') ? '#00A868' : '#ef4444' }}>{pwMsg}</p>}
             <button type="submit" disabled={pwSaving} className="btn-accent-s" style={{ alignSelf: 'flex-start' }}>

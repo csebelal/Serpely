@@ -41,6 +41,16 @@ export function Login() {
         </div>
 
         <div className="card p-8">
+          {new URLSearchParams(location.search).get('verified') === '1' && (
+            <p className="text-sm font-medium rounded-lg px-4 py-2.5 mb-4" style={{ color: '#065f46', background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+              Email confirmed. Sign in to continue.
+            </p>
+          )}
+          {new URLSearchParams(location.search).get('verified') === '0' && (
+            <p className="text-sm font-medium rounded-lg px-4 py-2.5 mb-4" style={{ color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a' }}>
+              That confirmation link is invalid or has expired. Sign in and we&apos;ll send a new one.
+            </p>
+          )}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label className="block text-xs font-bold uppercase mb-1.5" style={{ color: 'var(--text-soft)', letterSpacing: '0.06em' }}>Email</label>

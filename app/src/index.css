@@ -437,6 +437,138 @@ h2 { letter-spacing: -0.045em; }
     box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0, 255, 136, 0.05);
   }
 
+  /* Hero dashboard screenshot — light/dark renders swapped by [data-theme].
+     Both are block-level; the inactive one is removed from layout + a11y tree. */
+  .hero-dash-light,
+  .hero-dash-dark {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .hero-dash-dark { display: none; }
+  [data-theme="dark"] .hero-dash-light { display: none; }
+  [data-theme="dark"] .hero-dash-dark { display: block; }
+
+  /* ---------- Hero device mockups: MacBook lid + overlaying phone ---------- */
+
+  .mac-lid {
+    position: relative;
+    padding: 12px 12px 15px;
+    border-radius: 15px 15px 3px 3px;
+    background: linear-gradient(180deg, #343A41 0%, #191D21 100%);
+    box-shadow: 0 34px 74px rgba(10, 10, 10, 0.22), 0 5px 16px rgba(10, 10, 10, 0.10);
+  }
+  [data-theme="dark"] .mac-lid {
+    background: linear-gradient(180deg, #24282C 0%, #101315 100%);
+    box-shadow: 0 34px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(0, 255, 136, 0.05);
+  }
+  .mac-cam {
+    position: absolute; top: 4.5px; left: 50%; transform: translateX(-50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #4C545B;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+  }
+  .mac-screen {
+    border-radius: 7px;
+    overflow: hidden;
+    background: #000;
+  }
+  /* macOS window chrome: the traffic lights live in a slim title bar above the
+     dashboard, so they never collide with the app's own sidebar and logo. */
+  .mac-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.86%;
+    width: 100%;
+    aspect-ratio: 816 / 26;
+    padding-left: 1.7%;
+    background: #F5F8F7;
+    border-bottom: 1px solid rgba(11, 20, 17, 0.07);
+  }
+  [data-theme="dark"] .mac-titlebar {
+    background: #0D1214;
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+  }
+  .mac-dot {
+    flex: none;
+    width: 1%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
+  .mac-dot-close { background: #F5615C; }
+  .mac-dot-min { background: #F7C244; }
+  .mac-dot-max { background: #2BC48A; }
+  /* The lid's foot / hinge, flush with the lid so the whole mockup stays inside
+     the page container and both side gaps come out equal. */
+  .mac-base {
+    position: relative;
+    height: 12px;
+    margin: 0;
+    border-radius: 0 0 11px 11px;
+    background: linear-gradient(180deg, #D3D8DE 0%, #A6ADB5 55%, #878E96 100%);
+    box-shadow: 0 12px 26px rgba(10, 10, 10, 0.18);
+  }
+  [data-theme="dark"] .mac-base {
+    background: linear-gradient(180deg, #4E565D 0%, #333A3F 55%, #23282C 100%);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  }
+  .mac-notch {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 14%; height: 5px; border-radius: 0 0 7px 7px;
+    background: rgba(0, 0, 0, 0.26);
+  }
+  [data-theme="dark"] .mac-notch { background: rgba(0, 0, 0, 0.5); }
+
+  /* Phone showing the mobile view, overlapping the lid's lower-right corner.
+     It drifts outward with the alerts so the right edge stays on one line. */
+  .phone-frame {
+    display: none;
+    position: absolute;
+    right: calc(-1 * clamp(0px, 50vw - 688px, 24px));
+    bottom: -13%;
+    width: clamp(92px, 21%, 220px);
+    padding: 5px;
+    border-radius: 24px;
+    background: linear-gradient(160deg, #30363C, #131619);
+    box-shadow: 0 26px 52px rgba(10, 10, 10, 0.30), 0 6px 16px rgba(10, 10, 10, 0.16);
+    z-index: 2;
+  }
+  /* The desktop + mobile pairing only makes sense once the hero is side-by-side,
+     so the phone is desktop-only. */
+  @media (min-width: 1024px) { .phone-frame { display: block; } }
+  [data-theme="dark"] .phone-frame {
+    background: linear-gradient(160deg, #22282D, #0C0F11);
+    box-shadow: 0 26px 60px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  .phone-screen {
+    position: relative;
+    /* Matches the screenshot's own ratio so nothing is cropped. */
+    aspect-ratio: 368 / 827;
+    border-radius: 20px;
+    overflow: hidden;
+    background: #FFFFFF;
+  }
+  [data-theme="dark"] .phone-screen { background: #0B0F0E; }
+  .phone-screen img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .phone-shot-light { display: block; }
+  .phone-shot-dark { display: none; }
+  [data-theme="dark"] .phone-shot-light { display: none; }
+  [data-theme="dark"] .phone-shot-dark { display: block; }
+
+  /* Floating alerts. Flush with the laptop edges by default, then drift up to
+     24px outward once the hero has page margin to spare — never closer than
+     24px to the screen edge. */
+  .hero-alert-right { right: 0; }
+  .hero-alert-left { left: 24px; }
+  @media (min-width: 1024px) {
+    .hero-alert-right { right: calc(-1 * clamp(0px, 50vw - 688px, 24px)); }
+    .hero-alert-left { left: calc(-1 * clamp(0px, 50vw - 688px, 24px)); }
+  }
+
   .dash-card-s {
     background: var(--kpi-bg);
     border: 1px solid hsl(var(--border));

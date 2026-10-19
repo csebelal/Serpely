@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSection, updateSection, uploadFile } from '@/lib/api';
+import type { HeroShot, HeroShotPair } from '@/sections/HeroSection';
 
 // ─── Shared styles (mirrors AboutEditor) ────────────────────────────────────
 const s = {
@@ -45,10 +46,98 @@ function SaveBtn({ saving, saved, onClick }: { saving: boolean; saved: boolean; 
   );
 }
 
+// ─── Hero device screenshots ────────────────────────────────────────────────
+type ShotSlot = 'light' | 'dark';
+
+/** Natural pixel size of an uploaded image — saved with the URL so the hero can
+ *  reserve the right amount of space before the screenshot loads. */
+function naturalSize(url: string): Promise<{ w: number; h: number }> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth || 0, h: img.naturalHeight || 0 });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = url;
+  });
+}
+
+function ImageField({ label, value, fallbackPreview, onChange }: {
+  label: string;
+  value?: HeroShot;
+  fallbackPreview: string;
+  onChange: (shot: HeroShot | undefined) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const url = (value?.url || '').trim();
+
+  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setError('');
+    try {
+      // Measure the local file (not the uploaded URL) so the size is captured
+      // even when the upload host is not reachable from this machine yet.
+      const objectUrl = URL.createObjectURL(file);
+      const size = await naturalSize(objectUrl);
+      URL.revokeObjectURL(objectUrl);
+      const { data } = await uploadFile(file);
+      onChange({ url: data.url, w: size.w, h: size.h });
+    } catch {
+      setError('Upload failed — use a JPG, PNG or WebP under 10 MB.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <label style={s.label}>{label}</label>
+      <div style={{ position: 'relative', height: 132, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <img src={url || fallbackPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        {!url && (
+          <span style={{ position: 'absolute', bottom: 6, left: 6, padding: '2px 8px', borderRadius: 999, background: 'rgba(15,23,42,0.7)', color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Default</span>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} style={{ ...s.btnGhost, background: '#eef2f6', color: '#334155' }}>
+          {busy ? 'Uploading…' : url ? 'Replace' : 'Upload'}
+        </button>
+        {url && <button type="button" onClick={() => onChange(undefined)} style={s.btnDanger}>Reset to default</button>}
+        {value?.w ? <span style={{ fontSize: 11, color: '#94a3b8' }}>{value.w}×{value.h}px</span> : null}
+      </div>
+      {error && <p style={{ margin: '6px 0 0', fontSize: 11, color: '#dc2626' }}>{error}</p>}
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/avif" onChange={pick} style={{ display: 'none' }} />
+    </div>
+  );
+}
+
+function ShotGroup({ title, hint, pair, fallbacks, onChange }: {
+  title: string;
+  hint: string;
+  pair?: HeroShotPair;
+  fallbacks: { light: string; dark: string };
+  onChange: (slot: ShotSlot, shot: HeroShot | undefined) => void;
+}) {
+  return (
+    <div style={s.subCard}>
+      <p style={{ margin: '0 0 3px', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{title}</p>
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: '#94a3b8' }}>{hint}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <ImageField label="Light mode" value={pair?.light} fallbackPreview={fallbacks.light} onChange={v => onChange('light', v)} />
+        <ImageField label="Dark mode" value={pair?.dark} fallbackPreview={fallbacks.dark} onChange={v => onChange('dark', v)} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Hero Tab ───────────────────────────────────────────────────────────────
 function HeroTab() {
   const [badge, setBadge] = useState('');
   const [heroImage, setHeroImage] = useState('');
+  const [shots, setShots] = useState<{ desktop: HeroShotPair; phone: HeroShotPair }>({ desktop: {}, phone: {} });
   const [uploading, setUploading] = useState(false);
   const [headline, setHeadline] = useState<string[]>(['', '', '']);
   const [subheadline, setSubheadline] = useState('');
@@ -70,6 +159,8 @@ function HeroTab() {
       const d = r.data.data as Record<string, unknown>;
       if (typeof d.badge === 'string') setBadge(d.badge);
       if (typeof d.heroImage === 'string') setHeroImage(d.heroImage);
+      const pair = (v: unknown): HeroShotPair => (v && typeof v === 'object' ? (v as HeroShotPair) : {});
+      setShots({ desktop: pair(d.heroDesktopShot), phone: pair(d.heroPhoneShot) });
       if (Array.isArray(d.headline)) setHeadline(d.headline as string[]);
       if (typeof d.subheadline === 'string') setSubheadline(d.subheadline);
       if (typeof d.announcementText === 'string') setAnnouncementText(d.announcementText);
@@ -96,6 +187,7 @@ function HeroTab() {
   function handleSave() {
     doSave(() => updateSection('hero', {
       badge, heroImage, headline, subheadline, announcementText,
+      heroDesktopShot: shots.desktop, heroPhoneShot: shots.phone,
       cta1Text, cta1Href, cta1Sub,
       cta2Text, cta2Href, cta2Sub,
       alert1Title, alert1Sub, alert2Title, alert2Sub,
@@ -106,10 +198,39 @@ function HeroTab() {
     setHeadline(prev => { const next = [...prev]; next[i] = val; return next; });
   }
 
+  function setShot(device: 'desktop' | 'phone', slot: ShotSlot, shot: HeroShot | undefined) {
+    setShots(prev => ({ ...prev, [device]: { ...prev[device], [slot]: shot } }));
+  }
+
   return (
     <div>
       <div style={s.card}>
-        <h2 style={s.sectionHead}>Hero Right-Side Image</h2>
+        <h2 style={s.sectionHead}>Device Screenshots</h2>
+        <p style={{ margin: '0 0 16px', fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+          The two images shown inside the hero mockup: the <strong style={{ color: '#64748b' }}>desktop</strong> screen inside the MacBook and the <strong style={{ color: '#64748b' }}>mobile</strong> screen on the phone.
+          Leave a slot empty to keep the built-in screenshot, and if you only upload a light version it is used in dark mode as well.
+        </p>
+        <ShotGroup
+          title="Desktop — MacBook screen"
+          hint="Wide dashboard screenshot, e.g. 1392 × 915. Light and dark should share the same size."
+          pair={shots.desktop}
+          fallbacks={{ light: '/hero-dashboard-light-820.webp', dark: '/hero-dashboard-dark-820.webp' }}
+          onChange={(slot, shot) => setShot('desktop', slot, shot)}
+        />
+        <ShotGroup
+          title="Mobile — phone screen"
+          hint="Tall mobile screenshot of the same dashboard, e.g. 368 × 827."
+          pair={shots.phone}
+          fallbacks={{ light: '/hero-dashboard-light-phone-368.webp', dark: '/hero-dashboard-dark-phone-368.webp' }}
+          onChange={(slot, shot) => setShot('phone', slot, shot)}
+        />
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+          Changes appear on the homepage after you press <strong style={{ color: '#64748b' }}>Save Changes</strong>.
+        </p>
+      </div>
+
+      <div style={s.card}>
+        <h2 style={s.sectionHead}>Advanced — Whole Mockup Image</h2>
         {heroImage && (
           <img src={heroImage} alt="Hero preview" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 10, marginBottom: 10, border: '1px solid #e2e8f0' }} />
         )}
@@ -122,7 +243,7 @@ function HeroTab() {
             <button onClick={() => setHeroImage('')} style={{ fontSize: 12, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Remove</button>
           )}
         </div>
-        <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>Replaces the dashboard mockup on the right side of the hero.</p>
+        <p style={{ margin: '8px 0 0', fontSize: 12, color: '#94a3b8' }}>Optional. Replaces the entire MacBook + phone mockup with a single flat image — while this is set, the device screenshots above are ignored.</p>
       </div>
 
       <div style={s.card}>

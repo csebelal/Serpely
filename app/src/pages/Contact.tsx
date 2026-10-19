@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { submitContact } from '../lib/api';
+import { TurnstileWidget } from '../components/TurnstileWidget';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -117,6 +118,7 @@ export function Contact() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [formData, setFormData] = useState({ name: '', email: '', company: '', website: '', message: '' });
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -154,7 +156,7 @@ export function Contact() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await submitContact({ ...formData, topic: selectedTopic || undefined });
+      await submitContact({ ...formData, topic: selectedTopic || undefined, turnstileToken });
       setIsSubmitted(true);
     } catch {
       setSubmitError('Something went wrong. Please try again or email us directly.');
@@ -320,6 +322,8 @@ export function Contact() {
                       onBlur={e => { e.target.style.borderColor = 'hsl(var(--border))'; e.target.style.boxShadow = 'none'; }}
                     />
                   </div>
+
+                  <TurnstileWidget onToken={setTurnstileToken} />
 
                   {/* Submit */}
                   <button type="submit" disabled={submitting} className="btn-accent-s justify-center" style={{ width: '100%', padding: '13px', fontSize: 15, gap: 8 }}>

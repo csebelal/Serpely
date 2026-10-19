@@ -2,9 +2,11 @@ import axios from 'axios';
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
-export const api = axios.create({ baseURL: BASE });
+export const api = axios.create({ baseURL: BASE, withCredentials: true });
 
 api.interceptors.request.use((config) => {
+  // Transitional: still forward a stored Bearer token if one exists (cached
+  // frontends / scripts). New sessions rely on the httpOnly cookie only.
   const token = localStorage.getItem('serpely_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
@@ -13,9 +15,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && localStorage.getItem('serpely_token')) {
-      localStorage.removeItem('serpely_token');
-      localStorage.removeItem('serpely_login_time');
+    const url = String(err.config?.url || '');
+    // A 401 means the session cookie expired or was cleared. Do not bounce the
+    // login request itself (bad credentials also return 401) and do not reload
+    // while already on the login screen.
+    if (
+      err.response?.status === 401 &&
+      !url.includes('/api/auth/login') &&
+      !window.location.pathname.startsWith('/sp-super-admin/login')
+    ) {
       window.location.href = '/sp-super-admin/login';
     }
     return Promise.reject(err);
@@ -24,19 +32,23 @@ api.interceptors.response.use(
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const login = (email: string, password: string) =>
-  api.post<{ token: string }>('/api/auth/login', { email, password });
+  api.post<{ token: string; email: string; role: string }>('/api/auth/login', { email, password });
+
+export interface AdminMe { id: string; email: string; role: 'owner' | 'admin' | 'editor'; }
+export const getMe = () => api.get<AdminMe>('/api/auth/me');
+export const logoutAdmin = () => api.post('/api/auth/logout');
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
   api.post('/api/auth/change-password', { currentPassword, newPassword });
-export const setMyPassword = (password: string) =>
-  api.put('/api/auth/me/password', { password });
 
-export interface AdminUserData { _id: string; email: string; createdAt: string; }
+export interface AdminUserData { _id: string; email: string; role?: 'owner' | 'admin' | 'editor'; active?: boolean; createdAt: string; }
 export interface LoginLogData { _id: string; email: string; ip: string; userAgent: string; success: boolean; timestamp: string; }
 export const getAdminUsers = () => api.get<AdminUserData[]>('/api/auth/users');
-export const createAdminUser = (email: string, password: string) => api.post<AdminUserData>('/api/auth/users', { email, password });
+export const createAdminUser = (email: string, password: string, role: 'owner' | 'admin' | 'editor' = 'editor') =>
+  api.post<AdminUserData>('/api/auth/users', { email, password, role });
 export const deleteAdminUser = (id: string) => api.delete(`/api/auth/users/${id}`);
 export const setAdminUserPassword = (id: string, password: string) => api.put(`/api/auth/users/${id}/password`, { password });
+export const setAdminUserRole = (id: string, role: 'owner' | 'admin' | 'editor') => api.put(`/api/auth/users/${id}/role`, { role });
 export const getLoginLogs = () => api.get<LoginLogData[]>('/api/auth/logs');
 
 // ── Sections ──────────────────────────────────────────────────────────────────
@@ -176,6 +188,12 @@ export interface SiteSettingsData {
   customHeadCode?: string;
 }
 export const getSettings = () => api.get<SiteSettingsData>('/api/settings');
+export type PublicSettingsData = Pick<
+  SiteSettingsData,
+  'siteName' | 'siteUrl' | 'defaultMetaTitle' | 'defaultMetaDescription' | 'ogImage' | 'faviconUrl' | 'maintenanceMode' | 'systemStatus'
+>;
+// Safe subset — no customHeadCode, no analytics id.
+export const getPublicSettings = () => api.get<PublicSettingsData>('/api/settings/public');
 export const updateSettings = (data: Partial<SiteSettingsData>) => api.put('/api/settings', data);
 
 // ── Upload / Media ────────────────────────────────────────────────────────────
@@ -208,6 +226,7 @@ export interface ClientUserData {
   websites?: { domain: string; addedAt: string }[];
   notifications?: ClientUserNotifications;
   apiKey?: string;
+  emailVerified?: boolean;
 }
 const clientApi = axios.create({ baseURL: BASE });
 clientApi.interceptors.request.use(cfg => {
@@ -215,8 +234,12 @@ clientApi.interceptors.request.use(cfg => {
   if (t) cfg.headers.Authorization = `Bearer ${t}`;
   return cfg;
 });
-export const clientRegister = (name: string, email: string, password: string) =>
-  clientApi.post<{ token: string; user: ClientUserData }>('/api/users/register', { name, email, password });
+export const clientRegister = (name: string, email: string, password: string, turnstileToken?: string) =>
+  clientApi.post<{ token: string; user: ClientUserData }>('/api/users/register', { name, email, password, turnstileToken });
+
+/** Re-sends the "confirm your email" message for the signed-in user. */
+export const resendVerification = () =>
+  clientApi.post<{ success: boolean; alreadyVerified?: boolean; sent?: boolean }>('/api/users/resend-verification');
 export const clientLogin = (email: string, password: string) =>
   clientApi.post<{ token: string; user: ClientUserData }>('/api/users/login', { email, password });
 export const clientGetMe = () => clientApi.get<ClientUserData>('/api/users/me');
@@ -231,13 +254,47 @@ export const clientDeleteAccount = () => clientApi.delete('/api/users/me');
 export const clientChangePassword = (currentPassword: string, newPassword: string) =>
   clientApi.post('/api/users/change-password', { currentPassword, newPassword });
 
+// ── Google (GSC + GA4) OAuth ────────────────────────────────────────────────
+export interface GoogleStatus {
+  connected: boolean; email?: string; gscSite?: string; gaPropertyId?: string; connectedAt?: string;
+}
+export interface GscSummary {
+  site: string; totals: { clicks: number; impressions: number; ctr: number; position: number };
+  prev: { clicks: number; impressions: number; ctr: number; position: number };
+  topQueries: { query: string; clicks: number; impressions: number; ctr: number; position: number }[];
+  daily: { date: string; clicks: number; impressions: number }[];
+  cached?: boolean;
+}
+export interface GscIndex {
+  site: string; checked: number; indexed: number;
+  results: { url: string; verdict: string; coverage: string }[];
+  cached?: boolean;
+}
+export interface GaSessions {
+  property: string; days: number; sessions: number; users: number;
+  byChannel: { channel: string; sessions: number }[];
+  cached?: boolean;
+}
+export const googleConnectUrl = () => clientApi.get<{ url: string }>('/api/google/connect-url');
+export const googleStatus = () => clientApi.get<GoogleStatus>('/api/google/status');
+export const googleDisconnect = () => clientApi.post<GoogleStatus>('/api/google/disconnect');
+export const googleGscSites = () => clientApi.get<{ sites: string[]; current: string }>('/api/google/gsc/sites');
+export const googleSetProperty = (patch: { gscSite?: string; gaPropertyId?: string }) =>
+  clientApi.post('/api/google/property', patch);
+export const googleGscSummary = (site?: string, days = 28) =>
+  clientApi.get<GscSummary>('/api/google/gsc/summary', { params: { site, days } });
+export const googleGscIndex = (site?: string) =>
+  clientApi.get<GscIndex>('/api/google/gsc/index', { params: { site } });
+export const googleGaSessions = (property?: string, days = 28) =>
+  clientApi.get<GaSessions>('/api/google/ga/sessions', { params: { property, days } });
+
 // ── Contact Submissions ───────────────────────────────────────────────────────
 export interface ContactSubmissionData {
   _id: string; name: string; email: string; company?: string; website?: string;
   topic?: string; message: string; read: boolean; starred: boolean;
   status: 'new' | 'replied' | 'archived'; createdAt: string;
 }
-export const submitContact = (data: { name: string; email: string; company?: string; website?: string; topic?: string; message: string }) =>
+export const submitContact = (data: { name: string; email: string; company?: string; website?: string; topic?: string; message: string; turnstileToken?: string }) =>
   api.post('/api/contact', data);
 export const getContacts = (params?: { status?: string; starred?: boolean }) =>
   api.get<{ submissions: ContactSubmissionData[]; unreadCount: number }>('/api/contact', { params });
@@ -312,7 +369,9 @@ export const getAuditLogs = (params?: { action?: string; from?: string; to?: str
 
 // ── Backup ────────────────────────────────────────────────────────────────────
 export const downloadBackup = () => api.get('/api/backup', { responseType: 'blob' });
-export const restoreBackup = (data: unknown) => api.post('/api/backup/restore', data);
+// Dry run validates the file without touching the database.
+export const restoreBackup = (data: unknown, dryRun = false) =>
+  api.post('/api/backup/restore', { backup: data, confirm: 'RESTORE' }, dryRun ? { params: { dryRun: 1 } } : undefined);
 
 // ── Bulk Blog ─────────────────────────────────────────────────────────────────
 export const bulkUpdatePosts = (ids: string[], published: boolean) =>
@@ -328,17 +387,68 @@ export interface PublicAuditIssue {
   code: string; category: string; severity: string;
   title: string; evidence: string; fix: string;
   impact: number; effort: string; passed: boolean;
+  why?: string; affected?: { count: number; examples: string[] };
 }
+export interface PublicAuditAiCrawler { bot: string; status: string; detail: string }
 export interface PublicAuditReport {
-  _id: string; url: string; normalizedUrl: string;
+  _id: string; url: string; normalizedUrl: string; origin?: string;
+  status?: string; progress?: { stage: string; pagesDone: number; pagesTotal: number };
+  pages?: { crawled: number; discovered: number; errors: number };
+  aiCrawlers?: PublicAuditAiCrawler[];
+  summary?: { critical: number; warning: number; notice: number; passed: number };
+  priority?: { code: string; title: string; fix: string; impact: number } | null;
   scores: Record<string, number>; overall: number;
   forecast: { now: number; quickWins: number; allFixes: number };
   issues: PublicAuditIssue[]; meta: Record<string, string>; createdAt: string;
+  trend?: { date: string; overall: number; scores: Record<string, number> }[];
 }
-export const runPublicAudit = (url: string) =>
-  publicApi.post<{ id: string; cached: boolean; overall: number }>('/api/public-audit/run', { url });
+export interface AuditJobStatus {
+  status: 'queued' | 'running' | 'done' | 'failed';
+  stage: string; pagesDone: number; pagesTotal: number; reportId?: string; error?: string;
+}
+export const runPublicAudit = (url: string, turnstileToken?: string) =>
+  publicApi.post<{ jobId: string; cached: boolean; reportId?: string; status: string }>('/api/public-audit/run', { url, turnstileToken });
+export const getAuditStatus = (jobId: string) =>
+  publicApi.get<AuditJobStatus>(`/api/public-audit/status/${jobId}`);
 export const getPublicAudit = (id: string) =>
   publicApi.get<PublicAuditReport>(`/api/public-audit/${id}`);
+export const getAuditTrend = (origin: string) =>
+  publicApi.get<{ origin: string; points: { date: string; overall: number }[] }>('/api/public-audit/trend', { params: { origin } });
+export interface CompareSite {
+  url: string; origin: string; overall: number; scores: Record<string, number>;
+  summary: { critical: number; warning: number; notice: number; passed: number } | null;
+  psiScore?: number; issueCount?: number; error?: string;
+}
+export const compareAudit = (url: string, competitors: string[], turnstileToken?: string) =>
+  publicApi.post<{ sites: CompareSite[] }>('/api/public-audit/compare', { url, competitors, turnstileToken }, { timeout: 120000 });
+
+// ── Sitemap Checker (free sitemap health page) ──────────────────────────────
+export interface SitemapCheckedUrl {
+  url: string; status: number; finalUrl: string;
+  verdict: 'Healthy' | 'Redirected' | 'Broken' | 'Blocked' | 'Non-canonical' | 'Slow';
+  detail: string; title: string; desc?: string; h1?: string; words?: number;
+  loadMs: number; canonical: string;
+  gates: { code: string; label: string; passed: boolean; detail: string }[]; score: number;
+}
+export interface SiteIssue {
+  code: string; title: string; detail: string; urls: string[];
+}
+export interface SitemapSummary {
+  origin: string; sitemaps: { url: string; source: string; ok: boolean }[];
+  totalUrls: number; checked: number; truncated: boolean;
+  healthy: number; redirected: number; broken: number; blocked: number; nonCanonical: number; slow: number;
+  healthScore: number; lastmodCoverage: number;
+  duplicateUrls: string[]; variantNotes: string[]; siteIssues: SiteIssue[]; elapsedMs: number;
+}
+export interface SitemapReport {
+  _id: string; origin: string;
+  sitemaps: { url: string; source: string; ok: boolean }[];
+  summary: SitemapSummary; urls: SitemapCheckedUrl[]; createdAt: string;
+}
+export const runSitemapCheck = (url: string, turnstileToken?: string) =>
+  publicApi.post<{ id: string; cached: boolean; summary: SitemapSummary }>('/api/sitemap-check/run', { url, turnstileToken });
+export const getSitemapCheck = (id: string) =>
+  publicApi.get<SitemapReport>(`/api/sitemap-check/${id}`);
 
 // ── API Keys ──────────────────────────────────────────────────────────────────
 export interface APIKeyData {

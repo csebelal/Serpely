@@ -18,7 +18,7 @@ const colHrefs: Record<string, string> = {
   // Company
   'About Us': '/about', Contact: '/contact',
   'Privacy Policy': '/privacy', 'Terms of Service': '/terms',
-  'Cookie Policy': '#', 'Refund & Cancellation Policy': '#', 'Security Policy': '#',
+  'Cookie Policy': '/cookie-policy', 'Refund & Cancellation Policy': '#', 'Security Policy': '#',
   // Resources
   FAQ: '/faq', 'SEO Blog': '/blog',
   'GEO Guide': '#', 'API Docs': '#', 'Help Center': '#',
@@ -167,9 +167,11 @@ export function Footer() {
               />
             </a>
           </p>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00C27A', boxShadow: '0 0 10px rgba(0,194,122,0.5)' }} />
-            <span className="font-bold uppercase" style={{ fontSize: 11.5, color: 'var(--text-soft)', letterSpacing: '0.1em' }}>All Systems Operational</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00C27A', boxShadow: '0 0 10px rgba(0,194,122,0.5)' }} />
+              <span className="font-bold uppercase" style={{ fontSize: 11.5, color: 'var(--text-soft)', letterSpacing: '0.1em' }}>All Systems Operational</span>
+            </div>
           </div>
         </div>
       </div>

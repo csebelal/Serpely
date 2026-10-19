@@ -3,6 +3,7 @@ import { blogPosts, type BlogPostData as Article } from '@/data/blogPosts';
 import { getPosts, getFeaturedPosts, subscribe } from '@/lib/api';
 import { Link, useParams } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { sanitizeSvgFragment } from '@/lib/sanitize';
 /* ─── Inline Styles ─── */
 const globalStyles = `
   @import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,800,900&display=swap');
@@ -948,9 +949,9 @@ export function Blog() {
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18"/></svg></div>
                       <div className="dd-text"><strong>GEO Monitoring</strong><span>See citation visibility and brand presence across AI search surfaces.</span></div>
                     </a>
-                    <a className="mega-link" href="/features">
+                    <a className="mega-link" href="/sitemap-checker">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div>
-                      <div className="dd-text"><strong>Technical Site Audit</strong><span>Continuously monitor crawl issues, vitals, and schema health.</span></div>
+                      <div className="dd-text"><strong>Sitemap Checker</strong><span>Find broken, blocked & redirected URLs in any sitemap.</span></div>
                     </a>
                     <a className="mega-link" href="/features">
                       <div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M8 12h8"/><path d="M12 8v8"/><path d="M4.93 19.07a10 10 0 1 1 14.14 0"/></svg></div>
@@ -1170,7 +1171,7 @@ export function Blog() {
                     ) : (
                       <span className="thumb-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"
-                          dangerouslySetInnerHTML={{ __html: a.thumbIconSvg }} />
+                          dangerouslySetInnerHTML={{ __html: sanitizeSvgFragment(a.thumbIconSvg) }} />
                       </span>
                     )}
                   </div>

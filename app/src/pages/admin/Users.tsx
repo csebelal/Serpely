@@ -39,7 +39,7 @@ export function Users() {
   async function handleSetPassword(user: AdminUserData) {
     const pw = prompt(`New password for ${user.email} (min 6 chars):`);
     if (!pw) return;
-    if (pw.length < 6) { alert('Password must be at least 6 characters'); return; }
+    if (pw.length < 8) { alert('Password must be at least 8 characters'); return; }
     try {
       await setAdminUserPassword(user._id, pw);
       alert(`Password updated for ${user.email}`);
@@ -82,8 +82,8 @@ export function Users() {
           </div>
           <div style={{ flex: '1 1 160px' }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: col, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Password</label>
-            <input type="password" required minLength={6} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              placeholder="Min 6 characters"
+            <input type="password" required minLength={8} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              placeholder="Min 8 characters"
               style={{ width: '100%', padding: '9px 12px', background: '#f1f5f9', border: 'none', borderRadius: 10, fontSize: 13, color: '#0f172a', boxSizing: 'border-box' }} />
           </div>
           <button type="submit" disabled={creating}

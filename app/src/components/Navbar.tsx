@@ -143,7 +143,7 @@ export function Navbar() {
                   {[
                     { label: 'AI Rank Tracking', desc: 'Track Google, AI Overviews, and LLM visibility', href: '/features' },
                     { label: 'GEO Monitoring', desc: 'Brand presence across AI search surfaces', href: '/features' },
-                    { label: 'Technical Site Audit', desc: 'Continuously monitor crawl & vitals', href: '/features' },
+                    { label: 'Sitemap Checker', desc: 'Find broken, blocked & redirected URLs', href: '/sitemap-checker' },
                     { label: 'Content Prioritization', desc: 'AI-ranked page recommendations', href: '/features' },
                   ].map(item => (
                     <Link key={item.label} to={item.href} className="nav-drop-item">
@@ -245,6 +245,14 @@ export function Navbar() {
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                     My Profile
                   </Link>
+                  <Link to="/dashboard" onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold transition-colors"
+                    style={{ color: 'var(--text-soft)', textDecoration: 'none' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-soft)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg>
+                    Search Dashboard
+                  </Link>
                   <div style={{ margin: '4px 12px', height: 1, background: 'hsl(var(--border))' }} />
                   <button onClick={handleLogout}
                     className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold w-full transition-colors"
@@ -290,6 +298,7 @@ export function Navbar() {
               { label: 'FAQ', href: '/faq' },
               { label: 'Compare', href: '/compare' },
               { label: 'Free Site Audit', href: '/audit' },
+              { label: 'Sitemap Checker', href: '/sitemap-checker' },
               { label: 'About', href: '/about' },
               { label: 'Contact', href: '/contact' },
             ].map(item => (

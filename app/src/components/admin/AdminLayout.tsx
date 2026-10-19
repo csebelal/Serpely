@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate, Outlet } from 'react-router-dom';
+import { logoutAdmin } from '@/lib/api';
 
 const NAV = [
   { to: '/sp-super-admin', label: 'Dashboard', icon: '◈', end: true },
@@ -32,7 +33,8 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  function logout() {
+  async function logout() {
+    try { await logoutAdmin(); } catch { /* clear the client regardless */ }
     localStorage.removeItem('serpely_token');
     navigate('/sp-super-admin/login');
   }

@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import type { FormEvent } from 'react';
-import { getSettings, updateSettings, setMyPassword, uploadFile, downloadBackup, restoreBackup, type SiteSettingsData } from '@/lib/api';
+import { getSettings, updateSettings, changePassword, uploadFile, downloadBackup, restoreBackup, type SiteSettingsData } from '@/lib/api';
 
 export function Settings() {
   const [form, setForm] = useState<Partial<SiteSettingsData>>({});
-  const [pwForm, setPwForm] = useState({ newPw: '', confirm: '' });
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [pwMsg, setPwMsg] = useState('');
@@ -24,12 +24,12 @@ export function Settings() {
 
   async function handlePwChange(e: FormEvent) {
     e.preventDefault();
-    if (pwForm.newPw.length < 6) { setPwMsg('Password must be at least 6 characters'); return; }
+    if (pwForm.newPw.length < 8) { setPwMsg('Password must be at least 8 characters'); return; }
     if (pwForm.newPw !== pwForm.confirm) { setPwMsg('Passwords do not match'); return; }
     try {
-      await setMyPassword(pwForm.newPw);
+      await changePassword(pwForm.current, pwForm.newPw);
       setPwMsg('✓ Password updated successfully');
-      setPwForm({ newPw: '', confirm: '' });
+      setPwForm({ current: '', newPw: '', confirm: '' });
     } catch { setPwMsg('Failed to update password'); }
     setTimeout(() => setPwMsg(''), 4000);
   }
@@ -65,15 +65,28 @@ export function Settings() {
   }
 
   async function handleRestoreBackup(file: File) {
-    if (!confirm('Restore this backup? This will overwrite all current content.')) return;
     setBackupWorking(true);
     try {
-      const text = await file.text();
-      await restoreBackup(JSON.parse(text));
-      setBackupMsg('✓ Restore complete');
-    } catch { setBackupMsg('Restore failed — invalid backup file'); }
+      const parsed = JSON.parse(await file.text());
+      // 1) Dry run: validate shape/row counts without touching the database.
+      const dry = await restoreBackup(parsed, true);
+      const counts = (dry.data as { willReplace?: Record<string, number> }).willReplace || {};
+      const summary = Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join(', ');
+      // 2) Typed confirmation — a stray click can never wipe the site.
+      const typed = prompt(`This REPLACES all current content.\n\n${summary || 'No rows'}\n\nA snapshot is saved first.\n\nType RESTORE to continue.`);
+      if (typed !== 'RESTORE') {
+        setBackupMsg('Restore cancelled');
+        setBackupWorking(false);
+        setTimeout(() => setBackupMsg(''), 3000);
+        return;
+      }
+      // 3) Real restore (server snapshots the current DB first).
+      const res = await restoreBackup(parsed);
+      const snap = (res.data as { snapshot?: string }).snapshot;
+      setBackupMsg(`✓ Restore complete${snap ? ` · snapshot ${snap}` : ''}`);
+    } catch { setBackupMsg('Restore failed — invalid backup file (nothing was changed)'); }
     setBackupWorking(false);
-    setTimeout(() => setBackupMsg(''), 4000);
+    setTimeout(() => setBackupMsg(''), 6000);
   }
 
   const section = (title: string) => (
@@ -158,10 +171,10 @@ export function Settings() {
       <div style={{ paddingTop: 8 }}>
         <h2 style={{ margin: '0 0 18px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Change Password</h2>
         <form onSubmit={handlePwChange} style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 400 }}>
-          {[['New Password', 'newPw'], ['Confirm New Password', 'confirm']].map(([label, key]) => (
+          {[['Current Password', 'current'], ['New Password', 'newPw'], ['Confirm New Password', 'confirm']].map(([label, key]) => (
             <div key={key}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-              <input type="password" value={pwForm[key as keyof typeof pwForm]} onChange={e => setPwForm(f => ({ ...f, [key]: e.target.value }))} required minLength={6}
+              <input type="password" value={pwForm[key as keyof typeof pwForm]} onChange={e => setPwForm(f => ({ ...f, [key]: e.target.value }))} required minLength={key === 'current' ? 1 : 8}
                 style={{ width: '100%', padding: '9px 13px', background: '#f1f5f9', border: 'none', borderRadius: 10, color: '#0f172a', fontSize: 14, boxSizing: 'border-box' }} />
             </div>
           ))}

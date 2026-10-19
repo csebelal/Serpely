@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clientRegister } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { TurnstileWidget } from '../../components/TurnstileWidget';
 
 export function Register() {
   const { login } = useAuth();
@@ -11,15 +12,16 @@ export function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     if (form.password !== form.confirm) { setError('Passwords do not match'); return; }
-    if (form.password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
     setLoading(true);
     try {
-      const { data } = await clientRegister(form.name, form.email, form.password);
+      const { data } = await clientRegister(form.name, form.email, form.password, turnstileToken);
       login(data.token, data.user);
       navigate('/profile', { replace: true });
     } catch (err: unknown) {
@@ -59,8 +61,10 @@ export function Register() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {field('Full Name', 'name', 'text', 'Jane Smith')}
             {field('Email', 'email', 'email', 'jane@company.com')}
-            {field('Password', 'password', 'password', 'Min 6 characters')}
+            {field('Password', 'password', 'password', 'Min 8 characters')}
             {field('Confirm Password', 'confirm', 'password', 'Repeat password')}
+
+            <TurnstileWidget onToken={setTurnstileToken} />
 
             {error && <p className="text-sm font-medium rounded-lg px-4 py-2.5" style={{ color: '#ef4444', background: '#fef2f2', border: '1px solid #fecaca' }}>{error}</p>}
 

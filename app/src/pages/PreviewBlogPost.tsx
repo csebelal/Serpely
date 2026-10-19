@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api, type BlogPostData as ApiPost } from '@/lib/api';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 function extractHeadings(html: string): { level: 2 | 3; text: string; id: string }[] {
   return Array.from(html.matchAll(/<h([23])[^>]*?>([\s\S]*?)<\/h[23]>/gi)).map(([, level, inner]) => {
@@ -89,7 +90,7 @@ export function PreviewBlogPost() {
     : '';
   const readTime = calcReadTime(data.body || '');
   const headings = extractHeadings(data.body || '');
-  const processedBody = injectHeadingIds(data.body || '');
+  const processedBody = sanitizeHtml(injectHeadingIds(data.body || ''));
 
   return (
     <>

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getPost, getPosts, subscribe, type BlogPostData as ApiPost } from '@/lib/api';
 import { injectSchema, removeSchema } from '@/lib/schema';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 function extractHeadings(html: string): { level: 2 | 3; text: string; id: string }[] {
   return Array.from(html.matchAll(/<h([23])[^>]*?>([\s\S]*?)<\/h[23]>/gi)).map(([, level, inner]) => {
@@ -292,7 +293,7 @@ export function BlogPost() {
     : '';
   const readTime = calcReadTime(data.body || '');
   const headings = extractHeadings(data.body || '');
-  const processedBody = injectHeadingIds(data.body || '');
+  const processedBody = sanitizeHtml(injectHeadingIds(data.body || ''));
 
   return (
     <>
@@ -773,7 +774,7 @@ export function BlogPost() {
                     <div className="mega-title">Features</div>
                     <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 15V9"/><path d="M12 15V5"/><path d="M17 15v-3"/></svg></div><div className="dd-text"><strong>AI Rank Tracking</strong><span>Track Google, AI Overviews, and LLM visibility.</span></div></a>
                     <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M12 3a9 9 0 0 0 0 18"/></svg></div><div className="dd-text"><strong>GEO Monitoring</strong><span>See citation visibility across AI search surfaces.</span></div></a>
-                    <a className="mega-link" href="/features"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div><div className="dd-text"><strong>Technical Site Audit</strong><span>Monitor crawl issues, vitals, and schema health.</span></div></a>
+                    <a className="mega-link" href="/sitemap-checker"><div className="dd-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M7 12h10"/><path d="M9 17h6"/></svg></div><div className="dd-text"><strong>Sitemap Checker</strong><span>Find broken, blocked & redirected URLs.</span></div></a>
                     <a className="mega-footer" href="/features">See All Features →</a>
                   </div>
                   <div className="mega-col">

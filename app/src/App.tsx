@@ -3,7 +3,7 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { getSettings, trackPageView } from './lib/api';
+import { getPublicSettings, trackPageView } from './lib/api';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PopupRenderer } from './components/PopupRenderer';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
@@ -12,6 +12,7 @@ import { ProtectedRoute } from './components/admin/ProtectedRoute';
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/auth/Register').then(m => ({ default: m.Register })));
 const Profile = lazy(() => import('./pages/auth/Profile').then(m => ({ default: m.Profile })));
+const GoogleDashboard = lazy(() => import('./pages/auth/GoogleDashboard').then(m => ({ default: m.GoogleDashboard })));
 const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const About = lazy(() => import('./pages/About').then(m => ({ default: m.About })));
 const Features = lazy(() => import('./pages/Features').then(m => ({ default: m.Features })));
@@ -27,8 +28,10 @@ const HowItWorks = lazy(() => import('./pages/HowItWorks').then(m => ({ default:
 const Compare = lazy(() => import('./pages/Compare').then(m => ({ default: m.Compare })));
 const CompareVs = lazy(() => import('./pages/CompareVs').then(m => ({ default: m.CompareVs })));
 const Audit = lazy(() => import('./pages/Audit').then(m => ({ default: m.Audit })));
+const SitemapChecker = lazy(() => import('./pages/SitemapChecker').then(m => ({ default: m.SitemapChecker })));
 const Changelog = lazy(() => import('./pages/Changelog').then(m => ({ default: m.Changelog })));
 const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
+const CookiePolicy = lazy(() => import('./pages/CookiePolicy').then(m => ({ default: m.CookiePolicy })));
 const Terms = lazy(() => import('./pages/Terms').then(m => ({ default: m.Terms })));
 const ChatWidget = lazy(() => import('./components/ChatWidget').then(m => ({ default: m.ChatWidget })));
 
@@ -135,7 +138,7 @@ function PublicShell() {
   const [maintenance, setMaintenance] = useState<boolean | null>(null);
 
   useEffect(() => {
-    getSettings().then(r => setMaintenance(r.data.maintenanceMode)).catch(() => setMaintenance(false));
+    getPublicSettings().then(r => setMaintenance(r.data.maintenanceMode)).catch(() => setMaintenance(false));
   }, []);
 
   if (maintenance === null) return null;
@@ -165,12 +168,16 @@ function PublicShell() {
           <Route path="/compare/:slug" element={<CompareVs />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/audit/:id" element={<Audit />} />
+          <Route path="/sitemap-checker" element={<SitemapChecker />} />
+          <Route path="/sitemap-checker/:id" element={<SitemapChecker />} />
           <Route path="/changelog" element={<Changelog />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth><GoogleDashboard /></RequireAuth>} />
         </Routes>
       </main>
       <Footer />
