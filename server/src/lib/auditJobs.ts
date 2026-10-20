@@ -116,7 +116,14 @@ async function runJob(job: AuditJob): Promise<void> {
         ? { finalUrl: home.finalUrl, status: home.status, headers: home.headers, html: (await fetchPage(home.url).catch(() => null))?.html || '', loadMs: home.loadMs, protection: null }
         : await fetchPage(job.normalizedUrl);
       const r = await runChecks(hp, job.normalizedUrl, psiPromise);
-      baseIssues = r.issues; baseMeta = r.meta;
+      // These checks are run against one page (the homepage, after redirects).
+      // Store that page as the affected URL so a fresh report can show which
+      // page needs the fix instead of "no URL sample".
+      const checkedUrl = hp.finalUrl || job.normalizedUrl;
+      baseIssues = r.issues.map((issue) =>
+        issue.passed || issue.affected ? issue : { ...issue, affected: { count: 1, examples: [checkedUrl] } },
+      );
+      baseMeta = r.meta;
     } catch { baseMeta = {}; }
     const psi = await psiPromise;
 

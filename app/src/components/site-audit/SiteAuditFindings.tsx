@@ -260,15 +260,30 @@ export default function SiteAuditFindings({
                     </div>
                     <span className={`severity ${finding.tone}`}>{finding.severityLabel}</span>
                     <span className="finding-type">{finding.typeLabel}</span>
-                    {finding.affectedExample ? (
+                    {finding.tone === 'pass' ? (
+                      <div className="affected">
+                        <strong>—</strong>
+                        <span>No action needed</span>
+                      </div>
+                    ) : finding.affectedExample ? (
                       <div className="affected">
                         <strong>{finding.affectedExample}</strong>
                         <span>{finding.affectedCount} affected URL{finding.affectedCount === 1 ? '' : 's'}</span>
                       </div>
+                    ) : finding.affectedSample ? (
+                      <div className="affected">
+                        <strong>{finding.affectedSample}</strong>
+                        <span>{finding.affectedCount > 0 ? `${finding.affectedCount} affected` : 'Affected sample'}</span>
+                      </div>
+                    ) : finding.affectedCount > 0 ? (
+                      <div className="affected">
+                        <strong>{finding.affectedCount} page{finding.affectedCount === 1 ? '' : 's'}</strong>
+                        <span>No URL sample recorded</span>
+                      </div>
                     ) : (
                       <div className="affected">
-                        <strong>—</strong>
-                        <span>{finding.tone === 'pass' ? 'No action needed' : 'No URL sample recorded'}</span>
+                        <strong>Site-wide</strong>
+                        <span>No individual URLs</span>
                       </div>
                     )}
                     <button className="detail-btn" type="button" onClick={() => onOpenFinding(finding)}>

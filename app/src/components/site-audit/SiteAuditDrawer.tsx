@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { getAuditUrlPsi, type AuditUrlPsi } from '@/lib/api';
-import { affectedUrls, type AuditViewModel, type ReportFinding, type Tone } from './report';
+import type { AuditViewModel, ReportFinding, Tone } from './report';
 import type { UrlDetail, UrlIssue, UrlTabId } from './types';
 import { URL_TABS, statusTone } from './types';
 import PageSpeedTab from './tabs/PageSpeedTab';
@@ -47,7 +47,7 @@ function urlDetailFor(url: string, vm: AuditViewModel, finding: ReportFinding | 
   const issues: UrlIssue[] = [];
   for (const category of vm.categories) {
     for (const f of category.findings) {
-      if (affectedUrls(f.issue).some((u) => norm(u) === norm(url))) {
+      if (f.affectedUrls.some((u) => norm(u) === norm(url))) {
         issues.push({
           id: f.key,
           severity: f.tone === 'high' ? 'high' : f.tone === 'medium' ? 'medium' : 'low',
@@ -214,8 +214,19 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
   const status = statusTone(detail?.httpStatus ?? null);
   const severityTone: Tone = finding?.tone ?? 'low';
   const severityClass = severityTone === 'pass' ? 'low' : severityTone;
-  const urls = finding ? affectedUrls(finding.issue) : [];
+  const urls = finding?.affectedUrls ?? [];
   const affectedCount = finding?.affectedCount ?? 0;
+
+  // The affected-URLs panel is empty for two very different reasons: the check
+  // is site-wide (no URL applies) or the report stored a count/sample but no
+  // page URLs. Say which one instead of a generic "no sample".
+  const affectedEmptyCopy = finding
+    ? finding.tone === 'pass'
+      ? 'No affected URLs — this check passed.'
+      : affectedCount > 0
+        ? `${affectedCount} affected ${affectedCount === 1 ? 'item' : 'items'}${finding.affectedSample ? ` (${finding.affectedSample})` : ''} — this report did not store page URLs for this check.`
+        : 'This check applies to the whole site, so there are no individual page URLs to list.'
+    : '';
 
   // The adapter accepts the whole PSI response so the PageSpeed tab's Field Data
   // section can read `loadingExperience` too.
@@ -373,7 +384,7 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
             <div className="drawer-url-table" id="drawerUrlTable">
               {urls.length === 0 ? (
                 <div className="drawer-empty">
-                  <div>No sample URLs were stored for this finding.</div>
+                  <div>{affectedEmptyCopy}</div>
                 </div>
               ) : (
                 <>

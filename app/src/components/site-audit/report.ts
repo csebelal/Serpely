@@ -25,6 +25,10 @@ export interface ReportFinding {
   affectedCount: number;
   /** First affected URL, rendered as a path. `null` when the issue has none. */
   affectedExample: string | null;
+  /** Every affected URL we can list in the detail drawer. */
+  affectedUrls: string[];
+  /** A stored sample that is not a URL (bot name, timing, anchor text, …). */
+  affectedSample: string | null;
   issue: PublicAuditIssue;
 }
 
@@ -172,17 +176,13 @@ export function toneFor(issue: PublicAuditIssue): Tone {
   return 'low';
 }
 
-/** Example strings are like `https://x.com/a (HTTP 404)` — pull the URL out. */
-function firstUrl(examples: string[] | undefined): string | null {
-  const raw = examples?.[0];
-  if (!raw) return null;
-  const token = raw.split(/\s+/)[0];
-  if (!/^https?:\/\//i.test(token)) return null;
+/** Path of an absolute URL, or the string itself when it does not parse. */
+export function urlPath(url: string): string {
   try {
-    const u = new URL(token);
+    const u = new URL(url);
     return `${u.pathname}${u.search}` || '/';
   } catch {
-    return null;
+    return url;
   }
 }
 
@@ -196,8 +196,29 @@ export function affectedUrls(issue: PublicAuditIssue): string[] {
   return out;
 }
 
+/**
+ * The page the homepage-level checks actually ran against.
+ *
+ * Reports created before the crawl stored an `affected` block for these checks
+ * have no per-issue URL, but they were all run against exactly one page — the
+ * homepage — so this is the URL that needs the fix.
+ */
+function checkedHomepage(report: PublicAuditReport): string | null {
+  const meta = report.meta as Record<string, string> | undefined;
+  const candidates = [meta?.finalUrl, report.normalizedUrl, report.url, report.origin];
+  return candidates.find((v) => typeof v === 'string' && /^https?:\/\//i.test(v)) ?? null;
+}
+
+/**
+ * Crawler-wide checks are the only issues built from the whole crawl (`site-*`
+ * codes). Everything else comes from `runChecks`, which inspects the homepage.
+ */
+const isCrawlWide = (issue: PublicAuditIssue) => issue.code.startsWith('site-');
+
+
 export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
   const issues = Array.isArray(report.issues) ? report.issues : [];
+  const homepage = checkedHomepage(report);
 
   const counts = { all: issues.length, high: 0, medium: 0, low: 0, pass: 0 };
   const grouped = new Map<CategoryId, ReportFinding[]>();
@@ -206,6 +227,19 @@ export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
     const tone = toneFor(issue);
     counts[tone] += 1;
     const bucket = bucketFor(issue);
+
+    // Real URL examples first. When a failing homepage-level check stored none,
+    // attach the homepage it was run against so the report never shows a blank
+    // "affected" cell for a check that does have a page.
+    const storedUrls = affectedUrls(issue);
+    const fallbackUrl =
+      storedUrls.length === 0 && !issue.passed && !isCrawlWide(issue) ? homepage : null;
+    const urls = storedUrls.length > 0 ? storedUrls : fallbackUrl ? [fallbackUrl] : [];
+    const storedSample =
+      (issue.affected?.examples ?? [])
+        .map((e) => e.trim())
+        .find((e) => e && !/^https?:\/\//i.test(e.split(/\s+/)[0])) ?? null;
+
     const finding: ReportFinding = {
       key: `${issue.code}-${index}`,
       title: issue.title,
@@ -213,8 +247,10 @@ export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
       tone,
       severityLabel: severityLabelFor(tone),
       typeLabel: TYPE_LABELS[issue.code] ?? issue.category,
-      affectedCount: issue.affected?.count ?? 0,
-      affectedExample: firstUrl(issue.affected?.examples),
+      affectedCount: issue.affected?.count ?? (fallbackUrl ? 1 : 0),
+      affectedExample: urls.length > 0 ? urlPath(urls[0]) : null,
+      affectedUrls: urls,
+      affectedSample: storedSample,
       issue,
     };
     const list = grouped.get(bucket);
