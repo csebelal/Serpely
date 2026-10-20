@@ -30,10 +30,15 @@ function todayStr(): string { return new Date().toISOString().slice(0, 10); }
 
 export function getJob(id: string): AuditJob | undefined { return jobs.get(id); }
 
-export async function createJob(input: string, ip: string): Promise<{ job: AuditJob; cachedReportId?: string }> {
-  const normalized = normalizeUrl(String(input || ''));
-  const origin = new URL(normalized).origin;
-  // Per-domain 24h cache (plan) — exact-URL cache upgraded to origin cache
+export interface CachedReport { reportId: string; pagesCrawled: number; }
+
+/**
+ * A finished report for the same origin, younger than 24h. Shared by the route
+ * (so cached answers do not spend the full-crawl rate limit) and by createJob.
+ * Throws on an invalid URL, exactly like normalizeUrl.
+ */
+export async function findCachedReport(input: string): Promise<CachedReport | null> {
+  const origin = new URL(normalizeUrl(String(input || ''))).origin;
   try {
     const cached = await AuditReport.findOne({ origin, status: 'done' }).sort({ createdAt: -1 });
     if (cached && Date.now() - new Date(cached.createdAt).getTime() < 24 * 3600 * 1000) {
@@ -44,13 +49,34 @@ export async function createJob(input: string, ip: string): Promise<{ job: Audit
         cached.shareToken = crypto.randomBytes(16).toString('hex');
         await cached.save();
       }
-      const publicId = String(cached.shareToken);
       const crawled = (cached as unknown as { pages?: { crawled?: number } }).pages?.crawled ?? 1;
-      const job: AuditJob = { id: crypto.randomUUID(), normalizedUrl: normalized, origin, status: 'done', stage: 'Cached report (under 24h old)', pagesDone: crawled, pagesTotal: crawled, createdAt: Date.now(), ip, reportId: publicId };
-      jobs.set(job.id, job);
-      return { job, cachedReportId: publicId };
+      return { reportId: String(cached.shareToken), pagesCrawled: crawled };
     }
   } catch { /* cache miss -> run fresh */ }
+  return null;
+}
+
+export async function createJob(input: string, ip: string): Promise<{ job: AuditJob; cachedReportId?: string }> {
+  const normalized = normalizeUrl(String(input || ''));
+  const origin = new URL(normalized).origin;
+
+  // One crawl per origin at a time. A second request (the same visitor double
+  // clicking, or two visitors auditing the same site) joins the job that is
+  // already queued/running instead of launching another ~250-fetch crawl.
+  const inFlightCutoff = Date.now() - 30 * 60 * 1000;
+  for (const j of jobs.values()) {
+    if (j.origin === origin && j.createdAt >= inFlightCutoff && (j.status === 'queued' || j.status === 'running')) {
+      return { job: j };
+    }
+  }
+
+  const cached = await findCachedReport(normalized);
+  if (cached) {
+    const job: AuditJob = { id: crypto.randomUUID(), normalizedUrl: normalized, origin, status: 'done', stage: 'Cached report (under 24h old)', pagesDone: cached.pagesCrawled, pagesTotal: cached.pagesCrawled, createdAt: Date.now(), ip, reportId: cached.reportId };
+    jobs.set(job.id, job);
+    return { job, cachedReportId: cached.reportId };
+  }
+
   const job: AuditJob = { id: crypto.randomUUID(), normalizedUrl: normalized, origin, status: 'queued', stage: 'Queued', pagesDone: 0, pagesTotal: 0, createdAt: Date.now(), ip };
   jobs.set(job.id, job);
   queue.push(job.id);

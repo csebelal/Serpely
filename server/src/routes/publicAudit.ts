@@ -1,8 +1,8 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import AuditReport from '../models/AuditReport';
 import AuditSnapshot from '../models/AuditSnapshot';
-import { createJob, getJob, maybeRefreshStale } from '../lib/auditJobs';
+import { createJob, findCachedReport, getJob, maybeRefreshStale } from '../lib/auditJobs';
 import { normalizeUrl, fetchPage, runChecks, scoreReportV2 } from '../lib/publicAudit';
 import { fetchPsi, fetchPsiRaw, type PsiRawPayload, type PsiStrategy } from '../lib/pagespeed';
 import { fetchCrux } from '../lib/crux';
@@ -10,16 +10,43 @@ import { guardTurnstile } from '../lib/turnstile';
 
 const router = Router();
 
-// Full crawl is heavy (~250 fetches + 1 PSI): 3 audits / hour / IP.
+// Full crawl is heavy (~250 fetches + 1 PSI). Only *new* crawls count: a cached
+// report (24h per origin) and an already-running crawl are free, so re-running
+// the same site — or double clicking — no longer eats the budget.
 const limiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 3, standardHeaders: true, legacyHeaders: false,
-  handler: (_req, res) => res.status(429).json({ error: 'Too many audits — full-site crawls are heavy. Please wait a bit and try again.' }),
+  windowMs: 60 * 60 * 1000,
+  max: 6,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => Boolean((req as unknown as { crawlCacheHit?: unknown }).crawlCacheHit),
+  handler: (req, res) => {
+    const reset = (req as unknown as { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
+    const waitMs = reset ? Math.max(0, reset.getTime() - Date.now()) : 60 * 60 * 1000;
+    const mins = Math.max(1, Math.ceil(waitMs / 60000));
+    res.status(429).json({
+      error: `Too many full-site audits from this network. Try again in ${mins} minute${mins === 1 ? '' : 's'}, or open a report you already generated.`,
+      retryAfterSeconds: Math.ceil(waitMs / 1000),
+    });
+  },
 });
 
-// POST /api/public-audit/run { url } → async, returns { jobId } fast
-router.post('/run', limiter, async (req: Request, res: Response) => {
+// Verifies Turnstile once, then flags cached reports so the limiter can skip
+// them. Invalid URLs are rejected here, before they can spend a crawl slot.
+async function serveCached(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (!(await guardTurnstile(req, res))) return;
   try {
-    if (!(await guardTurnstile(req, res))) return;
+    const hit = await findCachedReport(String(req.body?.url || ''));
+    if (hit) (req as unknown as { crawlCacheHit?: unknown }).crawlCacheHit = hit;
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : 'Invalid URL' });
+    return;
+  }
+  next();
+}
+
+// POST /api/public-audit/run { url } → async, returns { jobId } fast
+router.post('/run', serveCached, limiter, async (req: Request, res: Response) => {
+  try {
     const ip = String((req as unknown as { ip?: string }).ip || req.headers['x-forwarded-for'] || 'unknown');
     const { job, cachedReportId } = await createJob(String(req.body?.url || ''), ip);
     if (cachedReportId) {
