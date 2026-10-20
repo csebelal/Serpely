@@ -4,6 +4,8 @@ import { useSEOMeta } from '@/hooks/useSEOMeta';
 import { injectSchema, removeSchema } from '@/lib/schema';
 import { runPublicAudit, getPublicAudit, getAuditStatus, clientGetMe, type PublicAuditReport } from '@/lib/api';
 import { AuditResults, parsePsiMeta } from '@/components/audit/AuditResults';
+import { AUDIT_REDESIGN } from '@/config/audit';
+import SiteAuditReport from '@/components/site-audit/SiteAuditReport';
 import { CompareCard } from '@/components/audit/CompareCard';
 import { GscInsights } from '@/components/audit/GscInsights';
 import { CrawlerAccess } from '@/components/audit/CrawlerAccess';
@@ -233,37 +235,57 @@ export function Audit() {
               {domain} — Website Audit Report
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <AuditResults
-                scores={report.scores}
-                issues={report.issues}
-                overall={report.overall}
-                failedCount={failedCount}
-                createdAt={report.createdAt}
-                ghostOverall={report.forecast?.allFixes}
-                psi={parsePsiMeta(report.meta)}
-              />
-            </div>
-
-            <div style={{ ...card, marginBottom: 20 }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800 }}>Issue summary</h3>
-                <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: '#E8EEEB', marginBottom: 10 }}>
-                  {!!s?.critical && <div style={{ width: `${(s.critical / Math.max(1, s.critical + s.warning + s.notice)) * 100}%`, background: '#E5484D' }} />}
-                  {!!s?.warning && <div style={{ width: `${(s.warning / Math.max(1, s.critical + s.warning + s.notice)) * 100}%`, background: '#D9A400' }} />}
-                  {!!s?.notice && <div style={{ width: `${(s.notice / Math.max(1, s.critical + s.warning + s.notice)) * 100}%`, background: '#0E9AA7' }} />}
-                </div>
-                <div style={{ fontSize: 13, color: '#55655D' }}>
-                  {s?.critical ?? 0} critical · {s?.warning ?? 0} warnings · {s?.notice ?? 0} notices · {s?.passed ?? 0} checks passed
+            {AUDIT_REDESIGN ? (
+              <>
+                <div style={{ marginBottom: 20 }}>
+                  <SiteAuditReport report={report} shareToken={report.shareToken ?? id ?? null} embedded />
                 </div>
                 {report.priority && (
-                  <div style={{ marginTop: 16, padding: 16, borderRadius: 14, background: '#0A1410', color: '#fff' }}>
-                    <div style={{ fontSize: 12, color: '#3BE39A', fontWeight: 800 }}>FIX FIRST · +{report.priority.impact} PTS</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, margin: '6px 0' }}>{report.priority.title}</div>
-                    <div style={{ fontSize: 13, color: '#B6C7BE' }}>{report.priority.fix}</div>
-                    <Link to="/register" className="btn-accent-s inline-flex" style={{ marginTop: 12 }}>Fix with Serpely agent</Link>
+                  <div style={{ ...card, marginBottom: 20 }}>
+                    <div style={{ padding: 16, borderRadius: 14, background: '#0A1410', color: '#fff' }}>
+                      <div style={{ fontSize: 12, color: '#3BE39A', fontWeight: 800 }}>FIX FIRST · +{report.priority.impact} PTS</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, margin: '6px 0' }}>{report.priority.title}</div>
+                      <div style={{ fontSize: 13, color: '#B6C7BE' }}>{report.priority.fix}</div>
+                      <Link to="/register" className="btn-accent-s inline-flex" style={{ marginTop: 12 }}>Fix with Serpely agent</Link>
+                    </div>
                   </div>
                 )}
-            </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom: 20 }}>
+                  <AuditResults
+                    scores={report.scores}
+                    issues={report.issues}
+                    overall={report.overall}
+                    failedCount={failedCount}
+                    createdAt={report.createdAt}
+                    ghostOverall={report.forecast?.allFixes}
+                    psi={parsePsiMeta(report.meta)}
+                  />
+                </div>
+
+                <div style={{ ...card, marginBottom: 20 }}>
+                  <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800 }}>Issue summary</h3>
+                    <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: '#E8EEEB', marginBottom: 10 }}>
+                      {!!s?.critical && <div style={{ width: `${(s.critical / Math.max(1, s.critical + s.warning + s.notice)) * 100}%`, background: '#E5484D' }} />}
+                      {!!s?.warning && <div style={{ width: `${(s.warning / Math.max(1, s.critical + s.warning + s.notice)) * 100}%`, background: '#D9A400' }} />}
+                      {!!s?.notice && <div style={{ width: `${(s.notice / Math.max(1, s.critical + s.warning + s.notice)) * 100}%`, background: '#0E9AA7' }} />}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#55655D' }}>
+                      {s?.critical ?? 0} critical · {s?.warning ?? 0} warnings · {s?.notice ?? 0} notices · {s?.passed ?? 0} checks passed
+                    </div>
+                    {report.priority && (
+                      <div style={{ marginTop: 16, padding: 16, borderRadius: 14, background: '#0A1410', color: '#fff' }}>
+                        <div style={{ fontSize: 12, color: '#3BE39A', fontWeight: 800 }}>FIX FIRST · +{report.priority.impact} PTS</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, margin: '6px 0' }}>{report.priority.title}</div>
+                        <div style={{ fontSize: 13, color: '#B6C7BE' }}>{report.priority.fix}</div>
+                        <Link to="/register" className="btn-accent-s inline-flex" style={{ marginTop: 12 }}>Fix with Serpely agent</Link>
+                      </div>
+                    )}
+                </div>
+              </>
+            )}
 
             <div style={{ ...card, marginBottom: 20 }}>
               <CrawlerAccess crawlers={report.aiCrawlers || []} />
@@ -279,10 +301,12 @@ export function Audit() {
               <GscInsights origin={report.origin || report.normalizedUrl} />
             </div>
 
-            <div style={{ ...card }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800 }}>Issues</h3>
-              <IssuesList issues={report.issues} />
-            </div>
+            {!AUDIT_REDESIGN && (
+              <div style={{ ...card }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800 }}>Issues</h3>
+                <IssuesList issues={report.issues} />
+              </div>
+            )}
 
             <div style={{ ...card, marginTop: 20, textAlign: 'center' }}>
               <span className="pill-s mb-4 inline-block">Serpely Pro</span>

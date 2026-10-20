@@ -3,18 +3,15 @@ import { useSEOMeta } from '@/hooks/useSEOMeta';
 import '@/styles/audit-preview-shell.css';
 
 /**
- * Host for the redesigned Site Audit page.
+ * Standalone host for the redesigned Site Audit report.
  *
- * Deliberately mounted OUTSIDE the public shell (no marketing Navbar/Footer) —
- * the redesign ships its own topbar and footer, exactly like the prototype.
+ * Mounted OUTSIDE the public shell (no marketing Navbar/Footer) so the full
+ * prototype page can be reviewed on its own.
  *
- * Routes: `/audit/:id`          — live while `AUDIT_REDESIGN` is on
- *         `/audit-preview/:id`  — kept for side-by-side review
- * `id` is the audit report shareToken.
+ * Route: `/audit-preview/:id`  (id = audit report shareToken)
  *
- * The SEO call below mirrors what the legacy report page did (same page key,
- * same fallback copy), so the report view keeps the title, description,
- * canonical and robots treatment it had before the cutover.
+ * The live `/audit` page renders the same report (`SiteAuditReport`) embedded
+ * below its hero form, after a crawl finishes or when opened via `/audit/:id`.
  */
 export default function AuditPreview() {
   useSEOMeta('audit', {

@@ -3,7 +3,6 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AUDIT_REDESIGN } from './config/audit';
 import { getPublicSettings, trackPageView } from './lib/api';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PopupRenderer } from './components/PopupRenderer';
@@ -169,10 +168,7 @@ function PublicShell() {
           <Route path="/compare" element={<Compare />} />
           <Route path="/compare/:slug" element={<CompareVs />} />
           <Route path="/audit" element={<Audit />} />
-          {/* The report view is served by the redesigned page while
-              AUDIT_REDESIGN is on (see the route block below). The legacy report
-              page stays available here for the flip back. */}
-          {AUDIT_REDESIGN ? null : <Route path="/audit/:id" element={<Audit />} />}
+          <Route path="/audit/:id" element={<Audit />} />
           <Route path="/sitemap-checker" element={<SitemapChecker />} />
           <Route path="/sitemap-checker/:id" element={<SitemapChecker />} />
           <Route path="/changelog" element={<Changelog />} />
@@ -234,13 +230,12 @@ function App() {
               <Route path="api-keys" element={<APIKeysManager />} />
             </Route>
 
-            {/* Site Audit redesign — own topbar/footer, so it sits outside the
-                public shell (no marketing Navbar/Footer, no maintenance gate).
-                `/audit/:id` is the live route when AUDIT_REDESIGN is on;
-                `/audit-preview/:id` stays for side-by-side review. */}
+            {/* Site Audit redesign — standalone report host with its own
+                topbar/footer, mounted outside the public shell. The live
+                `/audit` page embeds the same report below its form; this route
+                stays for side-by-side review. */}
             <Route path="/audit-preview" element={<AuditPreview />} />
             <Route path="/audit-preview/:id" element={<AuditPreview />} />
-            {AUDIT_REDESIGN ? <Route path="/audit/:id" element={<AuditPreview />} /> : null}
 
             {/* Public routes — maintenance mode aware */}
             <Route path="*" element={<PublicShell />} />

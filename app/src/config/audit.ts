@@ -1,15 +1,14 @@
 /**
- * Site Audit cutover switch.
+ * Site Audit report switch.
  *
- * `true`  → `/audit/:id` serves the redesigned report page
- *           (`components/site-audit`, i.e. `pages/AuditPreview`).
- * `false` → `/audit/:id` serves the legacy report page (`pages/Audit`).
+ * `true`  → the redesigned report (`components/site-audit`) renders inside the
+ *           public `/audit` page, below the hero form, right after a crawl
+ *           finishes (and on shared `/audit/:id` links).
+ * `false` → the legacy report body (`components/audit/AuditResults` plus the
+ *           old issue summary / issues list) renders in the same place.
  *
- * Nothing else changes with this flag: the `/audit` form, the API, the report
- * data and every component stay exactly as they are. Reverting the cutover is
- * therefore a one-line change — flip the value below and rebuild.
- *
- * Both branches are wired in `App.tsx`, which keeps the legacy page compiled
- * and reachable at all times.
+ * The page around it — navbar, hero, form, progress, exports, GSC, compare,
+ * crawler access — is identical either way, so this is a one-line rollback.
+ * Both branches stay compiled and mounted.
  */
 export const AUDIT_REDESIGN = true;

@@ -1,15 +1,14 @@
 /**
- * Redesigned Site Audit page (served at `/audit/:id` and `/audit-preview/:id`).
+ * Standalone host for the redesigned Site Audit report (`/audit-preview/:id`).
  *
- * Loads a real `PublicAuditReport` by its public share token and renders the
- * ported prototype UI. All state that has to survive a drawer round-trip
- * (collapsed categories, severity filter, the open finding) lives here.
+ * Loads a real `PublicAuditReport` by its public share token and hands it to
+ * `SiteAuditReport`. The live `/audit` page embeds the same component below its
+ * form instead of using this host.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPublicAudit, type PublicAuditReport } from '@/lib/api';
-import { buildAuditViewModel, type CategoryId, type ReportFinding, type Tone } from './report';
-import SiteAuditShell from './SiteAuditShell';
+import SiteAuditReport from './SiteAuditReport';
 
 type LoadState = 'loading' | 'ready' | 'missing' | 'error';
 
@@ -69,36 +68,11 @@ export default function SiteAuditPage() {
     };
   }, [id]);
 
-  const vm = useMemo(() => (report ? buildAuditViewModel(report) : null), [report]);
-
-  const [collapsed, setCollapsed] = useState<ReadonlySet<CategoryId>>(() => new Set());
-  const [severityFilter, setSeverityFilter] = useState<'all' | Tone>('all');
-  const [openFinding, setOpenFinding] = useState<ReportFinding | null>(null);
-
-  const toggleCategory = useCallback((categoryId: CategoryId) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(categoryId)) next.delete(categoryId);
-      else next.add(categoryId);
-      return next;
-    });
-  }, []);
-
-  const setCollapsedIds = useCallback((ids: CategoryId[]) => setCollapsed(new Set(ids)), []);
-
-  // The hero's "View critical" button filters the table and scrolls to it.
-  const jumpToSeverity = useCallback((tone: 'all' | Tone) => {
-    setSeverityFilter(tone);
-    document.getElementById('issues')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
-  const closeFinding = useCallback(() => setOpenFinding(null), []);
-
   if (state === 'loading') {
     return <StatusCard tone="loading" title="Loading audit…" body="Fetching this report." />;
   }
 
-  if (!vm || state !== 'ready') {
+  if (!report || state !== 'ready') {
     return (
       <StatusCard
         tone="error"
@@ -112,18 +86,5 @@ export default function SiteAuditPage() {
     );
   }
 
-  return (
-    <SiteAuditShell
-      vm={vm}
-      collapsed={collapsed}
-      onToggleCategory={toggleCategory}
-      onSetCollapsed={setCollapsedIds}
-      severityFilter={severityFilter}
-      onSeverityFilter={jumpToSeverity}
-      onOpenFinding={setOpenFinding}
-      openFinding={openFinding}
-      onCloseFinding={closeFinding}
-      shareToken={report?.shareToken ?? id ?? null}
-    />
-  );
+  return <SiteAuditReport report={report} shareToken={report.shareToken ?? id ?? null} />;
 }

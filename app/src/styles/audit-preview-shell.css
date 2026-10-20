@@ -59,3 +59,21 @@
 .sa-root main.container {
   flex: 0 0 auto;
 }
+
+/* ---------------------------------------------------------------------------
+ * Embedded mode (`embedded`): the report is rendered inside the public /audit
+ * page, below the hero form, instead of as a full page.
+ *
+ *  - no page canvas of its own: the host page owns the background and height,
+ *    so a 100vh min-height would just add dead space.
+ *  - the shell must stop creating a stacking context. The detail drawer is
+ *    `position:fixed; z-index:210`; with `isolation:isolate` on `.sa-root` it
+ *    would be trapped below the marketing navbar (`z-index:50`). Dropping the
+ *    isolation lets the drawer paint above the navbar, as it does standalone.
+ * ------------------------------------------------------------------------- */
+.sa-root.sa-embedded {
+  min-height: 0;
+  z-index: auto;
+  isolation: auto;
+}
+

@@ -4,10 +4,17 @@
  * The markup is ported verbatim from the prototype and rewired to real report
  * data. The findings table and the detail drawer are separate components.
  *
- * Two affordances that the prototype left as no-ops are wired to real routes:
- * the brand links home and “Run new audit” links to `/audit`. The rest of the
- * prototype's inert chrome (nav links, Export report, Help/Settings) is left
- * untouched on purpose — see the notes on the cutover commit.
+ * Two rendering modes:
+ *  - standalone (`embedded` false): the prototype's full page, with its own
+ *    workspace topbar and footer. Used by `/audit-preview/:id`.
+ *  - embedded (`embedded` true): the report only — the workspace topbar and
+ *    footer are dropped because the host page (public `/audit`) already has
+ *    the marketing navbar around it.
+ *
+ * Affordances wired to real behaviour: the brand links home, “Run new audit”
+ * returns to the audit form (or focuses it when embedded), and “Export report”
+ * prints the report exactly like the prototype did. The remaining prototype
+ * chrome (nav links, Help/Settings) is inert by design.
  */
 import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -27,6 +34,8 @@ interface Props {
   onCloseFinding: () => void;
   openFinding: ReportFinding | null;
   shareToken: string | null;
+  /** Render the report inside a host page instead of as a full page. */
+  embedded?: boolean;
 }
 
 export default function SiteAuditShell({
@@ -40,6 +49,7 @@ export default function SiteAuditShell({
   onCloseFinding,
   openFinding,
   shareToken,
+  embedded = false,
 }: Props) {
   const navigate = useNavigate();
   const overallScore = vm.overall ?? 0;
@@ -50,8 +60,21 @@ export default function SiteAuditShell({
     ? vm.generatedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Not recorded';
 
+  // Embedded: the form is right above us, so bring it into view instead of
+  // navigating to `/audit` (which would be a same-page route change).
+  const runNewAudit = () => {
+    if (!embedded) {
+      navigate('/audit');
+      return;
+    }
+    const input = document.querySelector<HTMLInputElement>('input[aria-label="Website URL to audit"]');
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input?.focus({ preventScroll: true });
+  };
+
   return (
-    <div className="sa-root">
+    <div className={`sa-root${embedded ? ' sa-embedded' : ''}`}>
+      {!embedded && (
       <header className="topbar" role="banner"> 
         <Link to="/" className="brand" aria-label="Serpely home"> 
           <span className="brand-icon" aria-hidden="true">S
@@ -92,7 +115,8 @@ export default function SiteAuditShell({
           <div className="avatar" aria-label="Account: Bella">B
           </div> 
         </div> 
-      </header> 
+      </header>
+      )}
       <main className="container"> 
         <nav className="breadcrumb" aria-label="Breadcrumb"> 
           <span>Workspace
@@ -116,7 +140,7 @@ export default function SiteAuditShell({
             </p> 
           </div> 
           <div className="heading-actions"> 
-            <button className="btn" id="exportBtn" type="button"> 
+            <button className="btn" id="exportBtn" type="button" onClick={() => window.print()}> 
               <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
@@ -125,7 +149,7 @@ export default function SiteAuditShell({
               Export report
 
             </button> 
-            <button className="btn primary" id="runAudit" type="button" onClick={() => navigate('/audit')}> 
+            <button className="btn primary" id="runAudit" type="button" onClick={runNewAudit}> 
               <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polyline points="23 4 23 10 17 10" />
                 <polyline points="1 20 1 14 7 14" />
@@ -343,6 +367,7 @@ export default function SiteAuditShell({
         onOpenFinding={onOpenFinding}
       />
       </main>
+      {!embedded && (
       <footer> 
         <span>© 2026 Serpely · Website intelligence
         </span> 
@@ -354,7 +379,8 @@ export default function SiteAuditShell({
           <span>Support
           </span>
         </div> 
-      </footer> 
+      </footer>
+      )} 
       <SiteAuditDrawer vm={vm} shareToken={shareToken} finding={openFinding} open={openFinding !== null} onClose={onCloseFinding} />
     </div>
   );
