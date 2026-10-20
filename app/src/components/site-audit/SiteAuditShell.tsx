@@ -118,6 +118,7 @@ export default function SiteAuditShell({
       </header>
       )}
       <main className="container"> 
+        {!embedded && (<>
         <nav className="breadcrumb" aria-label="Breadcrumb"> 
           <span>Workspace
           </span> 
@@ -186,7 +187,8 @@ export default function SiteAuditShell({
               </strong>
             </span> 
           </div> 
-        </section> 
+        </section>
+        </>)}
         <section className="summary" aria-label="Audit summary"> 
           <article className="card metric overall"> 
             <div className="metric-label">Overall health 
