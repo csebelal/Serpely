@@ -4,11 +4,13 @@
  * The prototype's `genCruxData(url, scope, device)` defines the presentation
  * contract. This file reproduces that shape from two sources:
  *
- *  1. `cruxFromLoadingExperience()` — the real path. The production CrUX API key
- *     is IP-restricted, so field data comes from the PageSpeed Insights response's
- *     `loadingExperience` / `originLoadingExperience` block, which carries the same
- *     CrUX data (`.metrics[key].percentile`, `.category`, `.distributions[]`).
- *     EVERY derived field is nullable; nothing is invented.
+ *  1. `cruxFromLoadingExperience()` — the real path. The CrUX field data is
+ *     served inside the PageSpeed Insights response's `loadingExperience` /
+ *     `originLoadingExperience` block (`metrics[key].percentile`, `.category`,
+ *     `.distributions[]`). The server also queries the CrUX API directly for the
+ *     audit's field-data checks, but this tab renders from the PSI payload that
+ *     the `/psi` endpoint returns. EVERY derived field is nullable; nothing is
+ *     invented.
  *
  *  2. `cruxMock()` — a DEV-only, deterministic port of `genCruxData`. It is the
  *     only place numbers are fabricated, and it must only be called behind
@@ -135,11 +137,10 @@ function numOrNull(v: unknown): number | null {
 function readPercentile(raw: unknown, id: CruxMetricId): number | null {
   const v = numOrNull(raw);
   if (v === null) return null;
-  // The CrUX/PSI CLS percentile is reported ×100 (e.g. 8 = 0.08) on some API
-  // versions — normalize to the 0..1 scale the charts expect. Mirrors the
-  // server's `parseField` normalization in server/src/lib/pagespeed.ts.
+  // PSI reports the CLS percentile on the ×100 scale (1 → 0.01, 25 → 0.25).
+  // `v > 1` would leave the very common 0.01 case as 1.00, so use `>= 1`.
   if (id === 'cls') {
-    const n = v > 1 ? v / 100 : v;
+    const n = v >= 1 ? v / 100 : v;
     return Math.round(n * 1000) / 1000;
   }
   return v;

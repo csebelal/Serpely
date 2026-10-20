@@ -33,6 +33,18 @@ import {
 
 const DEV = import.meta.env.DEV;
 
+/**
+ * PSI always answers with a `loadingExperience` object, but when Google has no
+ * field data for the URL it carries only `initial_url` — no `metrics`. Passing
+ * that to the CrUX adapter would render a full grid of empty cards, so treat a
+ * metrics-less block as "no data" and let the tab show its honest empty state.
+ */
+function hasFieldMetrics(block: unknown): boolean {
+  if (!block || typeof block !== 'object') return false;
+  const metrics = (block as { metrics?: unknown }).metrics;
+  return !!metrics && typeof metrics === 'object' && Object.keys(metrics as object).length > 0;
+}
+
 interface Props {
   vm: AuditViewModel;
   shareToken: string | null;
@@ -240,16 +252,18 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
     : psiUnavailable
       ? pagespeedMock(detail.url, 'mobile')
       : null;
-  const cruxUrlData = psi?.loadingExperience && typeof psi.loadingExperience === 'object'
-    ? cruxFromLoadingExperience(psi.loadingExperience)
-    : psiUnavailable
-      ? cruxMock(detail.url, 'url', 'all')
-      : null;
-  const cruxOriginData = psi?.originLoadingExperience && typeof psi.originLoadingExperience === 'object'
-    ? cruxFromLoadingExperience(psi.originLoadingExperience)
-    : psiUnavailable
-      ? cruxMock(detail.url, 'origin', 'all')
-      : null;
+  const cruxUrlData =
+    psi && hasFieldMetrics(psi.loadingExperience)
+      ? cruxFromLoadingExperience(psi.loadingExperience)
+      : psiUnavailable
+        ? cruxMock(detail.url, 'url', 'all')
+        : null;
+  const cruxOriginData =
+    psi && hasFieldMetrics(psi.originLoadingExperience)
+      ? cruxFromLoadingExperience(psi.originLoadingExperience)
+      : psiUnavailable
+        ? cruxMock(detail.url, 'origin', 'all')
+        : null;
 
   const renderTab = (): ReactElement => {
     if (!detail) return <EmptyTab tabId={tab} />;

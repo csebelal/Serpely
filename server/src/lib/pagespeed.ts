@@ -117,8 +117,9 @@ function parseField(loadingExperience: unknown): PsiField | null {
   };
   const normCls = (v: number | undefined): number | undefined => {
     if (v === undefined) return undefined;
-    // Older API versions report CLS percentile ×100 — normalize back to 0–1 scale.
-    const n = v > 1 ? v / 100 : v;
+    // PSI reports the CLS percentile on the ×100 scale (1 → 0.01, 25 → 0.25),
+    // so 0 and 1 both have to be handled — `v > 1` alone turns 0.01 into 1.
+    const n = v >= 1 ? v / 100 : v;
     return Math.round(n * 1000) / 1000;
   };
   const lcp = find('LARGEST_CONTENTFUL_PAINT');

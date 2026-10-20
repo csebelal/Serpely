@@ -11,7 +11,7 @@ const TIMEOUT_MS = 10000;
 export type CruxSource = 'crux-url' | 'crux-origin';
 export type CruxField = PsiField & { source: CruxSource };
 
-interface CruxMetric { percentiles?: { p75?: number } }
+interface CruxMetric { percentiles?: { p75?: number | string } }
 
 async function query(body: Record<string, unknown>, apiKey: string): Promise<PsiField | null> {
   const ctrl = new AbortController();
@@ -38,13 +38,17 @@ async function query(body: Record<string, unknown>, apiKey: string): Promise<Psi
     const m = j?.record?.metrics;
     if (!m) return null;
     const num = (k: string): number | undefined => {
-      const v = m[k]?.percentiles?.p75;
-      return typeof v === 'number' ? v : undefined;
+      const raw = m[k]?.percentiles?.p75;
+      // CrUX returns CLS as a decimal *string* ("0.08"); everything else is a number.
+      const v = typeof raw === 'string' ? Number(raw) : raw;
+      return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
     };
     const lcp = num('largest_contentful_paint');
-    // NOTE: the CrUX API reports CLS percentiles ×100 — normalize to 0–1 scale.
+    // CLS arrives as a 0–1 decimal; some payloads use the ×100 scale, so only
+    // rescale values that are clearly on it (1.00 CLS is beyond any real page).
     const clsRaw = num('cumulative_layout_shift');
-    const cls = clsRaw !== undefined ? Math.round((clsRaw / 100) * 1000) / 1000 : undefined;
+    const cls =
+      clsRaw !== undefined ? Math.round((clsRaw > 1 ? clsRaw / 100 : clsRaw) * 1000) / 1000 : undefined;
     const inp = num('interaction_to_next_paint');
     const ttfb = num('experimental_time_to_first_byte');
     if (lcp === undefined && cls === undefined && inp === undefined && ttfb === undefined) return null;
