@@ -77,3 +77,116 @@
   isolation: auto;
 }
 
+/* ---------------------------------------------------------------------------
+ * Report facts the prototype never drew: the five category scores, crawl
+ * coverage and AI crawler access. Same tokens, radii and shadows as the
+ * prototype's own cards so they read as part of the same system.
+ * ------------------------------------------------------------------------- */
+
+.sa-root .score-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: -8px 0 24px;
+}
+.sa-root .score-card {
+  padding: 14px 15px;
+  min-width: 0;
+}
+.sa-root .score-line {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 6px;
+}
+.sa-root .score-line b {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.sa-root .score-line span {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted-2);
+}
+.sa-root .score-bar {
+  margin-top: 10px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  box-shadow: inset 0 1px 2px rgba(12, 20, 15, 0.06);
+  overflow: hidden;
+}
+.sa-root .score-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-strong) 100%);
+}
+.sa-root .score-bar.warn span {
+  background: linear-gradient(90deg, #e5b45b 0%, var(--warning) 100%);
+}
+.sa-root .score-bar.bad span {
+  background: linear-gradient(90deg, #e88b8c 0%, var(--critical) 100%);
+}
+
+.sa-root .crawl-panel { margin-bottom: 13px; }
+.sa-root .crawl-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.25fr) minmax(0, 1.25fr);
+  gap: 10px;
+}
+.sa-root .fact {
+  padding: 11px 10px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.sa-root .fact b {
+  display: block;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.75px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.sa-root .fact span {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.sa-root .crawl-line {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 11px 10px;
+  min-width: 0;
+  border: 1px dashed var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+.sa-root .crawl-line span {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.sa-root .crawl-line strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+@media (max-width: 980px) {
+  .sa-root .score-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sa-root .crawl-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sa-root .crawl-line { grid-column: span 3; }
+}
+@media (max-width: 720px) {
+  .sa-root .score-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+

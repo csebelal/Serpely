@@ -47,6 +47,19 @@ export interface CoverageRow {
   label: string;
 }
 
+/** One of the five scored areas of the report (`report.scores`). */
+export interface ScoreRow {
+  name: string;
+  value: number;
+}
+
+/** One AI / search crawler the audit checked in robots.txt. */
+export interface CrawlerRow {
+  bot: string;
+  status: string;
+  detail: string;
+}
+
 export interface AuditViewModel {
   siteTitle: string;
   siteUrl: string;
@@ -57,6 +70,16 @@ export interface AuditViewModel {
   pagesCrawled: number | null;
   /** Pages discovered but not fetched, when the report recorded it. */
   pagesDiscovered: number | null;
+  /** Pages that failed to load on this run. */
+  pagesErrors: number | null;
+  /** Scores per category — the five numbers behind `overall`. */
+  scores: ScoreRow[];
+  /** robots.txt verdict for each AI crawler the report checked. */
+  crawlers: CrawlerRow[];
+  /** Sitemap URLs the crawl discovered, if any. */
+  sitemaps: string[];
+  /** Score potential after fixes. */
+  forecast: { now: number; quickWins: number; allFixes: number } | null;
   counts: { all: number; high: number; medium: number; low: number; pass: number };
   categories: ReportCategory[];
   /** Categories that actually have findings, in fixed display order. */
@@ -215,6 +238,41 @@ function checkedHomepage(report: PublicAuditReport): string | null {
  */
 const isCrawlWide = (issue: PublicAuditIssue) => issue.code.startsWith('site-');
 
+/** The five scored areas, in the order the report produces them. */
+const SCORE_ORDER = ['Performance', 'Accessibility', 'Technical SEO', 'On-page content', 'AI citation readiness'];
+
+function scoreRows(report: PublicAuditReport): ScoreRow[] {
+  const src = report.scores ?? {};
+  const names = [
+    ...SCORE_ORDER.filter((n) => typeof src[n] === 'number'),
+    ...Object.keys(src)
+      .filter((n) => !SCORE_ORDER.includes(n) && typeof src[n] === 'number')
+      .sort(),
+  ];
+  return names.map((name) => ({
+    name,
+    value: Math.max(0, Math.min(100, Math.round(src[name]))),
+  }));
+}
+
+/** `meta.sitemaps` is stored as JSON text in the report. */
+function sitemapUrls(report: PublicAuditReport): string[] {
+  const raw = (report.meta as Record<string, unknown> | undefined)?.sitemaps;
+  const asStrings = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+  if (Array.isArray(raw)) return asStrings(raw);
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) return asStrings(parsed);
+      if (typeof parsed === 'string') return [parsed];
+    } catch {
+      return [raw];
+    }
+  }
+  return [];
+}
+
 
 export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
   const issues = Array.isArray(report.issues) ? report.issues : [];
@@ -291,6 +349,20 @@ export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
   const overall = typeof report.overall === 'number' && report.overall > 0 ? report.overall : null;
   const pagesCrawled = typeof report.pages?.crawled === 'number' ? report.pages.crawled : null;
   const pagesDiscovered = typeof report.pages?.discovered === 'number' ? report.pages.discovered : null;
+  const pagesErrors = typeof report.pages?.errors === 'number' ? report.pages.errors : null;
+
+  const crawlers: CrawlerRow[] = (report.aiCrawlers ?? [])
+    .filter((c) => c && typeof c.bot === 'string' && c.bot)
+    .map((c) => ({ bot: c.bot, status: c.status || 'Unknown', detail: c.detail || '' }));
+
+  const forecastSource = report.forecast;
+  const forecast =
+    forecastSource &&
+    typeof forecastSource.now === 'number' &&
+    typeof forecastSource.quickWins === 'number' &&
+    typeof forecastSource.allFixes === 'number'
+      ? { now: forecastSource.now, quickWins: forecastSource.quickWins, allFixes: forecastSource.allFixes }
+      : null;
 
   return {
     siteTitle,
@@ -299,6 +371,11 @@ export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
     overall,
     pagesCrawled,
     pagesDiscovered,
+    pagesErrors,
+    scores: scoreRows(report),
+    crawlers,
+    sitemaps: sitemapUrls(report),
+    forecast,
     counts,
     categories,
     coverage,

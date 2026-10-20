@@ -59,6 +59,7 @@ export default function SiteAuditShell({
   const lastCrawled = vm.generatedAt
     ? vm.generatedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Not recorded';
+  const scoreTone = (value: number) => (value >= 80 ? 'good' : value >= 50 ? 'warn' : 'bad');
 
   // Embedded: the form is right above us, so bring it into view instead of
   // navigating to `/audit` (which would be a same-page route change).
@@ -265,6 +266,68 @@ export default function SiteAuditShell({
             <div className="metric-foot">Checks passed successfully
             </div> 
           </article> 
+        </section> 
+        {vm.scores.length > 0 && (
+          <section className="score-row" aria-label="Category scores">
+            {vm.scores.map((score) => (
+              <article className="card score-card" key={score.name}>
+                <div className="metric-label">{score.name}</div>
+                <div className="score-line">
+                  <b>{score.value}</b>
+                  <span>/ 100</span>
+                </div>
+                <div className={`score-bar ${scoreTone(score.value)}`} aria-hidden="true">
+                  <span style={{ width: `${score.value}%` }} />
+                </div>
+              </article>
+            ))}
+          </section>
+        )}
+        <section className="card panel crawl-panel" aria-label="Crawl coverage">
+          <div className="panel-header"> 
+            <div> 
+              <h3>Crawl coverage
+              </h3> 
+              <p>What this run fetched, and where it found the site.
+              </p> 
+            </div> 
+            <span className="small-label">Last crawled {lastCrawled}
+            </span> 
+          </div> 
+          <div className="crawl-strip"> 
+            <div className="fact">
+              <b>{vm.pagesCrawled ?? '—'}
+              </b>
+              <span>Pages crawled
+              </span>
+            </div> 
+            <div className="fact">
+              <b>{vm.pagesDiscovered ?? '—'}
+              </b>
+              <span>Pages discovered
+              </span>
+            </div> 
+            <div className="fact">
+              <b>{vm.pagesErrors ?? '—'}
+              </b>
+              <span>Crawl errors
+              </span>
+            </div> 
+            <div className="crawl-line">
+              <span>Sitemap
+              </span>
+              <strong title={vm.sitemaps[0] ?? undefined}>{vm.sitemaps[0] ?? 'None found'}
+              </strong>
+            </div> 
+            {vm.forecast && (
+              <div className="crawl-line">
+                <span>Score potential
+                </span>
+                <strong>{vm.forecast.quickWins} quick wins · {vm.forecast.allFixes} all fixes
+                </strong>
+              </div>
+            )}
+          </div> 
         </section> 
         <section className="top-grid"> 
           <article className="card panel"> 
