@@ -72,7 +72,9 @@ export function KpiCard({
   );
 }
 
-/* Port of the prototype's `renderEmptyTab()` (line 4380). */
+/* Port of the prototype's `renderEmptyTab()` (line 4380), with production copy:
+   the prototype said "in this preview"/"in this prototype", which cannot ship
+   to real users. The state itself is unchanged. */
 export function EmptyTab({ tabId }: { tabId: UrlTabId }): ReactElement {
   const labels: Partial<Record<UrlTabId, string>> = {
     search: 'Search metrics',
@@ -88,8 +90,8 @@ export function EmptyTab({ tabId }: { tabId: UrlTabId }): ReactElement {
     <div className="url-tab active" data-tab={tabId}>
       <div className="url-empty">
         <EmptyIcon />
-        <b>No data available in this preview</b>
-        <span>{labels[tabId] || 'This view'} is not yet wired to a live data source in this prototype.</span>
+        <b>Not collected yet</b>
+        <span>{labels[tabId] || 'This view'} data isn't collected by this audit yet.</span>
       </div>
     </div>
   );

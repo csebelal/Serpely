@@ -23,6 +23,8 @@ check-admin*.js
 _*.mjs
 _*.js
 _*.txt
+# Local release staging used by deploy/audit-release.ps1
+_release/
 # Scratch reference files staged in public/ for local visual comparison
 app/public/_*.html
 
