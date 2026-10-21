@@ -2,6 +2,7 @@ import { IAuditIssue, IAffected, AuditCategory, AuditSeverity } from '../models/
 import { PsiResult, buildPsiIssues } from './pagespeed';
 import { detectProtection, type ProtectionHit } from './protection';
 import { collectPhase2 } from './phase2';
+import dns from 'node:dns/promises';
 
 export interface FetchedPage {
   finalUrl: string;
@@ -12,22 +13,100 @@ export interface FetchedPage {
   protection?: ProtectionHit | null;
 }
 
+// ── SSRF protection ─────────────────────────────────────────────────────────
+// Literal checks run on every URL; DNS is additionally resolved for the target
+// hostname before any request to that host is made (redirects to other hosts
+// re-run the check). IPv6-mapped and decimal/octal IPv4 spellings resolve to
+// IPv4/IPv6 literals, which these both catch after dns.lookup().
+const PRIVATE_IPV4 = (ip: string): boolean => {
+  const m = ip.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (!m) return false;
+  const [a, b, c] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (a === 0 || a === 10) return true;                       // this network / private
+  if (a === 127) return true;                                 // loopback (all of 127.0.0.0/8)
+  if (a === 169 && b === 254) return true;                    // link-local + cloud metadata
+  if (a === 172 && b >= 16 && b <= 31) return true;           // private
+  if (a === 192 && b === 168) return true;                    // private
+  if (a === 100 && b >= 64 && b <= 127) return true;          // carrier-grade NAT
+  if (a === 192 && b === 0 && (c === 0 || c === 2)) return true; // test / doc ranges
+  if (a === 198 && b === 18) return true;                     // benchmark range
+  if (a >= 224) return true;                                  // multicast / reserved
+  return false;
+};
+const PRIVATE_IPV6 = (ip: string): boolean => {
+  const lo = ip.toLowerCase();
+  if (lo === '::' || lo === '::1') return true;                       // unspecified / loopback
+  if (lo.startsWith('fe80:')) return true;                            // link-local
+  if (/^f[cd][0-9a-f]{2}:/.test(lo)) return true;                     // unique local fc00::/7
+  if (lo.startsWith('::ffff:')) return PRIVATE_IPV4(lo.slice(7));      // v4-mapped
+  if (lo.startsWith('64:ff9b:')) return false;                        // NAT64 (public v4)
+  if (lo.startsWith('2002:')) { // 6to4 embeds the v4 address in the next 4 bytes
+    return PRIVATE_IPV4(lo.slice(5).split(':').map(Number).join('.'));
+  }
+  return false;
+};
+export function isPrivateIp(ip: string): boolean {
+  return ip.includes(':') ? PRIVATE_IPV6(ip) : PRIVATE_IPV4(ip);
+}
+
+/** True when the URL's host is a public DNS name or a public literal IP. */
+export async function assertPublicTarget(url: string): Promise<void> {
+  const u = new URL(url);
+  if (u.username) throw new Error('URLs with embedded credentials are not allowed');
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  // Literal IPs: no DNS lookup needed.
+  if (net_isIpLiteral(host)) {
+    if (isPrivateIp(host)) throw new Error('Local / private URLs are not allowed');
+    return;
+  }
+  const addrs = await dns
+    .lookup(host, { all: true, verbatim: true })
+    .catch(() => null);
+  if (!addrs || !addrs.length) {
+    throw new Error('This hostname does not resolve (DNS lookup failed — check the address, or the site may be offline)');
+  }
+  if (addrs.every(a => isPrivateIp(a.address))) {
+    throw new Error('This hostname resolves to a private network address');
+  }
+}
+function net_isIpLiteral(host: string): boolean {
+  if (host.includes(':')) return isPrivateIp(host) || host.includes(':');
+  const m = host.match(/^(\d{1,3})(\.\d{1,3}){3}$/);
+  return !!m;
+}
+
 export function normalizeUrl(input: string): string {
   let u = (input || '').trim().toLowerCase();
   if (!u) throw new Error('Enter a website URL');
+  // A leading scheme that is NOT http(s) is a smuggled protocol (ftp:, file:,
+  // javascript:, …) — without this check the https:// prefix would glue it into
+  // an URL whose real host is the scheme word itself.
+  if (/^[a-z][a-z0-9+.-]*:/.test(u) && !/^https?:\/\//.test(u)) {
+    throw new Error('Only http(s) URLs are allowed');
+  }
   if (!/^https?:\/\//.test(u)) u = 'https://' + u;
   const parsed = new URL(u);
   if (!/^https?:$/.test(parsed.protocol)) throw new Error('Only http(s) URLs allowed');
-  // Block private / local targets (no SSRF from audit form)
-  const host = parsed.hostname;
+  // Embedded credentials ("user:pass@host") never reach a fetch — reject them.
+  if (parsed.username || parsed.password) {
+    throw new Error('URLs with embedded credentials are not allowed');
+  }
+  // Block private / local targets (no SSRF from audit form). Literal web hosts
+  // (decimal/octal IPv4 spellings etc.) must also be rejected: never treat a
+  // hostname containing crud as a domain.
+  const host = parsed.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const isDottedQuad = /^(\d{1,3})(\.\d{1,3}){3}$/.test(host);
+  const isBareIpSpelling = /^\d+$/.test(host) || /^0[xX][0-9a-f]+$/.test(host);
   if (
-    host === 'localhost' ||
-    host.endsWith('.local') ||
-    host.startsWith('10.') ||
-    host.startsWith('192.168.') ||
-    host.startsWith('172.16.') ||
-    host === '127.0.0.1' ||
-    host === '0.0.0.0'
+    !host ||
+    host.includes(':') ||                       // bracketed IPv6 literal
+    isDottedQuad || isBareIpSpelling ||          // IP literals (public too): crawl by domain only
+    host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal') ||
+    host === '127.0.0.1' || host === '0.0.0.0' || host === '[::1]' ||
+    host.startsWith('10.') || host.startsWith('192.168.') ||
+    host.startsWith('169.254.') ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)
   ) {
     throw new Error('Local / private URLs are not allowed');
   }
@@ -35,15 +114,24 @@ export function normalizeUrl(input: string): string {
   return parsed.toString();
 }
 
+/** Hostname with `www.` and case normalized — the same-site test for redirects. */
+export function stableHost(u: string | URL): string {
+  try { return new URL(u).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; }
+}
+
+/** crawl-friendly identity used for every audit request — never spoofs Googlebot. */
+export const CRAWLER_UA = 'SerpelyAuditBot/1.0 (+https://serpely.com/audit)';
+
 async function fetchText(url: string, timeoutMs = 9000): Promise<{ text: string; status: number; headers: Record<string, string> } | null> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
+    await assertPublicTarget(url);
     const res = await fetch(url, {
       signal: ctrl.signal,
       redirect: 'follow',
       headers: {
-        'User-Agent': 'SerpelyAuditBot/1.0 (+https://serpely.com/audit)',
+        'User-Agent': CRAWLER_UA,
         Accept: 'text/html,application/xhtml+xml',
       },
     });
@@ -58,20 +146,65 @@ async function fetchText(url: string, timeoutMs = 9000): Promise<{ text: string;
   }
 }
 
-export async function fetchPage(url: string): Promise<FetchedPage> {
+/**
+ * Fetch a page with a manual redirect walk so every hop can be validated:
+ * - private / unresolvable hosts are rejected outright (SSRF),
+ * - a hop that lands on a DIFFERENT site stops the chain and reports the
+ *   off-site URL instead of silently crawling and reporting the other site.
+ * `allowOffsite` keeps scope: some probes (http→https) legitimately stay
+ * on-host, while a homepage that bounces to another domain must surface as
+ * honestly redirected rather than fabricated as reached.
+ */
+export async function fetchPage(url: string, opts: { allowOffsite?: boolean } = {}): Promise<FetchedPage & { offsite?: string }> {
   const start = Date.now();
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 12000);
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      redirect: 'follow',
-      headers: {
-        // Crawler UA: evaluates exactly what Googlebot sees (SSR/crawler variants included).
-        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-    });
+  await assertPublicTarget(url);
+  const startHost = stableHost(url);
+  let current = url;
+  let hops = 0;
+  for (;;) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    let res: Response;
+    try {
+      res = await fetch(current, {
+        signal: ctrl.signal,
+        redirect: 'manual',
+        headers: {
+          // Our own crawler identity — never spoof Googlebot while checking robots.txt rules.
+          'User-Agent': CRAWLER_UA,
+          Accept: 'text/html,application/xhtml+xml',
+        },
+      });
+    } finally {
+      clearTimeout(t);
+    }
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location') || '';
+      let next = '';
+      try { next = new URL(loc, current).toString(); } catch { next = ''; }
+      if (next && hops < 6) {
+        const nextHost = stableHost(next);
+        if (nextHost === startHost) {
+          // same-site hop: follow it, record the chain
+          try { await res.arrayBuffer().catch(() => undefined); } catch { /* ignore */ }
+          hops++;
+          current = next;
+          continue;
+        }
+        // Off-site bounce: report it, never crawl the other site's content.
+        try { await res.arrayBuffer().catch(() => undefined); } catch { /* ignore */ }
+        if (opts.allowOffsite && nextHost) {
+          // Explicitly requested (e.g. comparing services): follow under the
+          // caller's supervision — still refuses private networks.
+          await assertPublicTarget(next);
+          current = next;
+          hops++;
+          continue;
+        }
+        if (!next.startsWith('http')) return { finalUrl: current, status: res.status, headers: {}, html: '', loadMs: Date.now() - start, protection: null };
+        return { finalUrl: next, status: res.status, headers: {}, html: '', loadMs: Date.now() - start, protection: null, offsite: next };
+      }
+    }
     const html = await res.text().catch(() => '');
     const headers: Record<string, string> = {};
     res.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
@@ -81,9 +214,7 @@ export async function fetchPage(url: string): Promise<FetchedPage> {
       if (sc?.length) headers['set-cookie'] = sc.join('\n');
     } catch { /* ignore */ }
     const protection = detectProtection(res.status, headers, html);
-    return { finalUrl: res.url || url, status: res.status, headers, html: html.slice(0, 1_500_000), loadMs: Date.now() - start, protection };
-  } finally {
-    clearTimeout(t);
+    return { finalUrl: res.url || current, status: res.status, headers, html: html.slice(0, 1_500_000), loadMs: Date.now() - start, protection };
   }
 }
 
@@ -278,14 +409,26 @@ export async function runChecks(page: FetchedPage, normalizedUrl: string, psi?: 
     favicon || 'No icon link found',
     'Add <link rel="icon"> (SVG + PNG fallback) so tabs, bookmarks and search results show your brand.', 1, 'quick', !!favicon));
 
-  // robots.txt + sitemap + machine files (live fetch)
-  const [robotsTxt, sitemapXml, sitemapRoot, llmsTxt] = await Promise.all([
+  // robots.txt + sitemap + machine files (live fetch) — the sitemap candidates
+  // mirror what real crawler discovery tries, so the evidence names the paths
+  // actually probed (a site whose sitemap is /sitemap_index.xml must not be
+  // flagged for a serpely-internal /api/sitemap.xml path).
+  const [robotsTxt, sitemapXml, sitemapRoot, sitemapWp, sitemapApi, llmsTxt] = await Promise.all([
     fetchText(origin + '/robots.txt'),
-    fetchText(origin + '/api/sitemap.xml'),
     fetchText(origin + '/sitemap.xml'),
+    fetchText(origin + '/sitemap_index.xml'),
+    fetchText(origin + '/wp-sitemap.xml'),
+    fetchText(origin + '/api/sitemap.xml'),
     fetchText(origin + '/llms.txt'),
   ]);
+  const sitemapCandidates = ['/sitemap.xml', '/sitemap_index.xml', '/wp-sitemap.xml', '/api/sitemap.xml'];
   const robotsBody = robotsTxt?.text || '';
+  const sitemapHits = [
+    { path: '/sitemap.xml', body: sitemapXml },
+    { path: '/sitemap_index.xml', body: sitemapRoot },
+    { path: '/wp-sitemap.xml', body: sitemapWp },
+    { path: '/api/sitemap.xml', body: sitemapApi },
+  ].filter(s => s.body && /<(urlset|sitemapindex)/i.test(s.body.text));
   const aiBots = ['gptbot', 'chatgpt-user', 'perplexitybot', 'claudebot', 'google-extended'];
   const blockedBots = aiBots.filter(b => new RegExp(`user-agent:\\s*${b}[\\s\\S]{0,200}?disallow:\\s*/`, 'i').test(robotsBody));
   issues.push(issue('robots-ai-allow', 'AI Visibility / GEO', 'critical', 'AI crawlers allowed (GPTBot, PerplexityBot, Claude)',
@@ -315,8 +458,10 @@ export async function runChecks(page: FetchedPage, normalizedUrl: string, psi?: 
       !robotsBody ? true : blockedAdmin.length > 0));
   }
   issues.push(issue('sitemap', 'Technical SEO', 'medium', 'Sitemap found',
-    sitemapXml && /<url/i.test(sitemapXml.text) ? 'Found sitemap with page entries' : 'No sitemap found at /api/sitemap.xml',
-    'Publish /api/sitemap.xml with canonical indexable URLs; reference it in robots.txt.', 3, 'quick', !!(sitemapXml && /<url/i.test(sitemapXml.text))));
+    sitemapHits.length
+      ? `Found ${sitemapHits.map(s => `${s.path} (${/<sitemapindex/i.test(s.body!.text) ? 'index' : 'urlset'})`).join(', ')}`
+      : `No sitemap with page entries found at ${sitemapCandidates.join(', ')}`,
+    'Publish a sitemap listing canonical indexable URLs and reference it in robots.txt.', 3, 'quick', sitemapHits.length > 0));
   issues.push(issue('sitemap-ref', 'Technical SEO', 'low', 'Sitemap referenced in robots.txt',
     /sitemap:/i.test(robotsBody) ? 'robots.txt points crawlers at the sitemap' : 'No Sitemap: line in robots.txt',
     'Add "Sitemap: https://yoursite.com/sitemap.xml" to robots.txt so crawlers discover it without guessing.', 2, 'quick', /sitemap:/i.test(robotsBody)));
@@ -352,11 +497,11 @@ export async function runChecks(page: FetchedPage, normalizedUrl: string, psi?: 
   }
 
 
-  const smBody = `${sitemapXml?.text || ''}\n${sitemapRoot?.text || ''}`;
+  const smBody = sitemapHits.map(s => s.body!.text).join('\n');
   const smLocs = [...smBody.matchAll(/<loc>\s*([^<\s]+)\s*</gi)].map(m => normUrl(m[1], origin));
   const { gates, score } = computeIndexGates({
     page, normalizedUrl, origin, robotsBody,
-    sitemapLocs: smLocs, sitemapHasUrls: /<url/i.test(smBody),
+    sitemapLocs: smLocs, sitemapHasUrls: smLocs.length > 0,
     title, desc, canonical, robots,
   });
   meta.index = JSON.stringify({ score, gates });
@@ -740,8 +885,10 @@ export function buildSiteIssues(args: {
     heavyPages: { url: string; kb: number }[]; dupContent: { hash: string; urls: string[] }[]; dupDesc: { desc: string; urls: string[] }[];
     genericAnchors: { text: string; count: number }[]; nonIndexable: string[] };
   aiBlocked: string[]; llmsFound: boolean; schemaFound: boolean; psiLcpMs?: number; psiScore?: number;
+  /** Requested origin — used only to name machine-file URLs in evidence. */
+  origin?: string;
 }): IAuditIssue[] {
-  const { agg, aiBlocked, llmsFound, schemaFound, psiLcpMs, psiScore } = args;
+  const { agg, aiBlocked, llmsFound, schemaFound, psiLcpMs, origin } = args;
   const ex = (arr: string[]) => ({ count: arr.length, examples: arr.slice(0, 5) });
   const mk = (code: string, category: IAuditIssue['category'], severity: IAuditIssue['severity'],
     title: string, evidence: string, why: string, fix: string,
@@ -788,11 +935,12 @@ export function buildSiteIssues(args: {
       'Slow hero content fails Core Web Vitals and AI crawlers deprioritize slow pages.',
       'Preload hero image, cut render-blocking JS, serve WebP/AVIF, enable CDN caching.',
       5, 'normal', psiLcpMs !== undefined ? psiLcpMs <= 2500 : agg.avgLoadMs <= 2500,
-      { count: agg.crawled, examples: psiScore !== undefined && psiScore >= 0 ? [`PSI performance ${psiScore}/100`] : [`avg fetch ${agg.avgLoadMs}ms`] }),    mk('site-llms', 'AI citation readiness', 'low', 'llms.txt for AI agents',
+      { count: agg.crawled, examples: [] }),
+    mk('site-llms', 'AI citation readiness', 'low', 'llms.txt for AI agents',
       llmsFound ? 'llms.txt found' : 'No llms.txt — AI agents guess your key pages',
       'llms.txt is the fastest way to point answer engines at canonical, citable content.',
       'Publish /llms.txt with product summary, audience, key URLs (see llmstxt.org).',
-      2, 'quick', llmsFound, ex(llmsFound ? [] : ['https://yoursite.com/llms.txt (missing)'])),
+      2, 'quick', llmsFound, ex(llmsFound ? [] : [`${origin || 'https://yoursite.com'}/llms.txt (missing)`])),
     mk('site-thin', 'On-page content', 'low', 'Thin content (<300 words)',
       agg.thinPages.length ? `${agg.thinPages.length} thin page(s)` : 'Content depth looks healthy',
       'Thin pages rarely rank or earn citations — they dilute crawl budget.',

@@ -43,6 +43,36 @@ export interface UrlDetail {
   internalLinksCount: number | null;
   imagesCount: number | null;
   cssFilesCount: number | null;
+  /** Stored crawl facts for this exact URL, when the report kept them. */
+  stat: UrlPageStat | null;
+}
+
+/**
+ * Compact per-page facts stored by the crawl (`report.pageStats`). Mirrors the
+ * server's `PageStat` shape; every field arrives as real crawler data.
+ */
+export interface UrlPageStat {
+  url: string;
+  finalUrl: string;
+  status: number;
+  depth: number;
+  hops: number;
+  loadMs: number;
+  title: string;
+  descLen: number;
+  h1Count: number;
+  canonical: string;
+  robotsMeta: string;
+  words: number;
+  imgs: number;
+  imgsNoAlt: number;
+  imgsMissingDims: number;
+  imgsNoLazy: number;
+  schemaTypes: string[];
+  internalCount: number;
+  externalLinks: string[];
+  offsite?: string;
+  error?: string;
 }
 
 /** The 12 L2 tabs, in sidebar order. */
@@ -62,8 +92,9 @@ export const URL_TABS = [
 
 export type UrlTabId = (typeof URL_TABS)[number]['id'];
 
-/** Tabs wired to real collected data in v1. Everything else is an empty state. */
-export const REAL_TABS: UrlTabId[] = ['issues', 'pagespeed', 'crux'];
+/** Tabs wired to real collected data. Everything else is an honest empty state.
+ *  (`check`/`schema`/`links`/`images` read the stored per-page crawl facts.) */
+export const REAL_TABS: UrlTabId[] = ['issues', 'pagespeed', 'crux', 'check', 'schema', 'links', 'images'];
 
 export function statusTone(httpStatus: number | null): 'ok' | 'warn' | 'bad' | 'miss' {
   if (typeof httpStatus === 'number') {

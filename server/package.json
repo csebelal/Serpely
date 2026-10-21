@@ -7,7 +7,9 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "seed": "ts-node src/seed.ts"
+    "seed": "ts-node src/seed.ts",
+    "test:audit": "node scripts/audit-contract.mjs",
+    "test:security": "node scripts/security-check.mjs"
   },
   "keywords": [],
   "author": "",

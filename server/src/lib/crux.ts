@@ -12,6 +12,7 @@ export type CruxSource = 'crux-url' | 'crux-origin';
 export type CruxField = PsiField & { source: CruxSource };
 
 interface CruxMetric { percentiles?: { p75?: number | string } }
+interface CruxPeriod { firstDate?: string; lastDate?: string }
 
 async function query(body: Record<string, unknown>, apiKey: string): Promise<PsiField | null> {
   const ctrl = new AbortController();
@@ -34,9 +35,14 @@ async function query(body: Record<string, unknown>, apiKey: string): Promise<Psi
       if (res.status !== 404) console.error('[crux] HTTP', res.status);
       return null;
     }
-    const j = (await res.json()) as { record?: { metrics?: Record<string, CruxMetric> } };
+    const j = (await res.json()) as { record?: { metrics?: Record<string, CruxMetric>; collectionPeriod?: CruxPeriod } };
     const m = j?.record?.metrics;
     if (!m) return null;
+    // The real collection window — surfaced in the UI so users know what
+    // timeframe the field data covers (never fabricated).
+    const period = j?.record?.collectionPeriod && (j.record.collectionPeriod.firstDate || j.record.collectionPeriod.lastDate)
+      ? { firstDate: j.record.collectionPeriod.firstDate || '', lastDate: j.record.collectionPeriod.lastDate || '' }
+      : undefined;
     const num = (k: string): number | undefined => {
       const raw = m[k]?.percentiles?.p75;
       // CrUX returns CLS as a decimal *string* ("0.08"); everything else is a number.
@@ -63,6 +69,7 @@ async function query(body: Record<string, unknown>, apiKey: string): Promise<Psi
       cls,
       inpMs: inp !== undefined ? Math.round(inp) : undefined,
       ttfbMs: ttfb !== undefined ? Math.round(ttfb) : undefined,
+      ...(period ? { period } : {}),
     };
   } catch {
     return null;

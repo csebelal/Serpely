@@ -1,4 +1,4 @@
-import { fetchPage, normalizeUrl, normUrl, countWords, attrVal, allTags, linkHref } from './publicAudit';
+import { fetchPage, normalizeUrl, normUrl, countWords, attrVal, allTags, linkHref, assertPublicTarget, isDisallowedByRobots, stableHost, CRAWLER_UA } from './publicAudit';
 
 export const AUDIT_MAX_URLS = Number(process.env.AUDIT_MAX_URLS || 300);
 const DISCOVERY_TIMEOUT_MS = 12000;
@@ -31,7 +31,11 @@ export interface CrawledPage {
   anchors: { text: string; href: string }[];
   bodyHash: string;
   htmlBytes: number;
+  /** Absolute external (other-domain) hrefs, capped — powers the Links tab. */
+  externalLinks: string[];
   error?: string;
+  /** Set when the redirect chain left the requested site; content is NOT crawled. */
+  offsite?: string;
 }
 
 function first(regex: RegExp, html: string): string {
@@ -51,11 +55,12 @@ function metaContent(html: string, attr: string, name: string): string {
 
 async function fetchXml(url: string): Promise<string | null> {
   try {
+    await assertPublicTarget(url);
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), DISCOVERY_TIMEOUT_MS);
     const res = await fetch(url, {
       signal: ctrl.signal, redirect: 'follow',
-      headers: { 'User-Agent': 'SerpelyAuditBot/1.0 (+https://serpely.com/audit)', Accept: 'application/xml,text/xml,*/*' },
+      headers: { 'User-Agent': CRAWLER_UA, Accept: 'application/xml,text/xml,*/*' },
     });
     clearTimeout(t);
     if (!res.ok) return null;
@@ -149,6 +154,8 @@ function parsePage(url: string, html: string, status: number, finalUrl: string, 
   // Phase B: anchor texts need full <a>…</a> pairs (allTags returns open tags only)
   const anchorPairs = [...html.matchAll(/<a\b([^>]*)>([\s\S]{0,300}?)<\/a\s*>/gi)].slice(0, 80);
   const anchorTextByHref = new Map<string, string>();
+  /* External (other-domain) hrefs — capped, absolute, scheme-checked. */
+  const externalLinks: string[] = [];
   try {
     const oHost = new URL(origin).hostname.replace(/^www\./, '');
     for (const t of allTags(html, 'a')) {
@@ -158,7 +165,10 @@ function parsePage(url: string, html: string, status: number, finalUrl: string, 
       try {
         const u = new URL(href, finalUrl || url);
         if (u.protocol !== 'http:' && u.protocol !== 'https:') continue;
-        if (u.hostname.replace(/^www\./, '') !== oHost) continue;
+        if (u.hostname.replace(/^www\./, '') !== oHost) {
+          if (externalLinks.length < 30) externalLinks.push(u.origin + u.pathname);
+          continue;
+        }
         abs = u.origin + u.pathname;
       } catch { continue; }
       const k = normUrl(abs, origin);
@@ -205,22 +215,37 @@ function parsePage(url: string, html: string, status: number, finalUrl: string, 
     robotsMeta, wordCount: countWords(html), imgs: imgs.length, imgsNoAlt,
     imgsMissingDims, imgsNoLazy, anchors, bodyHash, htmlBytes,
     headingSkip, jsonLdTypes: [...new Set(jlTypes)].slice(0, 10),
-    loadMs, internalLinks, headers, redirectHops: 0, redirectChain: [],
+    loadMs, internalLinks, externalLinks, headers, redirectHops: 0, redirectChain: [],
   };
 }
 
 export async function crawlSite(
   origin: string, urls: string[],
   onProgress?: (done: number, total: number) => void,
+  robotsBody?: string,
 ): Promise<CrawledPage[]> {
-  const list = urls.slice(0, AUDIT_MAX_URLS);
+  // robots.txt compliance: URLs the site's own robots file disallows for
+  // user-agent groups `*` / our crawler are skipped entirely (not fetched).
+  const list0 = urls.slice(0, AUDIT_MAX_URLS);
+  const list = robotsBody
+    ? list0.filter(u => {
+        try { return !isDisallowedByRobots(robotsBody, new URL(u, origin).pathname || '/'); } catch { return true; }
+      })
+    : list0;
+  const skippedByRobots = list0.length - list.length;
+  if (skippedByRobots > 0) {
+    console.log(`[crawl] robots.txt disallows ${skippedByRobots}/${list0.length} discovered URLs — skipping them`);
+  }
   const out: (CrawledPage | undefined)[] = new Array(list.length);
   let cursor = 0; let done = 0;
   // Manual redirect following so we can record hop count / chains.
   // fetch() with redirect:'follow' hides intermediates — we need them for
-  // the redirect-chain check.
-  const fetchFinal = async (startUrl: string): Promise<{ res: Response; chain: string[] }> => {
+  // the redirect-chain check. Every hop is same-site guarded: a redirect to
+  // ANOTHER SITE is recorded but that site's content is never crawled, so a
+  // redirecting sitemap entry can never smuggle a foreign domain into the report.
+  const fetchFinal = async (startUrl: string): Promise<{ res: Response; chain: string[]; offsite?: string }> => {
     const chain = [startUrl];
+    const startHost = stableHost(startUrl);
     let current = startUrl;
     for (let hop = 0; hop < 5; hop++) {
       const ctrl = new AbortController();
@@ -229,7 +254,7 @@ export async function crawlSite(
       try {
         res = await fetch(current, {
           signal: ctrl.signal, redirect: 'manual',
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', Accept: 'text/html,application/xhtml+xml' },
+          headers: { 'User-Agent': CRAWLER_UA, Accept: 'text/html,application/xhtml+xml' },
         });
       } finally { clearTimeout(t); }
       if (res.status >= 300 && res.status < 400) {
@@ -238,6 +263,10 @@ export async function crawlSite(
         try {
           const next = new URL(loc, current).toString();
           if (chain.includes(next)) return { res, chain }; // loop — stop
+          if (stableHost(next) !== startHost) {
+            try { await res.arrayBuffer().catch(() => undefined); } catch { /* ignore */ }
+            return { res, chain, offsite: next };
+          }
           chain.push(next);
           current = next;
           // Drain body so the socket can be reused
@@ -253,9 +282,9 @@ export async function crawlSite(
     try {
       const res = await fetch(current, {
         signal: ctrl.signal, redirect: 'follow',
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', Accept: 'text/html,application/xhtml+xml' },
+        headers: { 'User-Agent': CRAWLER_UA, Accept: 'text/html,application/xhtml+xml' },
       });
-      return { res, chain };
+      return { res, chain: [...chain, res.url || current].filter((v, i, a) => a.indexOf(v) === i) };
     } finally { clearTimeout(t); }
   };
   const worker = async () => {
@@ -263,17 +292,24 @@ export async function crawlSite(
       const i = cursor++;
       const u = list[i];
       try {
+        await assertPublicTarget(u);
         const start = Date.now();
-        const { res, chain } = await fetchFinal(u);
-        const html = await res.text().catch(() => '');
+        const { res, chain, offsite } = await fetchFinal(u);
         const headers: Record<string, string> = {};
         res.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
-        const parsed = parsePage(u, html.slice(0, 1_500_000), res.status, res.url || chain[chain.length - 1] || u, Date.now() - start, headers, origin);
-        parsed.redirectHops = Math.max(0, chain.length - 1);
-        parsed.redirectChain = chain.slice(0, 6);
+        let parsed: CrawledPage;
+        if (offsite) {
+          // Redirect left the requested site — record the honest fact, no content.
+          parsed = { url: u, finalUrl: offsite, status: res.status, title: '', desc: '', h1: '', h1Count: 0, canonical: '', robotsMeta: '', wordCount: 0, imgs: 0, imgsNoAlt: 0, imgsMissingDims: 0, imgsNoLazy: 0, anchors: [], bodyHash: '', htmlBytes: 0, externalLinks: [], headingSkip: false, jsonLdTypes: [], loadMs: 0, internalLinks: [], headers, redirectHops: Math.max(0, chain.length - 1), redirectChain: chain.slice(0, 6), error: 'redirects to another site' , offsite };
+        } else {
+          const html = await res.text().catch(() => '');
+          parsed = parsePage(u, html.slice(0, 1_500_000), res.status, res.url || chain[chain.length - 1] || u, Date.now() - start, headers, origin);
+          parsed.redirectHops = Math.max(0, chain.length - 1);
+          parsed.redirectChain = chain.slice(0, 6);
+        }
         out[i] = parsed;
       } catch {
-        out[i] = { url: u, finalUrl: u, status: 0, title: '', desc: '', h1: '', h1Count: 0, canonical: '', robotsMeta: '', wordCount: 0, imgs: 0, imgsNoAlt: 0, imgsMissingDims: 0, imgsNoLazy: 0, anchors: [], bodyHash: '', htmlBytes: 0, headingSkip: false, jsonLdTypes: [], loadMs: 0, internalLinks: [], headers: {}, redirectHops: 0, redirectChain: [], error: 'fetch failed' };
+        out[i] = { url: u, finalUrl: u, status: 0, title: '', desc: '', h1: '', h1Count: 0, canonical: '', robotsMeta: '', wordCount: 0, imgs: 0, imgsNoAlt: 0, imgsMissingDims: 0, imgsNoLazy: 0, anchors: [], bodyHash: '', htmlBytes: 0, externalLinks: [], headingSkip: false, jsonLdTypes: [], loadMs: 0, internalLinks: [], headers: {}, redirectHops: 0, redirectChain: [], error: 'fetch failed' };
       }
       done++;
       try { onProgress?.(done, list.length); } catch { /* ignore */ }
@@ -308,6 +344,17 @@ export interface CrawlAggregates {
   dupDesc: { desc: string; urls: string[] }[];
   genericAnchors: { text: string; count: number }[];
   nonIndexable: string[];
+  /** Compact per-page records for the URL detail tabs (homepage first, ≤120). */
+  pageStats: PageStat[];
+}
+
+/** Compact per-page facts powering the redesigned URL detail tabs (capped). */
+export interface PageStat {
+  url: string; finalUrl: string; status: number; depth: number; hops: number; loadMs: number;
+  title: string; descLen: number; h1Count: number; canonical: string; robotsMeta: string;
+  words: number; imgs: number; imgsNoAlt: number; imgsMissingDims: number; imgsNoLazy: number;
+  schemaTypes: string[]; internalCount: number; externalLinks: string[];
+  offsite?: string; error?: string;
 }
 
 export function aggregateCrawl(pages: CrawledPage[], origin: string): CrawlAggregates {
@@ -440,5 +487,33 @@ export function aggregateCrawl(pages: CrawledPage[], origin: string): CrawlAggre
     return false;
   }).slice(0, 10).map(p => p.url);
 
-  return { total: pages.length, crawled: crawled.length, errors: errors.length, broken4xx, broken5xx, duplicateTitles, thinPages, missingAltPages, headingSkipPages, canonicalConflicts, metaDescMissing, noSchemaPages, avgLoadMs, orphans, deepPages, redirectChains, lowInbound, dimsPages, lazyPages, heavyPages, dupContent, dupDesc, genericAnchors, nonIndexable };
+  // ── Per-page facts for the redesigned URL detail tabs (capped) ──
+  // Homepage first so the primary URL always has real data, then crawl order.
+  const homeFirst = [...crawled].sort((a, b) =>
+    (keyOf(a.finalUrl || a.url) === homeKey ? 0 : 1) - (keyOf(b.finalUrl || b.url) === homeKey ? 0 : 1));
+  const pageStats: PageStat[] = homeFirst.slice(0, 120).map(p => ({
+    url: p.url,
+    finalUrl: p.finalUrl,
+    status: p.status,
+    depth: depth.get(keyOf(p.finalUrl || p.url)) ?? 0,
+    hops: p.redirectHops ?? 0,
+    loadMs: p.loadMs,
+    title: p.title,
+    descLen: (p.desc || '').length,
+    h1Count: p.h1Count,
+    canonical: p.canonical,
+    robotsMeta: p.robotsMeta,
+    words: p.wordCount,
+    imgs: p.imgs,
+    imgsNoAlt: p.imgsNoAlt,
+    imgsMissingDims: p.imgsMissingDims,
+    imgsNoLazy: p.imgsNoLazy,
+    schemaTypes: p.jsonLdTypes,
+    internalCount: p.internalLinks?.length ?? 0,
+    externalLinks: (p.externalLinks ?? []).slice(0, 15),
+    offsite: p.offsite,
+    error: p.error,
+  }));
+
+  return { total: pages.length, crawled: crawled.length, errors: errors.length, broken4xx, broken5xx, duplicateTitles, thinPages, missingAltPages, headingSkipPages, canonicalConflicts, metaDescMissing, noSchemaPages, avgLoadMs, orphans, deepPages, redirectChains, lowInbound, dimsPages, lazyPages, heavyPages, dupContent, dupDesc, genericAnchors, nonIndexable, pageStats };
 }

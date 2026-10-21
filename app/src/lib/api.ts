@@ -259,10 +259,14 @@ export interface GoogleStatus {
   connected: boolean; email?: string; gscSite?: string; gaPropertyId?: string; connectedAt?: string;
 }
 export interface GscSummary {
-  site: string; totals: { clicks: number; impressions: number; ctr: number; position: number };
-  prev: { clicks: number; impressions: number; ctr: number; position: number };
+  site: string;
+  totals: { clicks: number; impressions: number; ctr: number; position: number } | null;
+  prev: { clicks: number; impressions: number; ctr: number; position: number } | null;
   topQueries: { query: string; clicks: number; impressions: number; ctr: number; position: number }[];
   daily: { date: string; clicks: number; impressions: number }[];
+  byDevice: { device: string; clicks: number; impressions: number }[];
+  byCountry: { country: string; clicks: number; impressions: number }[];
+  hasData?: boolean;
   cached?: boolean;
 }
 export interface GscIndex {
@@ -271,7 +275,7 @@ export interface GscIndex {
   cached?: boolean;
 }
 export interface GaSessions {
-  property: string; days: number; sessions: number; users: number;
+  property: string; days: number; sessions: number | null; users: number | null;
   byChannel: { channel: string; sessions: number }[];
   cached?: boolean;
 }

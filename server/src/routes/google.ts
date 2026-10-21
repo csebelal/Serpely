@@ -9,13 +9,17 @@ import {
   GOOGLE_SCOPES,
   makeOAuthClient,
   encryptToken,
+  decryptToken,
   signState,
   verifyState,
   clientsFor,
+  ensureAuthorizedProperty,
   pickGscSite,
   pickGaProperty,
   fmtDate,
 } from '../lib/google';
+
+const NOT_AUTHORIZED = { error: 'This property is not accessible with the connected Google account.' };
 
 const router = Router();
 const SECRET = () => process.env.JWT_SECRET as string;
@@ -149,6 +153,9 @@ router.post('/disconnect', async (req: Request, res: Response) => {
     if (conn) {
       try {
         const oauth = makeOAuthClient();
+        // revokeCredentials needs credentials set; a fresh client silently no-ops.
+        // Best-effort: local deletion still happens if the Google-side revoke fails.
+        oauth.setCredentials({ refresh_token: decryptToken(conn.refreshTokenEnc) });
         await oauth.revokeCredentials().catch(() => null);
       } catch { /* ignore */ }
       await GoogleConnection.deleteOne({ _id: conn._id });
@@ -176,14 +183,38 @@ router.get('/gsc/sites', dataLimiter, async (req: Request, res: Response) => {
 });
 
 // POST /api/google/property { gscSite?, gaPropertyId? } — authed; pin selections.
+// Values must belong to the connected account (403 otherwise); empty strings
+// explicitly clear a stored selection.
 router.post('/property', async (req: Request, res: Response) => {
   try {
     const clientId = clientIdFrom(req);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
+    const conn = await GoogleConnection.findOne({ clientId });
+    if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }
     const { gscSite, gaPropertyId } = req.body as { gscSite?: string; gaPropertyId?: string };
+    if (typeof gscSite !== 'string' && typeof gaPropertyId !== 'string') {
+      res.status(400).json({ error: 'Nothing to update' });
+      return;
+    }
     const patch: Record<string, string> = {};
-    if (typeof gscSite === 'string') patch.gscSite = gscSite.slice(0, 200);
-    if (typeof gaPropertyId === 'string') patch.gaPropertyId = gaPropertyId.slice(0, 60);
+    if (typeof gscSite === 'string') {
+      if (gscSite) {
+        const { auth } = await clientsFor(conn);
+        if (!(await ensureAuthorizedProperty(auth, 'gsc', gscSite))) { res.status(403).json(NOT_AUTHORIZED); return; }
+        patch.gscSite = gscSite.slice(0, 200);
+      } else {
+        patch.gscSite = '';
+      }
+    }
+    if (typeof gaPropertyId === 'string') {
+      if (gaPropertyId) {
+        const { auth } = await clientsFor(conn);
+        if (!(await ensureAuthorizedProperty(auth, 'ga', gaPropertyId))) { res.status(403).json(NOT_AUTHORIZED); return; }
+        patch.gaPropertyId = gaPropertyId.slice(0, 60);
+      } else {
+        patch.gaPropertyId = '';
+      }
+    }
     await GoogleConnection.updateOne({ clientId }, patch);
     res.json({ ok: true, ...patch });
   } catch {
@@ -201,7 +232,11 @@ router.get('/gsc/summary', dataLimiter, async (req: Request, res: Response) => {
     const site = String(req.query.site || conn.gscSite || '');
     if (!site) { res.status(400).json({ error: 'No GSC property selected' }); return; }
     const days = Math.min(90, Math.max(7, Number(req.query.days) || 28));
-    const cacheKey = `${site}|${days}|v2`;
+    // The requested property must belong to the connected account — check before
+    // serving anything (cache included).
+    const { searchconsole, auth } = await clientsFor(conn);
+    if (!(await ensureAuthorizedProperty(auth, 'gsc', site))) { res.status(403).json(NOT_AUTHORIZED); return; }
+    const cacheKey = `${site}|${days}|v3`;
     const cached = await getSnapshot(clientId, 'gsc-summary', cacheKey);
     if (cached) { res.json({ ...cached, cached: true }); return; }
 
@@ -211,8 +246,7 @@ router.get('/gsc/summary', dataLimiter, async (req: Request, res: Response) => {
     const prevEnd = fmtDate(new Date(now.getTime() - (3 + days + 1) * 86400000));
     const prevStart = fmtDate(new Date(now.getTime() - (3 + days * 2 + 1) * 86400000));
 
-    const { searchconsole } = await clientsFor(conn);
-    const [cur, prev, top, daily] = await Promise.all([
+    const [cur, prev, top, daily, devices, countries] = await Promise.all([
       searchconsole.searchanalytics.query({ siteUrl: site, requestBody: { startDate: start, endDate: end } }),
       searchconsole.searchanalytics.query({ siteUrl: site, requestBody: { startDate: prevStart, endDate: prevEnd } }),
       searchconsole.searchanalytics.query({
@@ -223,21 +257,45 @@ router.get('/gsc/summary', dataLimiter, async (req: Request, res: Response) => {
         siteUrl: site,
         requestBody: { startDate: start, endDate: end, dimensions: ['date'], rowLimit: 100 },
       }),
+      searchconsole.searchanalytics.query({
+        siteUrl: site,
+        requestBody: { startDate: start, endDate: end, dimensions: ['device'], rowLimit: 8 },
+      }),
+      searchconsole.searchanalytics.query({
+        siteUrl: site,
+        requestBody: { startDate: start, endDate: end, dimensions: ['country'], rowLimit: 8 },
+      }),
     ]);
+    // No rows means Search Console genuinely has no data — keep totals null
+    // instead of fabricating zeros so the UI can show an honest empty state.
     const tot = (r: typeof cur) => {
       const row = r.data.rows?.[0];
+      if (!row) return null;
       return {
-        clicks: row?.clicks ?? 0,
-        impressions: row?.impressions ?? 0,
-        ctr: row?.ctr ?? 0,
-        position: row?.position ?? 0,
+        clicks: row.clicks ?? 0,
+        impressions: row.impressions ?? 0,
+        ctr: row.ctr ?? 0,
+        position: row.position ?? 0,
       };
     };
+    const totals = tot(cur);
+    const prevTotals = tot(prev);
+    const byDevice = (devices.data.rows || []).map(r => ({
+      device: r.keys?.[0] ?? '',
+      clicks: r.clicks ?? 0,
+      impressions: r.impressions ?? 0,
+    }));
+    const byCountry = (countries.data.rows || []).map(r => ({
+      country: r.keys?.[0] ?? '',
+      clicks: r.clicks ?? 0,
+      impressions: r.impressions ?? 0,
+    }));
     const out = {
       site,
       range: { start, end, prevStart, prevEnd },
-      totals: tot(cur),
-      prev: tot(prev),
+      totals,
+      prev: prevTotals,
+      hasData: totals !== null,
       topQueries: (top.data.rows || []).map(r => ({
         query: r.keys?.[0] ?? '',
         clicks: r.clicks ?? 0,
@@ -250,6 +308,8 @@ router.get('/gsc/summary', dataLimiter, async (req: Request, res: Response) => {
         clicks: r.clicks ?? 0,
         impressions: r.impressions ?? 0,
       })),
+      byDevice,
+      byCountry,
     };
     await putSnapshot(clientId, 'gsc-summary', cacheKey, out);
     res.json(out);
@@ -267,6 +327,9 @@ router.get('/gsc/index', dataLimiter, async (req: Request, res: Response) => {
     if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }
     const site = String(req.query.site || conn.gscSite || '');
     if (!site) { res.status(400).json({ error: 'No GSC property selected' }); return; }
+    // The requested property must belong to the connected account.
+    const { urlinspection, auth } = await clientsFor(conn);
+    if (!(await ensureAuthorizedProperty(auth, 'gsc', site))) { res.status(403).json(NOT_AUTHORIZED); return; }
     const cached = await getSnapshot(clientId, 'gsc-index', site);
     if (cached) { res.json({ ...cached, cached: true }); return; }
 
@@ -289,7 +352,6 @@ router.get('/gsc/index', dataLimiter, async (req: Request, res: Response) => {
     }
     if (!locs.length) { res.status(400).json({ error: 'Could not read a sitemap for this property' }); return; }
 
-    const { urlinspection } = await clientsFor(conn);
     const results: { url: string; verdict: string; coverage: string }[] = [];
     for (const u of locs) {
       try {
@@ -325,11 +387,13 @@ router.get('/ga/sessions', dataLimiter, async (req: Request, res: Response) => {
     const property = String(req.query.property || conn.gaPropertyId || '');
     if (!property) { res.status(400).json({ error: 'No GA4 property selected' }); return; }
     const days = Math.min(90, Math.max(7, Number(req.query.days) || 28));
-    const cacheKey = `${property}|${days}`;
+    // The requested property must belong to the connected account.
+    const { analyticsdata, auth } = await clientsFor(conn);
+    if (!(await ensureAuthorizedProperty(auth, 'ga', property))) { res.status(403).json(NOT_AUTHORIZED); return; }
+    const cacheKey = `${property}|${days}|v2`;
     const cached = await getSnapshot(clientId, 'ga-sessions', cacheKey);
     if (cached) { res.json({ ...cached, cached: true }); return; }
 
-    const { analyticsdata } = await clientsFor(conn);
     const end = 'yesterday';
     const start = `${days - 1}daysAgo`;
     const [cur, channels] = await Promise.all([
@@ -348,12 +412,16 @@ router.get('/ga/sessions', dataLimiter, async (req: Request, res: Response) => {
         },
       }),
     ]);
-    const total = (name: string) => Number(cur.data.rows?.[0]?.metricValues?.[name === 'sessions' ? 0 : 1]?.value || 0);
+    // No report rows means no data for this window — null, not a fabricated 0.
+    const metric = (idx: number): number | null => {
+      const v = cur.data.rows?.[0]?.metricValues?.[idx]?.value;
+      return v == null || v === '' ? null : Number(v);
+    };
     const out = {
       property,
       days,
-      sessions: total('sessions'),
-      users: total('users'),
+      sessions: metric(0),
+      users: metric(1),
       byChannel: (channels.data.rows || []).map(r => ({
         channel: r.dimensionValues?.[0]?.value || '',
         sessions: Number(r.metricValues?.[0]?.value || 0),

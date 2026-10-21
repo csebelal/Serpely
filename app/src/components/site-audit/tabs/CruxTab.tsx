@@ -16,7 +16,6 @@ import type { UrlDetail } from '../types';
 import { CRUX_THRESHOLDS, DistBars, MetricText, TimeSeriesChart, TinyHist, psClassify } from '../charts';
 import type { CruxBucket, CruxMetricId, TinyBuckets } from '../charts';
 import { PS_CRUX_ICONS } from './crux-icons';
-import { cruxMock } from './crux-types';
 import type { CruxApiMetricKey, CruxDevice, CruxScope, CruxTabData } from './crux-types';
 
 interface MetricCard {
@@ -79,9 +78,9 @@ function pillLabel(tier: 'good' | 'needs' | 'poor'): string {
 
 function originOf(url: string): string {
   try {
-    return new URL(url).hostname || 'serpely.com';
+    return new URL(url).hostname || '';
   } catch {
-    return 'serpely.com';
+    return '';
   }
 }
 
@@ -127,13 +126,11 @@ export default function CruxTab(props: {
   const [device, setDevice] = useState<CruxDevice>('all');
   const [distMetric, setDistMetric] = useState<CruxMetricId>('lcp');
 
-  const isDev = import.meta.env.DEV;
   const origin = originOf(detail.url);
 
-  // DEV: mirror the prototype exactly (deterministic mock for every toggle).
-  // PROD: URL scope uses `data`, origin scope uses `fieldData`.
-  const devData = isDev ? cruxMock(detail.url, scope, device) : null;
-  const view: CruxTabData | null = devData ?? (scope === 'url' ? data : fieldData);
+  // URL scope uses `data`; origin scope uses `fieldData`. The dev-only mock
+  // generator was removed — every environment renders only real CrUX data.
+  const view: CruxTabData | null = scope === 'url' ? data : fieldData;
 
   // Hard "not collected" state — nothing was collected for the URL or its origin.
   if (view === null) {

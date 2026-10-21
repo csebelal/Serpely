@@ -138,7 +138,9 @@ function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-// Pick the GSC property matching one of the user's domains, else first available.
+// Pick the GSC property matching one of the user's domains. When no host
+// matches, returns site: '' and all — the user must pick a property manually;
+// we never auto-bind an unrelated property.
 export async function pickGscSite(
   sc: ReturnType<typeof google.searchconsole>,
   domains: string[]
@@ -154,7 +156,45 @@ export async function pickGscSite(
     });
     if (hit) return { site: hit, all };
   }
-  return { site: all[0] || '', all };
+  return { site: '', all };
+}
+
+// Confirm a GSC site URL (or `sc-domain:` form) / GA4 property id actually
+// belongs to the account behind this OAuth client. Returns false when the
+// property is not found OR the account state cannot be verified — callers
+// must fail closed (403). For GA the value may be `properties/123` or `123`.
+export async function ensureAuthorizedProperty(
+  oauth: InstanceType<typeof google.auth.OAuth2>,
+  kind: 'gsc' | 'ga',
+  value: string
+): Promise<boolean> {
+  const raw = String(value || '').trim();
+  if (!raw) return false;
+  try {
+    if (kind === 'gsc') {
+      const sc = google.searchconsole({ version: 'v1', auth: oauth });
+      const res = await sc.sites.list();
+      const all = (res.data.siteEntry || []).map(s => String(s.siteUrl || '')).filter(Boolean);
+      if (all.includes(raw)) return true;
+      // URL form: allow trailing-slash/case differences, but never across
+      // www vs non-www or scheme (those are distinct properties).
+      if (raw.startsWith('sc-domain:')) return false;
+      const norm = (s: string) => s.toLowerCase().replace(/\/$/, '');
+      return all.some(s => !s.startsWith('sc-domain:') && norm(s) === norm(raw));
+    }
+    const admin = google.analyticsadmin({ version: 'v1beta', auth: oauth });
+    const res = await admin.accountSummaries.list({ pageSize: 200 });
+    const wanted = raw.replace(/^properties\//, '');
+    for (const acc of res.data.accountSummaries || []) {
+      for (const p of acc.propertySummaries || []) {
+        const id = String(p.property || '').replace(/^properties\//, '');
+        if (id && id === wanted) return true;
+      }
+    }
+    return false;
+  } catch {
+    return false; // unverifiable account state must not silently pass
+  }
 }
 
 // First GA4 property with data access (via Admin API account summaries).

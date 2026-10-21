@@ -18,6 +18,10 @@ function delta(cur: number, prev: number, invert = false): { t: string; c: strin
   return { t: `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, c: good ? '#00A868' : '#E5484D' };
 }
 
+// Title-case GSC device names (e.g. 'mobile' → 'Mobile'). Country codes are
+// rendered exactly as GSC returns them (no fabricated names).
+const titleCase = (s: string): string => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
 export function GoogleDashboard() {
   useSEOMeta('dashboard', {
     title: 'Search Dashboard — Serpely',
@@ -103,13 +107,14 @@ export function GoogleDashboard() {
     );
   }
 
-  const t = summary?.totals;
-  const p = summary?.prev;
-  const stats = t && p ? [
-    { label: 'Impressions', value: t.impressions.toLocaleString(), d: delta(t.impressions, p.impressions) },
-    { label: 'Clicks', value: t.clicks.toLocaleString(), d: delta(t.clicks, p.clicks) },
-    { label: 'Avg CTR', value: `${(t.ctr * 100).toFixed(1)}%`, d: delta(t.ctr, p.ctr) },
-    { label: 'Avg Position', value: t.position.toFixed(1), d: delta(t.position, p.position, true) },
+  const t = summary?.totals ?? null;
+  const p = summary?.prev ?? null;
+  const noSearchData = !!summary && !t;
+  const stats = summary ? [
+    { label: 'Impressions', value: t ? t.impressions.toLocaleString() : '—', d: t && p ? delta(t.impressions, p.impressions) : null },
+    { label: 'Clicks', value: t ? t.clicks.toLocaleString() : '—', d: t && p ? delta(t.clicks, p.clicks) : null },
+    { label: 'Avg CTR', value: t ? `${(t.ctr * 100).toFixed(1)}%` : '—', d: t && p ? delta(t.ctr, p.ctr) : null },
+    { label: 'Avg Position', value: t ? t.position.toFixed(1) : '—', d: t && p ? delta(t.position, p.position, true) : null },
   ] : [];
 
   const failing = (index?.results || []).filter(r => r.verdict !== 'PASS');
@@ -145,6 +150,12 @@ export function GoogleDashboard() {
           <div style={{ ...card, padding: '12px 18px', marginBottom: 16, fontSize: 13, color: 'var(--text-soft)' }}>{err}</div>
         )}
 
+        {noSearchData && (
+          <div style={{ ...card, padding: '12px 18px', marginBottom: 16, fontSize: 13, color: 'var(--text-soft)' }}>
+            No search data for this period yet — the property may be new or not receiving Search traffic.
+          </div>
+        )}
+
         {loading ? (
           <div style={{ color: 'var(--text-faint)', fontSize: 14 }}>Loading search data…</div>
         ) : (
@@ -155,16 +166,20 @@ export function GoogleDashboard() {
                 <div key={s.label} style={{ ...card, padding: 18 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-faint)' }}>{s.label.toUpperCase()}</div>
                   <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', marginTop: 4 }}>{s.value}</div>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: s.d.c, marginTop: 2 }}>{s.d.t} <span style={{ color: 'var(--text-faint)', fontWeight: 600 }}>vs prior {days}d</span></div>
+                  {s.d && (
+                    <div style={{ fontSize: 12, fontWeight: 800, color: s.d.c, marginTop: 2 }}>{s.d.t} <span style={{ color: 'var(--text-faint)', fontWeight: 600 }}>vs prior {days}d</span></div>
+                  )}
                 </div>
               ))}
               <div style={{ ...card, padding: 18 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-faint)' }}>SESSIONS (GA4)</div>
                 <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', marginTop: 4 }}>
-                  {sessions ? sessions.sessions.toLocaleString() : '—'}
+                  {sessions?.sessions != null ? sessions.sessions.toLocaleString() : '—'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>
-                  {sessions ? `${sessions.users.toLocaleString()} users · ${sessions.days}d` : 'No GA4 property linked'}
+                  {sessions
+                    ? `${sessions.users != null ? `${sessions.users.toLocaleString()} users · ` : ''}${sessions.days}d`
+                    : 'No GA4 property linked'}
                 </div>
               </div>
             </div>
@@ -259,7 +274,8 @@ export function GoogleDashboard() {
                   {(sessions?.byChannel?.length || 0) > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {sessions!.byChannel.map(c => {
-                        const pct = sessions!.sessions ? Math.round((c.sessions / sessions!.sessions) * 100) : 0;
+                        const gaSessions = sessions!.sessions;
+                        const pct = gaSessions ? Math.round((c.sessions / gaSessions) * 100) : 0;
                         return (
                           <div key={c.channel}>
                             <div className="flex" style={{ fontSize: 12, marginBottom: 4 }}>
@@ -280,6 +296,58 @@ export function GoogleDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Devices + countries (hidden entirely when both are empty) */}
+            {((summary?.byDevice?.length || 0) > 0 || (summary?.byCountry?.length || 0) > 0) && (
+              <div className="grid lg:grid-cols-2 gap-4" style={{ marginTop: 16 }}>
+                {(summary?.byDevice?.length || 0) > 0 && (
+                  <div style={{ ...card, padding: 20 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Top devices</div>
+                    <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-faint)', fontSize: 11 }}>
+                          <th style={{ padding: '6px 8px' }}>Device</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary!.byDevice.slice(0, 8).map(dv => (
+                          <tr key={dv.device} style={{ borderTop: '1px solid hsl(var(--border))' }}>
+                            <td style={{ padding: '8px', fontWeight: 600, color: 'var(--text)' }}>{titleCase(dv.device)}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', color: 'var(--text-soft)' }}>{dv.clicks.toLocaleString()}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', color: 'var(--text-soft)' }}>{dv.impressions.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {(summary?.byCountry?.length || 0) > 0 && (
+                  <div style={{ ...card, padding: 20 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Top countries</div>
+                    <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', color: 'var(--text-faint)', fontSize: 11 }}>
+                          <th style={{ padding: '6px 8px' }}>Country</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary!.byCountry.slice(0, 8).map(cn => (
+                          <tr key={cn.country} style={{ borderTop: '1px solid hsl(var(--border))' }}>
+                            <td style={{ padding: '8px', fontWeight: 600, color: 'var(--text)' }}>{cn.country}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', color: 'var(--text-soft)' }}>{cn.clicks.toLocaleString()}</td>
+                            <td style={{ padding: '8px', textAlign: 'right', color: 'var(--text-soft)' }}>{cn.impressions.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

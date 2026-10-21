@@ -9,6 +9,7 @@
  * explicit empty treatment.
  */
 import type { PublicAuditIssue, PublicAuditReport } from '@/lib/api';
+import type { UrlPageStat } from './types';
 
 export type Tone = 'high' | 'medium' | 'low' | 'pass';
 
@@ -78,6 +79,10 @@ export interface AuditViewModel {
   crawlers: CrawlerRow[];
   /** Sitemap URLs the crawl discovered, if any. */
   sitemaps: string[];
+  /** Compact per-page crawl facts backing the URL detail tabs (may be empty). */
+  pageStats: UrlPageStat[];
+  /** Partial-crawl marker from `meta.partial` (percent of pages failed, as string). */
+  partial: string | null;
   /** Score potential after fixes. */
   forecast: { now: number; quickWins: number; allFixes: number } | null;
   counts: { all: number; high: number; medium: number; low: number; pass: number };
@@ -273,6 +278,21 @@ function sitemapUrls(report: PublicAuditReport): string[] {
   return [];
 }
 
+/** Defensive parse of `report.pageStats` — real per-page crawl facts. */
+function pageStatsOf(report: PublicAuditReport): UrlPageStat[] {
+  const raw = (report as { pageStats?: unknown }).pageStats;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((s): s is UrlPageStat =>
+    !!s && typeof s === 'object' && typeof (s as { url?: unknown }).url === 'string',
+  );
+}
+
+/** `meta.partial` — honest incomplete-crawl marker (percent string or null). */
+function partialOf(report: PublicAuditReport): string | null {
+  const raw = (report.meta as Record<string, unknown> | undefined)?.partial;
+  return typeof raw === 'string' && raw.trim() ? raw : null;
+}
+
 
 export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
   const issues = Array.isArray(report.issues) ? report.issues : [];
@@ -375,6 +395,8 @@ export function buildAuditViewModel(report: PublicAuditReport): AuditViewModel {
     scores: scoreRows(report),
     crawlers,
     sitemaps: sitemapUrls(report),
+    pageStats: pageStatsOf(report),
+    partial: partialOf(report),
     forecast,
     counts,
     categories,

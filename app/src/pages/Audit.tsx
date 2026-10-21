@@ -109,10 +109,12 @@ export function Audit() {
 
   const pollJob = (jid: string) => {
     stopPoll();
+    let misses = 0;
     pollRef.current = setInterval(async () => {
       try {
         const r = await getAuditStatus(jid);
         const s = r.data;
+        misses = 0;
         setStage(s.stage); setPagesDone(s.pagesDone); setPagesTotal(s.pagesTotal);
         if (s.status === 'done' && s.reportId) {
           stopPoll(); setLoading(false);
@@ -123,19 +125,35 @@ export function Audit() {
           stopPoll(); setLoading(false);
           setError(s.error || 'Audit failed. Try again.');
         }
-      } catch { /* keep polling */ }
+      } catch {
+        // The job may have vanished (API restart) — stop after several misses
+        // instead of polling forever and then showing a stale spinner.
+        misses += 1;
+        if (misses >= 5) {
+          stopPoll();
+          setLoading(false);
+          setError('Lost track of this audit (it may be queued again). Please run the audit once more.');
+        }
+      }
     }, 2000);
   };
 
   useEffect(() => {
     if (!id) return;
+    let alive = true;
     setLoading(true);
     getPublicAudit(id)
-      .then(r => { loadReport(r.data); setLoading(false); })
+      .then(r => {
+        if (!alive) return;
+        loadReport(r.data);
+        setLoading(false);
+      })
       .catch(() => {
+        if (!alive) return;
         setError('Report not found or expired (free reports expire after 30 days).');
         setLoading(false);
       });
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -237,6 +255,25 @@ export function Audit() {
 
             {AUDIT_REDESIGN ? (
               <>
+                {report.meta?.redirectOffsite && (
+                  <div style={{ ...card, marginBottom: 20, borderLeft: '4px solid #E5484D' }}>
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>⚠️ This URL redirects to a different domain</div>
+                    <p style={{ margin: 0, fontSize: 13.5, color: '#55655D' }}>
+                      The submitted URL lands on <b>{String(report.meta.redirectOffsite)}</b>, so the crawl and its findings
+                      describe the redirected destination — not an audit of a different site than you see below.
+                    </p>
+                  </div>
+                )}
+                {!report.meta?.redirectOffsite && report.meta?.partial && (
+                  <div style={{ ...card, marginBottom: 20, borderLeft: '4px solid #D9A400' }}>
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>Partial audit — some pages could not be fetched</div>
+                    <p style={{ margin: 0, fontSize: 13.5, color: '#55655D' }}>
+                      {report.pages?.errors ?? 0} of {report.pages?.discovered ?? 0} discovered pages failed to load during this
+                      crawl. The findings below cover the {report.pages?.crawled ?? 0} pages that succeeded; re-run the audit if
+                      the numbers look unusually incomplete.
+                    </p>
+                  </div>
+                )}
                 <div style={{ marginBottom: 20 }}>
                   <SiteAuditReport report={report} shareToken={report.shareToken ?? id ?? null} embedded />
                 </div>

@@ -49,6 +49,8 @@ export interface IAuditReport extends Document {
   forecast: { now: number; quickWins: number; allFixes: number };
   issues: IAuditIssue[];
   meta: Record<string, string>;
+  /** Compact per-page facts for the URL detail tabs (capped, optional for legacy docs). */
+  pageStats?: Record<string, unknown>[];
   /** Unguessable public id used in share links (Mongo _id is enumerable). */
   shareToken?: string;
   createdAt: Date;
@@ -87,6 +89,7 @@ const AuditReportSchema = new Schema<IAuditReport>({
   forecast: { type: Schema.Types.Mixed, default: {} },
   issues: { type: [AuditIssueSchema], default: [] },
   meta: { type: Schema.Types.Mixed, default: {} },
+  pageStats: { type: Schema.Types.Mixed, default: [] },
   shareToken: { type: String, index: true, unique: true, sparse: true },
   createdAt: { type: Date, default: Date.now },
 });

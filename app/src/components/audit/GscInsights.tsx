@@ -118,13 +118,13 @@ export function GscInsights({ origin }: { origin: string }) {
     );
   }
 
-  const t = data.totals; const p = data.prev;
-  const dClicks = t.clicks - p.clicks; const dImpr = t.impressions - p.impressions;
+  const t = data.totals ?? null;
+  const p = data.prev ?? null;
   const cells = [
-    { label: 'Clicks · 28d', value: t.clicks.toLocaleString(), delta: dClicks },
-    { label: 'Impressions', value: t.impressions.toLocaleString(), delta: dImpr },
-    { label: 'Avg CTR', value: `${(t.ctr * 100).toFixed(1)}%`, delta: null },
-    { label: 'Avg position', value: t.position ? t.position.toFixed(1) : '—', delta: null },
+    { label: 'Clicks · 28d', value: t ? t.clicks.toLocaleString() : '—', delta: t && p ? t.clicks - p.clicks : null },
+    { label: 'Impressions', value: t ? t.impressions.toLocaleString() : '—', delta: t && p ? t.impressions - p.impressions : null },
+    { label: 'Avg CTR', value: t ? `${(t.ctr * 100).toFixed(1)}%` : '—', delta: null },
+    { label: 'Avg position', value: t && t.position ? t.position.toFixed(1) : '—', delta: null },
   ];
 
   return (
@@ -136,6 +136,11 @@ export function GscInsights({ origin }: { origin: string }) {
         </span>
       </div>
       <div style={{ fontSize: 12, color: '#7A8A83', marginBottom: 10, wordBreak: 'break-all' }}>{data.site}</div>
+      {!t && (
+        <p style={{ margin: '0 0 10px', fontSize: 13, color: '#7A8A83' }}>
+          No search data for this period yet — the property may be new or not receiving Search traffic.
+        </p>
+      )}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         {cells.map(c => (
           <div key={c.label} style={{ flex: '1 1 110px', background: '#F8FAF9', borderRadius: 12, padding: '10px 12px' }}>

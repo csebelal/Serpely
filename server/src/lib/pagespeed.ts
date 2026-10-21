@@ -14,6 +14,8 @@ export interface PsiField {
   inpMs?: number;
   ttfbMs?: number;
   source?: 'psi' | 'crux-url' | 'crux-origin';
+  /** CrUX collection window when the data came from the direct CrUX API. */
+  period?: { firstDate: string; lastDate: string };
 }
 
 export interface PsiResult {

@@ -5,9 +5,10 @@
  * L1 is fully driven by the real report; L2's PageSpeed and CrUX tabs are driven
  * by a real PageSpeed Insights payload fetched from
  * `GET /api/public-audit/:shareToken/psi` (the Google key stays server-side and
- * the URL must already exist inside the report). The remaining eight tabs have no
- * backend data in v1 — they render the prototype's mock in development and an
- * explicit "not collected" state in production.
+ * the URL must already exist inside the report). The check/schema/links/images
+ * tabs read the real per-page crawl facts (`report.pageStats`), and the tabs
+ * with no backend data yet render explicit "Not collected yet" states — the
+ * dev-only mock generators were removed, so no environment fabricates data.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
@@ -16,24 +17,12 @@ import type { AuditViewModel, ReportFinding, Tone } from './report';
 import type { UrlDetail, UrlIssue, UrlTabId } from './types';
 import { URL_TABS, statusTone } from './types';
 import PageSpeedTab from './tabs/PageSpeedTab';
-import { pagespeedFromLighthouse, pagespeedMock } from './tabs/pagespeed-types';
+import { pagespeedFromLighthouse } from './tabs/pagespeed-types';
 import CruxTab from './tabs/CruxTab';
-import { cruxFromLoadingExperience, cruxMock } from './tabs/crux-types';
-import {
-  CheckTab,
-  CssTab,
-  EmptyTab,
-  GapsTab,
-  ImagesTab,
-  InsightsTab,
-  LinksTab,
-  SchemaTab,
-  SearchTab,
-} from './tabs/MockTabs';
+import { cruxFromLoadingExperience } from './tabs/crux-types';
+import { CheckTab, CssTab, EmptyTab, GapsTab, ImagesTab, InsightsTab, LinksTab, SchemaTab, SearchTab } from './tabs/UrlTabs';
 
-const DEV = import.meta.env.DEV;
-
-/**
+/** Normalize a URL for matching (lowercase host, no trailing slash, no hash). *//**
  * PSI always answers with a `loadingExperience` object, but when Google has no
  * field data for the URL it carries only `initial_url` — no `metrics`. Passing
  * that to the CrUX adapter would render a full grid of empty cards, so treat a
@@ -53,9 +42,19 @@ interface Props {
   onClose: () => void;
 }
 
-/** Collect every real issue that touches one URL (falling back to the L1 finding). */
+/** Normalize a URL for matching (lowercase host, no trailing slash, no hash). */
+function normUrlFor(u: string): string {
+  try {
+    const parsed = new URL(u);
+    return `${parsed.hostname.replace(/^www\./, '')}${parsed.pathname.replace(/\/+$/, '')}`.toLowerCase();
+  } catch {
+    return u.replace(/\/+$/, '').toLowerCase();
+  }
+}
+
+/** Find the stored crawl facts for one URL (real data from `report.pageStats`). */
 function urlDetailFor(url: string, vm: AuditViewModel, finding: ReportFinding | null): UrlDetail {
-  const norm = (u: string) => u.replace(/\/+$/, '');
+  const norm = normUrlFor;
   const issues: UrlIssue[] = [];
   for (const category of vm.categories) {
     for (const f of category.findings) {
@@ -77,19 +76,23 @@ function urlDetailFor(url: string, vm: AuditViewModel, finding: ReportFinding | 
       category: finding.issue.category,
     });
   }
+  // Real crawl facts for THIS URL, when the report stored them.
+  const target = norm(url);
+  const stat = vm.pageStats.find((s) => norm(s.url) === target || norm(s.finalUrl || '') === target) ?? null;
   return {
     url,
-    httpStatus: null,
+    httpStatus: stat ? stat.status : null,
     contentType: null,
     pageScore: null,
     pageWeight: null,
-    metaRobots: null,
+    metaRobots: stat?.robotsMeta || null,
     robotsTxt: null,
     httpHeaders: [],
     issues,
-    internalLinksCount: null,
-    imagesCount: null,
+    internalLinksCount: stat ? (typeof stat.internalCount === 'number' ? stat.internalCount : null) : null,
+    imagesCount: stat ? stat.imgs : null,
     cssFilesCount: null,
+    stat,
   };
 }
 
@@ -183,6 +186,8 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
   }, [open, level, onClose]);
 
   // Fetch real PageSpeed data only when a tab that needs it is actually open.
+  // `psiAttempt` re-runs the fetch when the user clicks Retry after an error.
+  const [psiAttempt, setPsiAttempt] = useState(0);
   useEffect(() => {
     if (!open || level !== 2 || !activeUrl || !shareToken) return;
     if (tab !== 'pagespeed' && tab !== 'crux') return;
@@ -202,7 +207,9 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
     return () => {
       alive = false;
     };
-  }, [open, level, activeUrl, tab, shareToken]);
+  }, [open, level, activeUrl, tab, shareToken, psiAttempt]);
+
+  const retryPsi = useCallback(() => setPsiAttempt((n) => n + 1), []);
 
   const openUrl = (url: string) => {
     setActiveUrl(url);
@@ -241,29 +248,17 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
     : '';
 
   // The adapter accepts the whole PSI response so the PageSpeed tab's Field Data
-  // section can read `loadingExperience` too.
-  //
-  // In development only, a failed PSI call falls back to the ported prototype
-  // mock so the tab can still be reviewed locally without the prod API key.
-  // Production never fabricates data — it renders the explicit notice instead.
-  const psiUnavailable = psiState === 'error' && DEV && !!detail;
-  const pagespeedData = psi
-    ? pagespeedFromLighthouse(psi)
-    : psiUnavailable
-      ? pagespeedMock(detail.url, 'mobile')
-      : null;
+  // section can read `loadingExperience` too. Both environments render only real
+  // data; a failed PSI call renders the notice (with Retry) — nothing is mocked.
+  const pagespeedData = psi ? pagespeedFromLighthouse(psi) : null;
   const cruxUrlData =
     psi && hasFieldMetrics(psi.loadingExperience)
       ? cruxFromLoadingExperience(psi.loadingExperience)
-      : psiUnavailable
-        ? cruxMock(detail.url, 'url', 'all')
-        : null;
+      : null;
   const cruxOriginData =
     psi && hasFieldMetrics(psi.originLoadingExperience)
       ? cruxFromLoadingExperience(psi.originLoadingExperience)
-      : psiUnavailable
-        ? cruxMock(detail.url, 'origin', 'all')
-        : null;
+      : null;
 
   const renderTab = (): ReactElement => {
     if (!detail) return <EmptyTab tabId={tab} />;
@@ -273,29 +268,48 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
       case 'pagespeed':
         if (!shareToken) return <TabNotice tabId="pagespeed">PageSpeed data is unavailable for this report.</TabNotice>;
         if (psiState === 'loading') return <TabNotice tabId="pagespeed">Running PageSpeed Insights on this URL…</TabNotice>;
-        if (psiState === 'error' && !DEV) return <TabNotice tabId="pagespeed">PageSpeed Insights did not return data for this URL.</TabNotice>;
+        if (psiState === 'error') {
+          return (
+            <TabNotice tabId="pagespeed">
+              PageSpeed Insights did not return data for this URL — the site may be unreachable, rate-limited, or blocking
+              the crawler.
+              <button className="full-page-btn" type="button" style={{ margin: '10px auto 0', display: 'inline-flex' }} onClick={retryPsi}>
+                Retry PageSpeed
+              </button>
+            </TabNotice>
+          );
+        }
         return <PageSpeedTab detail={detail} data={pagespeedData} />;
       case 'crux':
         if (!shareToken) return <TabNotice tabId="crux">CrUX field data is unavailable for this report.</TabNotice>;
         if (psiState === 'loading') return <TabNotice tabId="crux">Loading CrUX field data for this URL…</TabNotice>;
-        if (psiState === 'error' && !DEV) return <TabNotice tabId="crux">CrUX field data is unavailable for this URL.</TabNotice>;
+        if (psiState === 'error') {
+          return (
+            <TabNotice tabId="crux">
+              CrUX field data could not be loaded (the same fetch as PageSpeed).
+              <button className="full-page-btn" type="button" style={{ margin: '10px auto 0', display: 'inline-flex' }} onClick={retryPsi}>
+                Retry
+              </button>
+            </TabNotice>
+          );
+        }
         return <CruxTab detail={detail} data={cruxUrlData} fieldData={cruxOriginData} />;
       case 'search':
-        return <SearchTab detail={detail} collected={DEV} />;
+        return <SearchTab detail={detail} />;
       case 'gaps':
-        return <GapsTab detail={detail} collected={DEV} />;
+        return <GapsTab detail={detail} />;
       case 'check':
-        return <CheckTab detail={detail} collected={DEV} />;
+        return <CheckTab detail={detail} />;
       case 'insights':
-        return <InsightsTab detail={detail} collected={DEV} />;
+        return <InsightsTab detail={detail} />;
       case 'schema':
-        return <SchemaTab detail={detail} collected={DEV} />;
+        return <SchemaTab detail={detail} />;
       case 'links':
-        return <LinksTab detail={detail} collected={DEV} />;
+        return <LinksTab detail={detail} />;
       case 'images':
-        return <ImagesTab detail={detail} collected={DEV} />;
+        return <ImagesTab detail={detail} />;
       case 'css':
-        return <CssTab detail={detail} collected={DEV} />;
+        return <CssTab detail={detail} />;
       default:
         return <EmptyTab tabId={tab} />;
     }

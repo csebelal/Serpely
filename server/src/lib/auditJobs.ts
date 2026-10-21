@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import AuditReport from '../models/AuditReport';
 import AuditSnapshot from '../models/AuditSnapshot';
-import { normalizeUrl, fetchPage, runChecks, scoreReportV2, buildSiteIssues } from './publicAudit';
+import { normalizeUrl, fetchPage, runChecks, scoreReportV2, buildSiteIssues, assertPublicTarget } from './publicAudit';
 import { fetchPsi, type PsiResult } from './pagespeed';
 import { fetchCrux } from './crux';
 import { discoverUrls, crawlSite, aggregateCrawl } from './crawler';
@@ -97,6 +97,9 @@ function pump() {
 async function runJob(job: AuditJob): Promise<void> {
   job.status = 'running';
   try {
+    // Honest DNS/SSRF failure up front: an unresolvable or private target
+    // fails here with a real message instead of producing an empty report.
+    await assertPublicTarget(job.normalizedUrl);
     job.stage = 'Discovering URLs';
     let robotsBody = '';
     try {
@@ -110,9 +113,17 @@ async function runJob(job: AuditJob): Promise<void> {
     const pages = await crawlSite(job.origin, targets, (done, total) => {
       job.pagesDone = done; job.pagesTotal = total;
       job.stage = `Crawling ${done}/${total} pages`;
-    });
+    }, robotsBody);
     const agg = aggregateCrawl(pages, job.origin);
     const home = pages.find(p => p.finalUrl === job.normalizedUrl || p.url === job.normalizedUrl) || pages[0];
+    if (agg.crawled === 0) {
+      // Nothing was actually fetched — never save an empty "done" report.
+      const offsite = pages.find(p => p.offsite)?.offsite;
+      if (offsite) {
+        throw new Error(`This URL redirects to a different domain (${offsite}). The audit stopped so the other site is not analyzed as yours.`);
+      }
+      throw new Error(`The website could not be crawled (0 of ${targets.length} pages responded). It may be offline, blocking bots, or the address may be wrong.`);
+    }
 
     job.stage = 'Google lab data';
     job.pagesDone = job.pagesTotal;
@@ -137,19 +148,28 @@ async function runJob(job: AuditJob): Promise<void> {
     // Homepage deep checks (headers, OG, schema, security) reuse existing engine
     let baseIssues: Awaited<ReturnType<typeof runChecks>>['issues'] = [];
     let baseMeta: Record<string, string> = {};
+    let homepageOffsite = '';
     try {
-      const hp = home && home.status === 200
-        ? { finalUrl: home.finalUrl, status: home.status, headers: home.headers, html: (await fetchPage(home.url).catch(() => null))?.html || '', loadMs: home.loadMs, protection: null }
-        : await fetchPage(job.normalizedUrl);
-      const r = await runChecks(hp, job.normalizedUrl, psiPromise);
-      // These checks are run against one page (the homepage, after redirects).
-      // Store that page as the affected URL so a fresh report can show which
-      // page needs the fix instead of "no URL sample".
-      const checkedUrl = hp.finalUrl || job.normalizedUrl;
-      baseIssues = r.issues.map((issue) =>
-        issue.passed || issue.affected ? issue : { ...issue, affected: { count: 1, examples: [checkedUrl] } },
-      );
-      baseMeta = r.meta;
+      const hp = home && home.status === 200 && !home.error
+        ? await fetchPage(home.url).catch(() => null)
+        : await fetchPage(job.normalizedUrl).catch(() => null);
+      if (!hp) {
+        baseMeta = {};
+      } else if (hp.offsite) {
+        // The submitted homepage lands on a different domain — do NOT run
+        // SEO checks against the other site's content.
+        homepageOffsite = hp.offsite;
+      } else {
+        const r = await runChecks(hp, job.normalizedUrl, psiPromise);
+        // These checks are run against one page (the homepage, after redirects).
+        // Store that page as the affected URL so a fresh report can show which
+        // page needs the fix instead of "no URL sample".
+        const checkedUrl = hp.finalUrl || job.normalizedUrl;
+        baseIssues = r.issues.map((issue) =>
+          issue.passed || issue.affected ? issue : { ...issue, affected: { count: 1, examples: [checkedUrl] } },
+        );
+        baseMeta = r.meta;
+      }
     } catch { baseMeta = {}; }
     const psi = await psiPromise;
 
@@ -157,8 +177,18 @@ async function runJob(job: AuditJob): Promise<void> {
     const aiBlocked = (baseIssues.find(i => i.code === 'robots-ai-allow')?.evidence.startsWith('Blocked:') ? baseIssues.find(i => i.code === 'robots-ai-allow')!.evidence.slice(8).split(',').map(s => s.trim()).filter(Boolean) : []);
     const llmsFound = !!baseIssues.find(i => i.code === 'llms-txt')?.passed;
     const schemaFound = !!baseIssues.find(i => i.code === 'org-schema' || i.code === 'article-schema')?.passed;
-    const siteIssues = buildSiteIssues({ agg, aiBlocked, llmsFound, schemaFound, psiLcpMs: psi?.lcpMs, psiScore: psi?.score });
+    const siteIssues = buildSiteIssues({ agg, aiBlocked, llmsFound, schemaFound, psiLcpMs: psi?.lcpMs, psiScore: psi?.score, origin: job.origin });
     const allIssues = [...siteIssues, ...baseIssues];
+    if (homepageOffsite) {
+      allIssues.unshift({
+        code: 'homepage-redirects-offsite', category: 'Technical SEO', severity: 'critical',
+        title: 'Homepage redirects to a different domain',
+        evidence: `The submitted URL ${job.normalizedUrl} redirects to ${homepageOffsite}. Audited data reflects the redirected destination.`,
+        fix: 'Audit the destination URL directly, or remove the redirect if this domain is the one you intend to analyze.',
+        impact: 0, effort: 'normal', passed: false,
+        affected: { count: 1, examples: [job.normalizedUrl] },
+      });
+    }
     const { scores, overall, forecast, summary, priority } = scoreReportV2(allIssues);
 
     // AI crawler access table (mockup): per-bot parse + llms.txt row
@@ -171,6 +201,12 @@ async function runJob(job: AuditJob): Promise<void> {
     if (!llmsFound) aiCrawlers.push({ bot: 'llms.txt', status: 'Missing', detail: 'No /llms.txt found' } as unknown as { bot: string; status: 'Allowed' | 'Blocked'; detail: string });
 
     const meta: Record<string, string> = { ...baseMeta, origin: job.origin, finalUrl: home?.finalUrl || job.normalizedUrl, sitemaps: JSON.stringify(sitemaps.slice(0, 10)) };
+    if (homepageOffsite) meta.redirectOffsite = homepageOffsite;
+    // Honest incomplete marker: homepage unreachable or ≥30% of pages failed.
+    const homepageOk = !!(home && home.status === 200 && !home.error && !home.offsite);
+    if (!homepageOk || (agg.total > 0 && agg.errors >= agg.total * 0.3)) {
+      meta.partial = String(Math.round((agg.errors / Math.max(1, agg.total)) * 100));
+    }
     if (psi) {
       meta.psi = JSON.stringify({ score: psi.score >= 0 ? psi.score : undefined, lcpS: psi.lcpMs !== undefined ? Math.round((psi.lcpMs / 1000) * 10) / 10 : undefined, cls: psi.cls, inpMs: psi.inpMs, strategy: psi.strategy, scores: psi.scores, field: psi.field ?? null, originField: psi.originField ?? null });
     }
@@ -181,6 +217,7 @@ async function runJob(job: AuditJob): Promise<void> {
       pages: { crawled: agg.crawled, discovered: agg.total, errors: agg.errors },
       aiCrawlers, summary, priority, gsc: {},
       scores, overall, forecast, issues: allIssues, meta,
+      pageStats: agg.pageStats as unknown as Record<string, unknown>[],
     });
     try {
       await AuditSnapshot.updateOne(

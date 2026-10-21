@@ -429,11 +429,11 @@ export function Profile() {
               ) : (gSummary || gSessions) ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 8 }}>
                   {[
-                    { label: 'Impressions', value: gSummary ? gSummary.totals.impressions.toLocaleString() : '—' },
-                    { label: 'Clicks', value: gSummary ? gSummary.totals.clicks.toLocaleString() : '—' },
-                    { label: 'Avg CTR', value: gSummary ? `${(gSummary.totals.ctr * 100).toFixed(1)}%` : '—' },
-                    { label: 'Avg Position', value: gSummary ? gSummary.totals.position.toFixed(1) : '—' },
-                    { label: 'Sessions', value: gSessions ? gSessions.sessions.toLocaleString() : '—' },
+                    { label: 'Impressions', value: gSummary?.totals ? gSummary.totals.impressions.toLocaleString() : '—' },
+                    { label: 'Clicks', value: gSummary?.totals ? gSummary.totals.clicks.toLocaleString() : '—' },
+                    { label: 'Avg CTR', value: gSummary?.totals ? `${(gSummary.totals.ctr * 100).toFixed(1)}%` : '—' },
+                    { label: 'Avg Position', value: gSummary?.totals ? gSummary.totals.position.toFixed(1) : '—' },
+                    { label: 'Sessions', value: gSessions?.sessions != null ? gSessions.sessions.toLocaleString() : '—' },
                   ].map(s => (
                     <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))' }}>
                       <div className="text-base font-black" style={{ color: 'var(--text)' }}>{s.value}</div>
