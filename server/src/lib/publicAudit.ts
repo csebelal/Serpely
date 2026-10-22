@@ -889,7 +889,7 @@ export function buildSiteIssues(args: {
   origin?: string;
 }): IAuditIssue[] {
   const { agg, aiBlocked, llmsFound, schemaFound, psiLcpMs, origin } = args;
-  const ex = (arr: string[]) => ({ count: arr.length, examples: arr.slice(0, 5) });
+  const ex = (arr: string[]) => ({ count: arr.length, examples: arr.slice(0, 10) });
   const mk = (code: string, category: IAuditIssue['category'], severity: IAuditIssue['severity'],
     title: string, evidence: string, why: string, fix: string,
     impact: number, effort: 'quick' | 'normal', passed: boolean, affected?: IAffected): IAuditIssue =>
@@ -935,7 +935,9 @@ export function buildSiteIssues(args: {
       'Slow hero content fails Core Web Vitals and AI crawlers deprioritize slow pages.',
       'Preload hero image, cut render-blocking JS, serve WebP/AVIF, enable CDN caching.',
       5, 'normal', psiLcpMs !== undefined ? psiLcpMs <= 2500 : agg.avgLoadMs <= 2500,
-      { count: agg.crawled, examples: [] }),
+      // The LCP probe runs against the homepage — name it so the drawer's
+      // affected-URL table lists the page the finding actually measured.
+      { count: agg.crawled, examples: psiLcpMs !== undefined ? [`${origin || 'https://yoursite.com'}/`] : [] }),
     mk('site-llms', 'AI citation readiness', 'low', 'llms.txt for AI agents',
       llmsFound ? 'llms.txt found' : 'No llms.txt — AI agents guess your key pages',
       'llms.txt is the fastest way to point answer engines at canonical, citable content.',
@@ -1000,7 +1002,7 @@ export function buildSiteIssues(args: {
     'Unsized images shift the layout (CLS) and eager images bloat first paint — both fail Core Web Vitals for real visitors.',
     'Add width/height to every <img>, loading="lazy" below the fold, and serve WebP/AVIF at responsive sizes.',
     4, 'normal', imgPages.size === 0,
-    { count: imgPages.size, examples: [...dims.slice(0, 3).map(d => `${d.url} (${d.missing}/${d.total} unsized)`), ...lazy.slice(0, 2).map(l => `${l.url} (${l.nonLazy}/${l.total} eager)`)] }));
+    { count: imgPages.size, examples: [...dims.slice(0, 5).map(d => `${d.url} (${d.missing}/${d.total} unsized)`), ...lazy.slice(0, 5).map(l => `${l.url} (${l.nonLazy}/${l.total} eager)`)] }));
   const heavy = agg.heavyPages ?? [];
   out.push(mk('site-heavy', 'Performance', 'low', 'No bloated HTML pages (>150KB)',
     heavy.length ? `${heavy.length} page(s) ship over 150KB of HTML` : 'HTML weight looks lean across crawled pages',
@@ -1015,7 +1017,7 @@ export function buildSiteIssues(args: {
     'Near-identical pages force Google to pick one winner — the rest never surface and thin out topical authority.',
     'Differentiate each page with original detail and unique titles/descriptions, or consolidate with 301s + canonicals.',
     4, 'normal', dupTotal === 0,
-    { count: dupTotal, examples: [...dupC.slice(0, 3).flatMap(g => g.urls.slice(0, 2)), ...dupD.slice(0, 2).flatMap(g => g.urls.slice(0, 2))].slice(0, 5) }));
+    { count: dupTotal, examples: [...dupC.slice(0, 5).flatMap(g => g.urls.slice(0, 2)), ...dupD.slice(0, 5).flatMap(g => g.urls.slice(0, 2))].slice(0, 10) }));
   const genA = agg.genericAnchors ?? [];
   const genCount = genA.reduce((s, g) => s + g.count, 0);
   out.push(mk('site-anchors', 'On-page content', 'low', 'Descriptive internal anchor text',

@@ -123,10 +123,21 @@ export async function discoverUrls(origin: string, robotsBody: string): Promise<
   return { urls, sitemaps };
 }
 
+/** Decode the HTML entities a <title> or meta description legally carries. */
+function decodeEntities(s: string): string {
+  if (!s || !s.includes('&')) return s;
+  return s
+    .replace(/&#(\d+);/g, (_, n) => { try { return String.fromCodePoint(Number(n)); } catch { return n; } })
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => { try { return String.fromCodePoint(parseInt(n, 16)); } catch { return n; } })
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/gi, (_, e) => (
+      { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }[String(e).toLowerCase()] ?? _
+    ));
+}
+
 function parsePage(url: string, html: string, status: number, finalUrl: string, loadMs: number, headers: Record<string, string>, origin: string): CrawledPage {
   const title = first(/<title[^>]*>([^<]*)<\/title>/i, html);
-  const h1s = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
-  const desc = metaContent(html, 'name', 'description');
+  const h1s = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => decodeEntities(m[1].replace(/<[^>]+>/g, '').trim())).filter(Boolean);
+  const desc = decodeEntities(metaContent(html, 'name', 'description'));
   const robotsMeta = metaContent(html, 'name', 'robots');
   const canonical = linkHref(html, 'canonical');
   const imgs = html.match(/<img\b[^>]*>/gi) || [];
@@ -210,7 +221,7 @@ function parsePage(url: string, html: string, status: number, finalUrl: string, 
     }
   } catch { /* ignore */ }
   return {
-    url, finalUrl, status, title: title.slice(0, 120), desc: desc.slice(0, 200),
+    url, finalUrl, status, title: decodeEntities(title).slice(0, 120), desc: decodeEntities(desc).slice(0, 200),
     h1: (h1s[0] || '').slice(0, 120), h1Count: h1s.length, canonical,
     robotsMeta, wordCount: countWords(html), imgs: imgs.length, imgsNoAlt,
     imgsMissingDims, imgsNoLazy, anchors, bodyHash, htmlBytes,
