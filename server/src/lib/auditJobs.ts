@@ -42,6 +42,13 @@ export async function findCachedReport(input: string): Promise<CachedReport | nu
   try {
     const cached = await AuditReport.findOne({ origin, status: 'done' }).sort({ createdAt: -1 });
     if (cached && Date.now() - new Date(cached.createdAt).getTime() < 24 * 3600 * 1000) {
+      // Reports crawled by older code lack the per-page facts the redesigned
+      // drawer needs — treat them as stale so a re-run crawls fresh instead of
+      // serving an empty-format report from the 24h cache.
+      const stats = (cached as unknown as { pageStats?: [{ htmlKb?: unknown }] }).pageStats;
+      const usable = Array.isArray(stats) && stats.length > 0
+        && stats.some((s) => typeof (s as { htmlKb?: unknown }).htmlKb === 'number');
+      if (!usable) return null;
       // Public links are shareTokens only, so adopt a pre-token report instead of
       // returning an _id that can no longer be read. If the write fails we fall
       // through to a fresh audit.

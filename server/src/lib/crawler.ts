@@ -354,6 +354,8 @@ export interface PageStat {
   title: string; descLen: number; h1Count: number; canonical: string; robotsMeta: string;
   words: number; imgs: number; imgsNoAlt: number; imgsMissingDims: number; imgsNoLazy: number;
   schemaTypes: string[]; internalCount: number; externalLinks: string[];
+  /** Document size in kilobytes (HTML only — assets are not downloaded). */
+  htmlKb: number;
   offsite?: string; error?: string;
 }
 
@@ -511,6 +513,7 @@ export function aggregateCrawl(pages: CrawledPage[], origin: string): CrawlAggre
     schemaTypes: p.jsonLdTypes,
     internalCount: p.internalLinks?.length ?? 0,
     externalLinks: (p.externalLinks ?? []).slice(0, 15),
+    htmlKb: Math.round((p.htmlBytes || 0) / 1024),
     offsite: p.offsite,
     error: p.error,
   }));

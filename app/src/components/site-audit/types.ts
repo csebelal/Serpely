@@ -71,6 +71,8 @@ export interface UrlPageStat {
   schemaTypes: string[];
   internalCount: number;
   externalLinks: string[];
+  /** Document size in kilobytes (HTML only — assets are not downloaded). */
+  htmlKb: number;
   offsite?: string;
   error?: string;
 }

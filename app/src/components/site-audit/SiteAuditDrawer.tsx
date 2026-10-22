@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { getAuditUrlPsi, type AuditUrlPsi } from '@/lib/api';
 import type { AuditViewModel, ReportFinding, Tone } from './report';
-import type { UrlDetail, UrlIssue, UrlTabId } from './types';
+import type { UrlDetail, UrlIssue, UrlPageStat, UrlTabId } from './types';
 import { URL_TABS, statusTone } from './types';
 import PageSpeedTab from './tabs/PageSpeedTab';
 import { pagespeedFromLighthouse } from './tabs/pagespeed-types';
@@ -50,6 +50,12 @@ function normUrlFor(u: string): string {
   } catch {
     return u.replace(/\/+$/, '').toLowerCase();
   }
+}
+
+/** Find the stored crawl facts for one URL (real data from `report.pageStats`). */
+function statForUrl(vm: AuditViewModel, url: string): UrlPageStat | null {
+  const target = normUrlFor(url);
+  return vm.pageStats.find((s) => normUrlFor(s.url) === target || normUrlFor(s.finalUrl || '') === target) ?? null;
 }
 
 /** Find the stored crawl facts for one URL (real data from `report.pageStats`). */
@@ -419,7 +425,7 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
                   <div className="drawer-url-thead">
                     <span>Page</span>
                     <span>Status</span>
-                    <span>MB</span>
+                    <span>HTML (KB)</span>
                     <span>Score</span>
                     <span>Discovered</span>
                     <span />
@@ -433,11 +439,18 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
                         return url;
                       }
                     })();
+                    // Real crawl facts for this row (null for reports crawled by
+                    // older code without `pageStats` — columns show "—" then).
+                    const stat = statForUrl(vm, url);
+                    const tone = statusTone(stat ? stat.status : null);
+                    const discovered = vm.generatedAt
+                      ? vm.generatedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : '—';
                     return (
                       <div
                         className="drawer-url-row"
                         data-url={url}
-                        data-status="0"
+                        data-status={String(stat?.status ?? 0)}
                         data-finding={finding?.title ?? ''}
                         key={url}
                         onClick={() => openUrl(url)}
@@ -451,16 +464,18 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
                           </span>
                           <span className="drawer-url-path" title={url}>{path}</span>
                         </span>
-                        <span className="drawer-url-pill miss">—</span>
-                        <span className="drawer-url-metric">—</span>
+                        <span className={`drawer-url-pill ${tone}`}>{stat ? stat.status : '—'}</span>
+                        <span className="drawer-url-metric">
+                          {stat && Number.isFinite(stat.htmlKb) && stat.htmlKb > 0 ? `${Math.round(stat.htmlKb)} KB` : '—'}
+                        </span>
                         <span className="drawer-url-metric score">—</span>
-                        <span className="drawer-url-date">—</span>
+                        <span className="drawer-url-date">{discovered}</span>
                         <button
                           className="full-page-btn"
                           type="button"
                           aria-label={`Open full page detail for ${url}`}
                           data-url={url}
-                          data-status="0"
+                          data-status={String(stat?.status ?? 0)}
                           data-finding={finding?.title ?? ''}
                         >
                           Full page detail{' '}
