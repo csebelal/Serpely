@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import jwt from 'jsonwebtoken';
 import { google } from 'googleapis';
 import ClientUser from '../models/ClientUser';
 import GoogleConnection from '../models/GoogleConnection';
@@ -18,24 +17,19 @@ import {
   pickGaProperty,
   fmtDate,
 } from '../lib/google';
+import { resolveActiveClient } from '../lib/clientSession';
 
 const NOT_AUTHORIZED = { error: 'This property is not accessible with the connected Google account.' };
 
 const router = Router();
-const SECRET = () => process.env.JWT_SECRET as string;
 const CLIENT_ORIGIN = () => String(process.env.CLIENT_ORIGIN || 'https://serpely.com').split(',')[0].trim().replace(/\/$/, '');
 
 const dataLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
 
-function clientIdFrom(req: Request): string | null {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) return null;
-  try {
-    const payload = jwt.verify(header.split(' ')[1], SECRET()) as { clientId?: string };
-    return payload.clientId || null;
-  } catch {
-    return null;
-  }
+async function clientIdFrom(req: Request, res: Response): Promise<string | null> {
+  // Same session as the client dashboard: httpOnly cookie first, Bearer header
+  // accepted for clients issued before cookie sessions.
+  return resolveActiveClient(req, res);
 }
 
 async function getSnapshot(clientId: string, kind: 'gsc-summary' | 'gsc-index' | 'ga-sessions', key: string) {
@@ -55,7 +49,7 @@ async function putSnapshot(clientId: string, kind: 'gsc-summary' | 'gsc-index' |
 // GET /api/google/connect-url — authed; returns the Google consent URL (frontend redirects).
 router.get('/connect-url', async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const oauth = makeOAuthClient();
     const url = oauth.generateAuthUrl({
@@ -128,7 +122,7 @@ router.get('/callback', async (req: Request, res: Response) => {
 // GET /api/google/status — authed; never exposes tokens.
 router.get('/status', async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId }).lean();
     if (!conn) { res.json({ connected: false }); return; }
@@ -147,7 +141,7 @@ router.get('/status', async (req: Request, res: Response) => {
 // POST /api/google/disconnect — authed; revokes + deletes.
 router.post('/disconnect', async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId });
     if (conn) {
@@ -170,7 +164,7 @@ router.post('/disconnect', async (req: Request, res: Response) => {
 // GET /api/google/gsc/sites — authed; properties the Google account can access.
 router.get('/gsc/sites', dataLimiter, async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId });
     if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }
@@ -187,7 +181,7 @@ router.get('/gsc/sites', dataLimiter, async (req: Request, res: Response) => {
 // explicitly clear a stored selection.
 router.post('/property', async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId });
     if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }
@@ -225,7 +219,7 @@ router.post('/property', async (req: Request, res: Response) => {
 // GET /api/google/gsc/summary?site=&days=28 — clicks/impressions/CTR/position + top queries.
 router.get('/gsc/summary', dataLimiter, async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId });
     if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }
@@ -321,7 +315,7 @@ router.get('/gsc/summary', dataLimiter, async (req: Request, res: Response) => {
 // GET /api/google/gsc/index?site= — true indexed/not via URL Inspection (≤25 URLs, cached).
 router.get('/gsc/index', dataLimiter, async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId });
     if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }
@@ -380,7 +374,7 @@ router.get('/gsc/index', dataLimiter, async (req: Request, res: Response) => {
 // GET /api/google/ga/sessions?property=&days=28 — sessions by channel.
 router.get('/ga/sessions', dataLimiter, async (req: Request, res: Response) => {
   try {
-    const clientId = clientIdFrom(req);
+    const clientId = await clientIdFrom(req, res);
     if (!clientId) { res.status(401).json({ error: 'Login required' }); return; }
     const conn = await GoogleConnection.findOne({ clientId });
     if (!conn) { res.status(400).json({ error: 'Connect Google first' }); return; }

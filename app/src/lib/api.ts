@@ -1,16 +1,11 @@
 import axios from 'axios';
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const BASE = import.meta.env.VITE_API_URL || '';
 
 export const api = axios.create({ baseURL: BASE, withCredentials: true });
 
-api.interceptors.request.use((config) => {
-  // Transitional: still forward a stored Bearer token if one exists (cached
-  // frontends / scripts). New sessions rely on the httpOnly cookie only.
-  const token = localStorage.getItem('serpely_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// Admin sessions live entirely in the httpOnly `serpely_admin` cookie — no
+// Bearer header, nothing readable by JavaScript.
 
 api.interceptors.response.use(
   (res) => res,
@@ -35,7 +30,7 @@ export const login = (email: string, password: string) =>
   api.post<{ token: string; email: string; role: string }>('/api/auth/login', { email, password });
 
 export interface AdminMe { id: string; email: string; role: 'owner' | 'admin' | 'editor'; }
-export const getMe = () => api.get<AdminMe>('/api/auth/me');
+export const getMe = () => api.get<AdminMe>('/api/auth/me', { timeout: 10000 });
 export const logoutAdmin = () => api.post('/api/auth/logout');
 
 export const changePassword = (currentPassword: string, newPassword: string) =>
@@ -228,12 +223,9 @@ export interface ClientUserData {
   apiKey?: string;
   emailVerified?: boolean;
 }
-const clientApi = axios.create({ baseURL: BASE });
-clientApi.interceptors.request.use(cfg => {
-  const t = localStorage.getItem('serpely_client_token');
-  if (t) cfg.headers.Authorization = `Bearer ${t}`;
-  return cfg;
-});
+const clientApi = axios.create({ baseURL: BASE, withCredentials: true });
+// Client sessions live entirely in the httpOnly `serpely_client` cookie — no
+// Bearer header, nothing readable by JavaScript.
 export const clientRegister = (name: string, email: string, password: string, turnstileToken?: string) =>
   clientApi.post<{ token: string; user: ClientUserData }>('/api/users/register', { name, email, password, turnstileToken });
 
@@ -243,6 +235,7 @@ export const resendVerification = () =>
 export const clientLogin = (email: string, password: string) =>
   clientApi.post<{ token: string; user: ClientUserData }>('/api/users/login', { email, password });
 export const clientGetMe = () => clientApi.get<ClientUserData>('/api/users/me');
+export const clientLogout = () => clientApi.post('/api/users/logout');
 export const clientUpdateMe = (name: string) => clientApi.put<ClientUserData>('/api/users/me', { name });
 export const clientUpdateWebsites = (websites: { domain: string }[]) =>
   clientApi.put<ClientUserData>('/api/users/websites', { websites });
@@ -355,13 +348,58 @@ export const updateSEO = (key: string, data: Partial<SEOPageData>) => api.put<SE
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
 export interface AnalyticsSummary {
-  today: number; last7d: number; last30d: number;
+  today: number;
+  yesterday?: number;
+  last7d: number;
+  prev7d?: number;
+  last30d: number;
   topPages: { path: string; count: number }[];
+  topReferrers?: { referrer: string; count: number }[];
   dailyViews: { date: string; count: number }[];
+  audits?: {
+    total: number;
+    last7d: number;
+    avgScore: number | null;
+    recent: {
+      url: string;
+      overall: number;
+      pagesCrawled: number;
+      critical: number;
+      warning: number;
+      shareToken: string;
+      createdAt: string;
+    }[];
+  };
+  sitemaps?: { total: number };
+  clients?: {
+    total: number;
+    last7d: number;
+    verified: number;
+    plans: { starter: number; pro: number; business: number };
+  };
 }
 export const trackPageView = (path: string, referrer?: string) =>
   api.post('/api/analytics/track', { path, referrer }).catch(() => {});
 export const getAnalyticsSummary = () => api.get<AnalyticsSummary>('/api/analytics/summary');
+
+// ── Consent Log (cookie banner decisions) ─────────────────────────────────────
+export interface ConsentLogData {
+  _id: string;
+  choice: 'granted' | 'denied';
+  visitorId: string;
+  ua: string;
+  page: string;
+  createdAt: string;
+}
+export interface ConsentLogStats {
+  total: number; granted: number; denied: number;
+  today: number; last30d: number;
+  acceptRate: number | null;
+  byDay: { _id: { day: string; choice: 'granted' | 'denied' }; count: number }[];
+  byPage: { page: string; count: number }[];
+}
+export const getConsentLog = (params?: { choice?: string; from?: string; to?: string }) =>
+  api.get<{ logs: ConsentLogData[]; stats: ConsentLogStats }>('/api/analytics/consent-log', { params });
 
 // ── Audit Log ─────────────────────────────────────────────────────────────────
 export interface AuditLogData {
@@ -431,10 +469,41 @@ export interface AuditUrlPsi {
   analysisUTCTimestamp?: string;
   cached?: boolean;
 }
-export const getAuditUrlPsi = (shareToken: string, url: string, strategy: 'mobile' | 'desktop' = 'mobile') =>
+export const getAuditUrlPsi = (
+  shareToken: string,
+  url: string,
+  strategy: 'mobile' | 'desktop' = 'mobile',
+  refresh = false,
+) =>
   publicApi.get<AuditUrlPsi>(`/api/public-audit/${shareToken}/psi`, {
-    params: { url, strategy },
+    params: { url, strategy, ...(refresh ? { refresh: '1' } : {}) },
     timeout: 70000,
+  });
+
+export interface CriticalRequestChainNode {
+  type: 'stylesheet' | 'script' | 'css-import';
+  url: string;
+  blocking: boolean;
+  preloaded?: boolean;
+  cross_origin?: boolean;
+  preconnected?: boolean;
+  children?: CriticalRequestChainNode[];
+}
+
+export interface AuditUrlCss {
+  url: string;
+  critical_request_count: number;
+  chain_count: number;
+  issues: { severity: string; message: string; url?: string }[];
+  chains: CriticalRequestChainNode[];
+  fetch_error?: string | null;
+  cached?: boolean;
+}
+
+export const getAuditUrlCss = (shareToken: string, url: string) =>
+  publicApi.get<AuditUrlCss>(`/api/public-audit/${shareToken}/css`, {
+    params: { url },
+    timeout: 30000,
   });
 export const getAuditTrend = (origin: string) =>
   publicApi.get<{ origin: string; points: { date: string; overall: number }[] }>('/api/public-audit/trend', { params: { origin } });

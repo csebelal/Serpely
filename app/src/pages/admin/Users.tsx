@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent, CSSProperties } from 'react';
 import {
-  getAdminUsers, createAdminUser, deleteAdminUser, setAdminUserPassword, getLoginLogs,
+  getAdminUsers, createAdminUser, deleteAdminUser, setAdminUserPassword, setAdminUserRole, getLoginLogs,
   type AdminUserData, type LoginLogData,
 } from '@/lib/api';
 
@@ -12,13 +12,21 @@ const td: CSSProperties = { padding: '9px 12px', fontSize: 13, color: '#0f172a',
 export function Users() {
   const [users, setUsers] = useState<AdminUserData[]>([]);
   const [logs, setLogs] = useState<LoginLogData[]>([]);
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState<{ email: string; password: string; role: 'owner' | 'admin' | 'editor' }>({ email: '', password: '', role: 'editor' });
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState('');
+  const [loadErr, setLoadErr] = useState('');
 
   useEffect(() => {
-    getAdminUsers().then(r => setUsers(r.data));
-    getLoginLogs().then(r => setLogs(r.data));
+    Promise.all([getAdminUsers(), getLoginLogs()])
+      .then(([u, l]) => {
+        setUsers(u.data);
+        setLogs(l.data);
+      })
+      .catch((err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        setLoadErr(msg || 'Could not load admin users (owner role required)');
+      });
   }, []);
 
   async function handleCreate(e: FormEvent) {
@@ -26,9 +34,9 @@ export function Users() {
     setCreateErr('');
     setCreating(true);
     try {
-      const { data } = await createAdminUser(form.email, form.password);
+      const { data } = await createAdminUser(form.email, form.password, form.role);
       setUsers(prev => [data, ...prev]);
-      setForm({ email: '', password: '' });
+      setForm({ email: '', password: '', role: 'editor' });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to create user';
       setCreateErr(msg);
@@ -36,8 +44,20 @@ export function Users() {
     setCreating(false);
   }
 
+  async function handleRoleChange(user: AdminUserData, role: 'owner' | 'admin' | 'editor') {
+    const prevRole = user.role || 'admin';
+    setUsers(prev => prev.map(u => (u._id === user._id ? { ...u, role } : u)));
+    try {
+      await setAdminUserRole(user._id, role);
+    } catch (err: unknown) {
+      setUsers(prev => prev.map(u => (u._id === user._id ? { ...u, role: prevRole } : u)));
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Failed to update role';
+      alert(msg);
+    }
+  }
+
   async function handleSetPassword(user: AdminUserData) {
-    const pw = prompt(`New password for ${user.email} (min 6 chars):`);
+    const pw = prompt(`New password for ${user.email} (min 8 chars):`);
     if (!pw) return;
     if (pw.length < 8) { alert('Password must be at least 8 characters'); return; }
     try {
@@ -68,7 +88,13 @@ export function Users() {
   return (
     <div style={{ padding: '36px 44px', maxWidth: 900 }}>
       <h1 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#0f172a' }}>Users & Access</h1>
-      <p style={{ margin: '0 0 32px', fontSize: 13, color: '#94a3b8' }}>Manage admin accounts and view login activity</p>
+      <p style={{ margin: '0 0 24px', fontSize: 13, color: '#94a3b8' }}>Manage admin accounts and view login activity</p>
+
+      {loadErr && (
+        <div style={{ padding: '12px 16px', background: '#fef2f2', color: '#dc2626', borderRadius: 12, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+          {loadErr}
+        </div>
+      )}
 
       {/* Create user */}
       <div style={{ background: '#fff', borderRadius: 16, padding: '22px 26px', marginBottom: 20, boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
@@ -85,6 +111,15 @@ export function Users() {
             <input type="password" required minLength={8} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               placeholder="Min 8 characters"
               style={{ width: '100%', padding: '9px 12px', background: '#f1f5f9', border: 'none', borderRadius: 10, fontSize: 13, color: '#0f172a', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ flex: '0 1 130px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: col, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Role</label>
+            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value as 'owner' | 'admin' | 'editor' }))}
+              style={{ width: '100%', padding: '9px 12px', background: '#f1f5f9', border: 'none', borderRadius: 10, fontSize: 13, color: '#0f172a', boxSizing: 'border-box' }}>
+              <option value="editor">Editor</option>
+              <option value="admin">Admin</option>
+              <option value="owner">Owner</option>
+            </select>
           </div>
           <button type="submit" disabled={creating}
             style={{ padding: '9px 22px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
@@ -103,6 +138,7 @@ export function Users() {
           <thead>
             <tr>
               <th style={th}>Email</th>
+              <th style={th}>Role</th>
               <th style={th}>Created</th>
               <th style={{ ...th, textAlign: 'right' }}>Action</th>
             </tr>
@@ -111,6 +147,18 @@ export function Users() {
             {users.map(u => (
               <tr key={u._id}>
                 <td style={td}><span style={{ fontWeight: 600 }}>{u.email}</span></td>
+                <td style={td}>
+                  <select
+                    aria-label={`Role for ${u.email}`}
+                    value={u.role || 'admin'}
+                    onChange={e => handleRoleChange(u, e.target.value as 'owner' | 'admin' | 'editor')}
+                    style={{ padding: '4px 8px', background: '#f1f5f9', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#0f172a' }}
+                  >
+                    <option value="editor">Editor</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </td>
                 <td style={{ ...td, color: '#64748b' }}>{fmtDate(u.createdAt)}</td>
                 <td style={{ ...td, textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -127,7 +175,7 @@ export function Users() {
               </tr>
             ))}
             {users.length === 0 && (
-              <tr><td colSpan={3} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>No users found</td></tr>
+              <tr><td colSpan={4} style={{ ...td, textAlign: 'center', color: '#94a3b8', padding: '24px' }}>No users found</td></tr>
             )}
           </tbody>
         </table>

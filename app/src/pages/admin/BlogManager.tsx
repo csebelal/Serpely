@@ -11,8 +11,13 @@ export function BlogManager() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => { getAllPosts().then(r => setPosts(r.data)); }, []);
+  useEffect(() => {
+    getAllPosts()
+      .then(r => setPosts(r.data))
+      .catch(() => setError('Failed to load blog posts.'));
+  }, []);
 
   const filtered = posts.filter(p => {
     const matchCat = filter === 'All' || p.category === filter;
@@ -21,7 +26,12 @@ export function BlogManager() {
   });
 
   function toggleSelect(id: string) {
-    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected(s => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   }
 
   function toggleAll() {
@@ -31,17 +41,26 @@ export function BlogManager() {
   async function handleDelete(id: string, title: string) {
     if (!confirm(`Delete "${title}"?`)) return;
     setDeleting(id);
-    try { await deletePost(id); setPosts(posts.filter(p => p._id !== id)); } catch { /* ignore */ }
+    setError('');
+    try {
+      await deletePost(id);
+      setPosts(posts.filter(p => p._id !== id));
+    } catch {
+      setError(`Failed to delete "${title}".`);
+    }
     setDeleting(null);
   }
 
   async function bulkPublish(published: boolean) {
     if (!selected.size) return;
     setBulkWorking(true);
+    setError('');
     try {
       await bulkUpdatePosts(Array.from(selected), published);
       setPosts(p => p.map(x => selected.has(x._id!) ? { ...x, published } : x));
       setSelected(new Set());
+    } catch {
+      setError('Failed to update selected posts.');
     } finally {
       setBulkWorking(false);
     }
@@ -50,10 +69,13 @@ export function BlogManager() {
   async function bulkDelete() {
     if (!selected.size || !confirm(`Delete ${selected.size} posts?`)) return;
     setBulkWorking(true);
+    setError('');
     try {
       await bulkDeletePosts(Array.from(selected));
       setPosts(p => p.filter(x => !selected.has(x._id!)));
       setSelected(new Set());
+    } catch {
+      setError('Failed to delete selected posts.');
     } finally {
       setBulkWorking(false);
     }
@@ -73,6 +95,12 @@ export function BlogManager() {
         </div>
         <Link to="/sp-super-admin/blog/new" style={{ padding: '9px 20px', background: '#00C27A', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>+ New Post</Link>
       </div>
+
+      {error && (
+        <div style={{ padding: '10px 14px', background: '#fef2f2', color: '#dc2626', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 18 }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search posts…"

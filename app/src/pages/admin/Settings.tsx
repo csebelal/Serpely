@@ -7,19 +7,37 @@ export function Settings() {
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveErr, setSaveErr] = useState('');
   const [pwMsg, setPwMsg] = useState('');
   const [uploading, setUploading] = useState<string | null>(null);
   const [backupWorking, setBackupWorking] = useState(false);
   const [backupMsg, setBackupMsg] = useState('');
   const restoreRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { getSettings().then(r => setForm(r.data)); }, []);
+  useEffect(() => {
+    getSettings()
+      .then(r => setForm(r.data))
+      .catch((err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        setSaveErr(msg || 'Failed to load settings');
+      });
+  }, []);
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await updateSettings(form);
-    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000);
+    setSaveErr('');
+    setSaved(false);
+    try {
+      await updateSettings(form);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setSaveErr(msg || 'Failed to save settings (owner role required)');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handlePwChange(e: FormEvent) {
@@ -144,9 +162,12 @@ export function Settings() {
           {inp('System Status Text', 'systemStatus')}
         </div>
 
-        <button type="submit" disabled={saving} style={{ padding: '10px 28px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-          {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Settings'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button type="submit" disabled={saving} style={{ padding: '10px 28px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+            {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Settings'}
+          </button>
+          {saveErr && <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 600 }}>{saveErr}</span>}
+        </div>
       </form>
 
       <div style={{ marginTop: 40, paddingTop: 36, borderTop: '1px solid #f1f5f9' }}>

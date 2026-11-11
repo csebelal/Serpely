@@ -7,6 +7,7 @@ export interface IAdminUser extends Document {
   passwordHash: string;
   role: AdminRole;
   active: boolean;
+  tokenVersion: number;
   createdAt: Date;
 }
 
@@ -17,6 +18,7 @@ const AdminUserSchema = new Schema<IAdminUser>({
   // owner promotes it. The startup migration promotes the original account.
   role: { type: String, enum: ['owner', 'admin', 'editor'], default: 'editor' },
   active: { type: Boolean, default: true },
+  tokenVersion: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 

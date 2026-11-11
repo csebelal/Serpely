@@ -8,12 +8,17 @@ export function APIKeysManager() {
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<{ key: string; name: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
 
   async function load() {
     setLoading(true);
+    setError('');
     try {
       const res = await getAPIKeys();
       setKeys(res.data);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Failed to load API keys.');
     } finally {
       setLoading(false);
     }
@@ -24,11 +29,15 @@ export function APIKeysManager() {
   async function generate() {
     if (!newName.trim()) return;
     setCreating(true);
+    setError('');
     try {
       const res = await createAPIKey(newName.trim());
       setRevealed({ key: res.data.key!, name: res.data.name });
       setKeys(k => [res.data, ...k]);
       setNewName('');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Failed to generate API key.');
     } finally {
       setCreating(false);
     }
@@ -36,8 +45,14 @@ export function APIKeysManager() {
 
   async function revoke(id: string) {
     if (!confirm('Revoke this API key? This cannot be undone.')) return;
-    await deleteAPIKey(id);
-    setKeys(k => k.filter(x => x._id !== id));
+    setError('');
+    try {
+      await deleteAPIKey(id);
+      setKeys(k => k.filter(x => x._id !== id));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Failed to revoke API key.');
+    }
   }
 
   function copyKey(key: string) {
@@ -50,6 +65,12 @@ export function APIKeysManager() {
     <div style={{ padding: '36px 44px', maxWidth: 800 }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.03em', margin: '0 0 8px' }}>API Keys</h1>
       <p style={{ margin: '0 0 28px', fontSize: 14, color: '#64748b' }}>Use API keys to authenticate requests via the <code>X-API-Key</code> header.</p>
+
+      {error && (
+        <div style={{ padding: '10px 14px', background: '#fef2f2', color: '#dc2626', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+          {error}
+        </div>
+      )}
 
       {revealed && (
         <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '18px 20px', marginBottom: 24 }}>

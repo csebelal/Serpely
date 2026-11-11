@@ -28,21 +28,33 @@ interface AudienceCardData { label: string; title: string; items: string[]; cta:
 function useSaveState() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
   async function doSave(fn: () => Promise<unknown>) {
     setSaving(true);
-    try { await fn(); } catch { /* ignore */ }
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setError('');
+    setSaved(false);
+    try {
+      await fn();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      setError(msg || 'Save failed. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
-  return { saving, saved, doSave };
+  return { saving, saved, error, doSave };
 }
 
-function SaveBtn({ saving, saved, onClick }: { saving: boolean; saved: boolean; onClick: () => void }) {
+function SaveBtn({ saving, saved, error, onClick }: { saving: boolean; saved: boolean; error?: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} disabled={saving} style={s.btnGreen}>
-      {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Changes'}
-    </button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <button onClick={onClick} disabled={saving} style={{ ...s.btnGreen, opacity: saving ? 0.7 : 1 }}>
+        {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Changes'}
+      </button>
+      {error && <span style={{ fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{error}</span>}
+    </div>
   );
 }
 
@@ -124,8 +136,8 @@ function ShotGroup({ title, hint, pair, fallbacks, onChange }: {
   return (
     <div style={s.subCard}>
       <p style={{ margin: '0 0 3px', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{title}</p>
-      <p style={{ margin: '0 0 14px', fontSize: 12, color: '#94a3b8' }}>{hint}</p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <p style={{ margin: '0 0 14px', fontSize: 12, color: '#475569' }}>{hint}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         <ImageField label="Light mode" value={pair?.light} fallbackPreview={fallbacks.light} onChange={v => onChange('light', v)} />
         <ImageField label="Dark mode" value={pair?.dark} fallbackPreview={fallbacks.dark} onChange={v => onChange('dark', v)} />
       </div>
@@ -152,7 +164,7 @@ function HeroTab() {
   const [alert1Sub, setAlert1Sub] = useState('');
   const [alert2Title, setAlert2Title] = useState('');
   const [alert2Sub, setAlert2Sub] = useState('');
-  const { saving, saved, doSave } = useSaveState();
+  const { saving, saved, error, doSave } = useSaveState();
 
   useEffect(() => {
     getSection('hero').then(r => {
@@ -276,7 +288,7 @@ function HeroTab() {
         <h2 style={s.sectionHead}>CTAs</h2>
         <div style={{ ...s.subCard, marginBottom: 12 }}>
           <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Primary CTA</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             <div>
               <label style={s.label}>Button Text</label>
               <input style={s.inp} value={cta1Text} onChange={e => setCta1Text(e.target.value)} placeholder="Start Free Trial" />
@@ -293,7 +305,7 @@ function HeroTab() {
         </div>
         <div style={s.subCard}>
           <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Secondary CTA</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             <div>
               <label style={s.label}>Button Text</label>
               <input style={s.inp} value={cta2Text} onChange={e => setCta2Text(e.target.value)} placeholder="Book a Demo" />
@@ -312,7 +324,7 @@ function HeroTab() {
 
       <div style={s.card}>
         <h2 style={s.sectionHead}>Alert Cards</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           <div>
             <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Alert 1</p>
             <div style={{ marginBottom: 10 }}>
@@ -339,7 +351,7 @@ function HeroTab() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-        <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+        <SaveBtn saving={saving} saved={saved} error={error} onClick={handleSave} />
       </div>
     </div>
   );
@@ -371,7 +383,7 @@ function ProblemTab() {
     'Every page scored 0–100 for AI visibility and citation eligibility. Updated continuously.',
     'Identifies pages to refresh first, scored by traffic decay, GEO Score, and keyword movement.',
   ]);
-  const { saving, saved, doSave } = useSaveState();
+  const { saving, saved, error, doSave } = useSaveState();
 
   useEffect(() => {
     getSection('problem-solution').then(r => {
@@ -428,7 +440,7 @@ function ProblemTab() {
           <label style={s.label}>Pill Text</label>
           <input style={s.inp} value={pillText} onChange={e => setPillText(e.target.value)} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Headline Line 1</label>
             <input style={s.inp} value={headline1} onChange={e => setHeadline1(e.target.value)} />
@@ -464,7 +476,7 @@ function ProblemTab() {
           ))}
           <button style={s.btnGhost} onClick={addProblemItem}>+ Add Problem</button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Stat Number</label>
             <input style={s.inp} value={statNum} onChange={e => setStatNum(e.target.value)} placeholder="40%" />
@@ -511,7 +523,7 @@ function ProblemTab() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-        <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+        <SaveBtn saving={saving} saved={saved} error={error} onClick={handleSave} />
       </div>
     </div>
   );
@@ -530,7 +542,7 @@ function HowItWorksTab() {
     { num: '3', title: 'Prioritize', desc: "AI-powered scoring tells you which pages need attention most. Not a firehose of data — a clear, ranked action queue your team can actually act on.", tags: ['Action Queue', 'AI Scoring'] },
     { num: '4', title: 'Improve', desc: 'Apply AI-suggested fixes, track the impact, and generate reports that prove SEO value. Then the loop restarts, automatically.', tags: ['Auto Reports', 'Loop'] },
   ]);
-  const { saving, saved, doSave } = useSaveState();
+  const { saving, saved, error, doSave } = useSaveState();
 
   useEffect(() => {
     getSection('how-it-works').then(r => {
@@ -617,7 +629,7 @@ function HowItWorksTab() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-        <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+        <SaveBtn saving={saving} saved={saved} error={error} onClick={handleSave} />
       </div>
     </div>
   );
@@ -639,7 +651,7 @@ function CoreFeaturesTab() {
     { title: 'Backlink Monitoring', desc: 'Track new and lost backlinks with quality and authority scoring. Protect domain strength and uncover link-building opportunities.' },
     { title: 'White-Label Reporting', desc: 'Generate SEO, GEO, and LLM visibility reports instantly. Share client-ready dashboards under your brand.' },
   ]);
-  const { saving, saved, doSave } = useSaveState();
+  const { saving, saved, error, doSave } = useSaveState();
 
   useEffect(() => {
     getSection('core-features').then(r => {
@@ -668,7 +680,7 @@ function CoreFeaturesTab() {
           <label style={s.label}>Pill Text</label>
           <input style={s.inp} value={pillText} onChange={e => setPillText(e.target.value)} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Headline Line 1</label>
             <input style={s.inp} value={headline1} onChange={e => setHeadline1(e.target.value)} />
@@ -708,7 +720,7 @@ function CoreFeaturesTab() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-        <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+        <SaveBtn saving={saving} saved={saved} error={error} onClick={handleSave} />
       </div>
     </div>
   );
@@ -726,7 +738,7 @@ function AudienceTab() {
     { label: 'For Startups', title: 'Grow SEO like a\nteam 10x your size.', items: ['AI SEO agent for fast growth', 'Automated keyword gap analysis', 'Real-time AI search tracking', 'AI-powered content optimization', 'Scalable SEO automation platform'], cta: 'Get started for startups →', ctaHref: '#' },
     { label: 'For Enterprise', title: 'Enterprise-grade SEO\nat every scale.', items: ['Granular SEO roles and permissions', 'Enterprise AI SEO platform', 'Technical SEO audit & compliance logs', 'Generative Engine Optimization (GEO) tools', 'LLM SEO monitoring & API integration'], cta: 'Talk to enterprise sales →', ctaHref: '#' },
   ]);
-  const { saving, saved, doSave } = useSaveState();
+  const { saving, saved, error, doSave } = useSaveState();
 
   useEffect(() => {
     getSection('target-audience').then(r => {
@@ -806,7 +818,7 @@ function AudienceTab() {
         {cards.map((card, i) => (
           <div key={i} style={{ ...s.subCard, borderLeft: i === 1 ? '3px solid #00C27A' : undefined }}>
             <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 13, color: i === 1 ? '#00C27A' : '#0f172a' }}>Card {i + 1}{i === 1 ? ' (Accent — Most Popular)' : ''}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
               <div>
                 <label style={s.label}>Label</label>
                 <input style={s.inp} value={card.label} onChange={e => updateCard(i, { label: e.target.value })} />
@@ -839,7 +851,7 @@ function AudienceTab() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8 }}>
-        <SaveBtn saving={saving} saved={saved} onClick={handleSave} />
+        <SaveBtn saving={saving} saved={saved} error={error} onClick={handleSave} />
       </div>
     </div>
   );
@@ -924,7 +936,7 @@ function CTANewsletterTab() {
           <label style={s.label}>Badge Text</label>
           <input style={s.inp} value={ctaBadge} onChange={e => setCtaBadge(e.target.value)} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Headline Line 1</label>
             <input style={s.inp} value={ctaHeadline1} onChange={e => setCtaHeadline1(e.target.value)} />
@@ -942,7 +954,7 @@ function CTANewsletterTab() {
           <label style={s.label}>Subtext</label>
           <input style={s.inp} value={ctaSubtext} onChange={e => setCtaSubtext(e.target.value)} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Primary Button Text</label>
             <input style={s.inp} value={ctaCta1Text} onChange={e => setCtaCta1Text(e.target.value)} />
@@ -952,7 +964,7 @@ function CTANewsletterTab() {
             <input style={s.inp} value={ctaCta1Href} onChange={e => setCtaCta1Href(e.target.value)} />
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Secondary Button Text</label>
             <input style={s.inp} value={ctaCta2Text} onChange={e => setCtaCta2Text(e.target.value)} />
@@ -966,7 +978,7 @@ function CTANewsletterTab() {
           <label style={s.label}>Support Text (below buttons)</label>
           <input style={s.inp} value={ctaSupportText} onChange={e => setCtaSupportText(e.target.value)} />
         </div>
-        <SaveBtn saving={ctaSave.saving} saved={ctaSave.saved} onClick={handleCtaSave} />
+        <SaveBtn saving={ctaSave.saving} saved={ctaSave.saved} error={ctaSave.error} onClick={handleCtaSave} />
       </div>
 
       {/* Newsletter Section */}
@@ -984,7 +996,7 @@ function CTANewsletterTab() {
           <label style={s.label}>Subtext</label>
           <textarea style={{ ...s.ta, minHeight: 80 }} value={nlSubtext} onChange={e => setNlSubtext(e.target.value)} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Input Placeholder</label>
             <input style={s.inp} value={nlInputPlaceholder} onChange={e => setNlInputPlaceholder(e.target.value)} />
@@ -994,7 +1006,7 @@ function CTANewsletterTab() {
             <input style={s.inp} value={nlButtonText} onChange={e => setNlButtonText(e.target.value)} />
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
           <div>
             <label style={s.label}>Success Title</label>
             <input style={s.inp} value={nlSuccessTitle} onChange={e => setNlSuccessTitle(e.target.value)} />
@@ -1008,7 +1020,7 @@ function CTANewsletterTab() {
           <label style={s.label}>Privacy Text</label>
           <input style={s.inp} value={nlPrivacyText} onChange={e => setNlPrivacyText(e.target.value)} />
         </div>
-        <SaveBtn saving={nlSave.saving} saved={nlSave.saved} onClick={handleNlSave} />
+        <SaveBtn saving={nlSave.saving} saved={nlSave.saved} error={nlSave.error} onClick={handleNlSave} />
       </div>
     </div>
   );

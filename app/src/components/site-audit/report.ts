@@ -144,14 +144,14 @@ const CATEGORY_ORDER: CategoryId[] = ['crawl', 'index', 'onpage', 'links', 'sche
 export function bucketFor(issue: PublicAuditIssue): CategoryId {
   const hay = `${issue.code} ${issue.title}`.toLowerCase();
   const has = (re: RegExp) => re.test(hay);
-  if (has(/canonical|noindex|indexab|robots|sitemap/)) return 'index';
-  if (has(/crawl|404|410|5xx|broken|redirect|status|server|dns|https|ssl|mixed|downtime/)) return 'crawl';
+  if (has(/canonical|noindex|indexab|robots|sitemap|x-robots/)) return 'index';
+  if (has(/crawl|404|410|5xx|broken|redirect|status|server|dns|https|ssl|mixed|downtime|url-quality|faceted-nav/)) return 'crawl';
   if (has(/anchor|orphan|inbound|internal|link/)) return 'links';
-  if (has(/schema|structured|llms|json-?ld|ai-|citation|geo|extract/)) return 'schema';
-  if (has(/lcp|cls|inp|ttfb|fcp|speed|weight|byte|img|image|render|unused|unminified|javascript|\bjs\b|css|font|compress|http2|console|performance|cwv|anim|block/)) {
+  if (has(/schema|structured|llms|json-?ld|ai-|citation|geo|extract|rich-results|answer-blocks/)) return 'schema';
+  if (has(/lcp|cls|inp|ttfb|fcp|speed|weight|byte|img|image|render|unused|unminified|javascript|\bjs\b|css|font|compress|http2|console|performance|cwv|anim|block|third-party/)) {
     return 'performance';
   }
-  if (has(/title|meta|desc|thin|heading|alt|content|word|contrast|label|button|aspect/)) return 'onpage';
+  if (has(/title|meta|desc|thin|heading|alt|content|word|contrast|label|button|aspect|readability|eeat|a11y/)) return 'onpage';
   // Fall back to the report's own category.
   const fallback: Record<string, CategoryId> = {
     'Technical SEO': 'crawl',
@@ -184,6 +184,18 @@ const TYPE_LABELS: Record<string, string> = {
   'psi-cls': 'CLS',
   'psi-inp': 'INP',
   'psi-ttfb': 'TTFB',
+  'x-robots-header': 'X-Robots-Tag',
+  'rich-results-guard': 'Rich results',
+  'critical-css-blocking': 'Critical CSS/JS',
+  'third-party-scripts': '3rd-party JS',
+  'font-loading': 'Web fonts',
+  'readability-score': 'Readability',
+  'eeat-signals': 'E-E-A-T',
+  'citation-readiness': 'AI citations',
+  'answer-blocks': 'Answer blocks',
+  'a11y-landmarks-labels': 'Accessibility',
+  'site-url-quality': 'URL hygiene',
+  'site-faceted-nav': 'Faceted nav',
 };
 
 export function severityLabelFor(tone: Tone): string {

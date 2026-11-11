@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Plug } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { SpotlightRegion } from '@/components/SpotlightRegion';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 import {
   googleStatus, googleGscSites, googleSetProperty,
   googleGscSummary, googleGscIndex, googleGaSessions,
@@ -15,7 +18,7 @@ function delta(cur: number, prev: number, invert = false): { t: string; c: strin
   const pct = ((cur - prev) / prev) * 100;
   if (Math.abs(pct) < 0.05) return { t: '0%', c: 'var(--text-faint)' };
   const good = invert ? pct < 0 : pct > 0;
-  return { t: `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, c: good ? '#00A868' : '#E5484D' };
+  return { t: `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, c: good ? 'var(--accent-text)' : '#DC2626' };
 }
 
 // Title-case GSC device names (e.g. 'mobile' → 'Mobile'). Country codes are
@@ -94,7 +97,9 @@ export function GoogleDashboard() {
     return (
       <div className="min-h-screen px-4 py-16" style={{ background: 'var(--bg)' }}>
         <div className="max-w-2xl mx-auto text-center" style={{ ...card, padding: 48 }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🔌</div>
+          <div className="w-12 h-12 rounded-2xl inline-flex items-center justify-center mb-4" style={{ background: 'rgba(0,194,122,0.12)', border: '1px solid rgba(0,194,122,0.28)', color: 'var(--accent-text)' }}>
+            <Plug className="w-6 h-6" aria-hidden="true" />
+          </div>
           <h1 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>Connect Google to unlock this dashboard</h1>
           <p style={{ fontSize: 14, color: 'var(--text-soft)', marginBottom: 20 }}>
             Pull Search Console impressions, clicks, rankings and indexed pages plus GA4 sessions — read-only, revocable anytime.
@@ -120,8 +125,11 @@ export function GoogleDashboard() {
   const failing = (index?.results || []).filter(r => r.verdict !== 'PASS');
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 py-16" style={{ background: 'var(--bg)' }}>
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen px-4 sm:px-6 py-16 relative overflow-hidden" style={{ background: 'var(--bg)' }}>
+      {/* Analytical ambient layer — slow grid pass, interference-free */}
+      <PageBackground variant="grid" />
+      <div className="max-w-6xl mx-auto relative">
+        <SpotlightRegion>
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>Search Dashboard</h1>
@@ -139,7 +147,7 @@ export function GoogleDashboard() {
             </select>
           )}
           {[7, 28, 90].map(d => (
-            <button key={d} onClick={() => void changeDays(d)}
+            <button key={d} type="button" aria-pressed={days === d} onClick={() => void changeDays(d)}
               style={{ padding: '8px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700, border: '1px solid hsl(var(--border))', cursor: 'pointer', background: days === d ? 'var(--text)' : 'var(--card-bg)', color: days === d ? 'var(--bg)' : 'var(--text-soft)' }}>
               {d}d
             </button>
@@ -163,7 +171,7 @@ export function GoogleDashboard() {
             {/* Stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               {stats.map(s => (
-                <div key={s.label} style={{ ...card, padding: 18 }}>
+                <div key={s.label} className="analytics-card" style={{ ...card, padding: 18 }}>
                   <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-faint)' }}>{s.label.toUpperCase()}</div>
                   <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', marginTop: 4 }}>{s.value}</div>
                   {s.d && (
@@ -171,7 +179,7 @@ export function GoogleDashboard() {
                   )}
                 </div>
               ))}
-              <div style={{ ...card, padding: 18 }}>
+              <div className="analytics-card" style={{ ...card, padding: 18 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text-faint)' }}>SESSIONS (GA4)</div>
                 <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', marginTop: 4 }}>
                   {sessions?.sessions != null ? sessions.sessions.toLocaleString() : '—'}
@@ -185,7 +193,7 @@ export function GoogleDashboard() {
             </div>
 
             {/* Trend */}
-            <div style={{ ...card, padding: 20, marginBottom: 16 }}>
+            <div className="analytics-card" style={{ ...card, padding: 20, marginBottom: 16 }}>
               <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Search performance trend</div>
               {(summary?.daily?.length || 0) > 0 ? (
                 <div style={{ height: 260 }}>
@@ -207,17 +215,17 @@ export function GoogleDashboard() {
 
             <div className="grid lg:grid-cols-2 gap-4">
               {/* Top queries */}
-              <div style={{ ...card, padding: 20 }}>
+              <div className="analytics-card" style={{ ...card, padding: 20 }}>
                 <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Top queries</div>
                 {(summary?.topQueries?.length || 0) > 0 ? (
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ textAlign: 'left', color: 'var(--text-faint)', fontSize: 11 }}>
-                          <th style={{ padding: '6px 8px' }}>Query</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Pos.</th>
+                          <th scope="col" style={{ padding: '6px 8px' }}>Query</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Pos.</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -239,12 +247,12 @@ export function GoogleDashboard() {
 
               {/* Index coverage + channels */}
               <div>
-                <div style={{ ...card, padding: 20, marginBottom: 16 }}>
+                <div className="analytics-card" style={{ ...card, padding: 20, marginBottom: 16 }}>
                   <div className="flex items-center" style={{ marginBottom: 4 }}>
                     <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)' }}>Google Index coverage</span>
                     <span style={{ flex: 1 }} />
                     {index && (
-                      <span style={{ fontSize: 22, fontWeight: 900, color: index.checked && index.indexed === index.checked ? '#00C27A' : '#D9A400' }}>
+                      <span style={{ fontSize: 22, fontWeight: 900, color: index.checked && index.indexed === index.checked ? 'var(--accent-text)' : '#B45309' }}>
                         {index.indexed}<span style={{ fontSize: 13, color: 'var(--text-faint)' }}>/{index.checked}</span>
                       </span>
                     )}
@@ -269,7 +277,7 @@ export function GoogleDashboard() {
                   )}
                 </div>
 
-                <div style={{ ...card, padding: 20 }}>
+                <div className="analytics-card" style={{ ...card, padding: 20 }}>
                   <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Sessions by channel (GA4)</div>
                   {(sessions?.byChannel?.length || 0) > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -301,14 +309,14 @@ export function GoogleDashboard() {
             {((summary?.byDevice?.length || 0) > 0 || (summary?.byCountry?.length || 0) > 0) && (
               <div className="grid lg:grid-cols-2 gap-4" style={{ marginTop: 16 }}>
                 {(summary?.byDevice?.length || 0) > 0 && (
-                  <div style={{ ...card, padding: 20 }}>
+                  <div className="analytics-card" style={{ ...card, padding: 20 }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Top devices</div>
                     <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ textAlign: 'left', color: 'var(--text-faint)', fontSize: 11 }}>
-                          <th style={{ padding: '6px 8px' }}>Device</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
+                          <th scope="col" style={{ padding: '6px 8px' }}>Device</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -324,14 +332,14 @@ export function GoogleDashboard() {
                   </div>
                 )}
                 {(summary?.byCountry?.length || 0) > 0 && (
-                  <div style={{ ...card, padding: 20 }}>
+                  <div className="analytics-card" style={{ ...card, padding: 20 }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 12 }}>Top countries</div>
                     <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ textAlign: 'left', color: 'var(--text-faint)', fontSize: 11 }}>
-                          <th style={{ padding: '6px 8px' }}>Country</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
-                          <th style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
+                          <th scope="col" style={{ padding: '6px 8px' }}>Country</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Clicks</th>
+                          <th scope="col" style={{ padding: '6px 8px', textAlign: 'right' }}>Impr.</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -350,6 +358,7 @@ export function GoogleDashboard() {
             )}
           </>
         )}
+        </SpotlightRegion>
       </div>
     </div>
   );

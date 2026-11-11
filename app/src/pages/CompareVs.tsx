@@ -3,6 +3,7 @@ import { useParams, Navigate, Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { injectSchema, removeSchema } from '@/lib/schema';
 import { competitors } from '@/data/competitors';
 
@@ -119,7 +120,8 @@ export function CompareVs() {
 
   useEffect(() => {
     if (!competitor) return;
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       gsap.fromTo('.cvs-hero', { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out', delay: 0.1 });
 
       gsap.fromTo('.cvs-table', { opacity: 0, y: 28 }, {
@@ -142,7 +144,7 @@ export function CompareVs() {
         scrollTrigger: { trigger: '.cvs-cta', start: 'top 84%', toggleActions: 'play none none reverse' },
       });
     }, pageRef);
-    return () => ctx.revert();
+    return () => mm.revert();
   }, [competitor]);
 
   if (!competitor) return <Navigate to="/compare" replace />;
@@ -155,6 +157,7 @@ export function CompareVs() {
       {/* ── Hero ── */}
       <section className="pt-32 pb-20 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,194,122,0.09) 0%, transparent 70%)' }} />
+        <PageBackground variant="aurora" intensity={0.7} />
         <div className="cvs-hero max-w-3xl mx-auto relative z-10">
           <Link
             to="/compare"

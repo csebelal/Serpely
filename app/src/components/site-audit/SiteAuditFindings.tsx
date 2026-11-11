@@ -16,12 +16,15 @@ const TONE_STATE: Record<Tone, keyof typeof FINDING_STATE_ICONS> = {
   pass: 'good',
 };
 
-const FILTERS: { id: 'all' | Tone; label: string }[] = [
-  { id: 'all', label: 'All findings' },
+export type SeverityFilter = 'actionable' | 'all' | Tone;
+
+const FILTERS: { id: SeverityFilter; label: string }[] = [
+  { id: 'actionable', label: 'Issues to fix' },
   { id: 'high', label: 'Critical' },
   { id: 'medium', label: 'Warnings' },
   { id: 'low', label: 'Opportunities' },
   { id: 'pass', label: 'Passed' },
+  { id: 'all', label: 'All' },
 ];
 
 interface Props {
@@ -32,8 +35,8 @@ interface Props {
   onToggleCategory: (id: CategoryId) => void;
   onSetCollapsed: (ids: CategoryId[]) => void;
   /** Severity filter is owned by the page so the hero can jump to "critical". */
-  severityFilter: 'all' | Tone;
-  onSeverityFilter: (tone: 'all' | Tone) => void;
+  severityFilter: SeverityFilter;
+  onSeverityFilter: (tone: SeverityFilter) => void;
 }
 
 export default function SiteAuditFindings({
@@ -57,8 +60,10 @@ export default function SiteAuditFindings({
       .filter((c) => categoryFilter === 'all' || c.id === categoryFilter)
       .map((c) => ({
         ...c,
+        allFindings: c.findings,
         findings: c.findings.filter((f) => {
-          if (severityFilter !== 'all' && f.tone !== severityFilter) return false;
+          if (severityFilter === 'actionable' && f.tone === 'pass') return false;
+          if (severityFilter !== 'all' && severityFilter !== 'actionable' && f.tone !== severityFilter) return false;
           if (!query) return true;
           return (
             f.title.toLowerCase().includes(query) ||
@@ -71,12 +76,13 @@ export default function SiteAuditFindings({
   }, [categories, categoryFilter, severityFilter, query]);
 
   const pillCounts = useMemo(() => {
-    const out: Record<'all' | Tone, number> = { all: 0, high: 0, medium: 0, low: 0, pass: 0 };
+    const out: Record<SeverityFilter, number> = { actionable: 0, all: 0, high: 0, medium: 0, low: 0, pass: 0 };
     for (const c of categories) {
       if (categoryFilter !== 'all' && c.id !== categoryFilter) continue;
       for (const f of c.findings) {
         if (query && !(f.title.toLowerCase().includes(query) || f.desc.toLowerCase().includes(query))) continue;
         out.all += 1;
+        if (f.tone !== 'pass') out.actionable += 1;
         out[f.tone] += 1;
       }
     }
@@ -98,14 +104,14 @@ export default function SiteAuditFindings({
 
   const visibleCount = useMemo(() => visible.reduce((n, c) => n + c.findings.length, 0), [visible]);
   const totalCount = useMemo(() => categories.reduce((n, c) => n + c.findings.length, 0), [categories]);
-  const hasFilters = Boolean(query) || categoryFilter !== 'all' || severityFilter !== 'all';
+  const hasFilters = Boolean(query) || categoryFilter !== 'all' || severityFilter !== 'actionable';
 
   const expandAll = () => onSetCollapsed([]);
   const collapseAll = () => onSetCollapsed(categories.map((c) => c.id));
   const clearFilters = () => {
     setSearch('');
     setCategoryFilter('all');
-    onSeverityFilter('all');
+    onSeverityFilter('actionable');
   };
 
   if (categories.length === 0) {
@@ -138,11 +144,11 @@ export default function SiteAuditFindings({
             </svg>
             Collapse all
           </button>
-          <button className="btn" id="showAll" type="button" onClick={() => { clearFilters(); expandAll(); }}>
+          <button className="btn" id="showAll" type="button" onClick={() => { setSearch(''); setCategoryFilter('all'); onSeverityFilter('all'); expandAll(); }}>
             <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <polyline points="4 9 12 16 20 9" />
             </svg>
-            Show all findings
+            Expand all
           </button>
         </div>
       </div>
@@ -209,17 +215,17 @@ export default function SiteAuditFindings({
 
       <div className="result-meta">
         <span>
-          <strong id="visibleCount">{visibleCount}</strong> visible findings in this report
+          Showing <strong id="visibleCount">{visibleCount}</strong> {severityFilter === 'actionable' ? 'issues to fix' : 'findings'}
         </span>
-        <span>Click a category to expand or collapse · Use Search to locate a specific issue</span>
+        <span>Click any category to expand · Switch to Passed to view {pillCounts.pass} passed checks</span>
       </div>
 
       <div id="categoryList">
         {visible.map((category) => {
           const isCollapsed = collapsed.has(category.id);
-          const critical = category.findings.filter((f) => f.tone === 'high').length;
-          const warnings = category.findings.filter((f) => f.tone === 'medium' || f.tone === 'low').length;
-          const passed = category.findings.filter((f) => f.tone === 'pass').length;
+          const critical = category.allFindings.filter((f) => f.tone === 'high').length;
+          const warnings = category.allFindings.filter((f) => f.tone === 'medium' || f.tone === 'low').length;
+          const passed = category.allFindings.filter((f) => f.tone === 'pass').length;
           return (
             <section className="category" data-category={category.id} key={category.id}>
               <button
@@ -299,7 +305,9 @@ export default function SiteAuditFindings({
 
       {visible.length === 0 && (
         <div className="no-results" id="noResults">
-          No findings match your current filters. Try another search or clear the filters.
+          {severityFilter === 'actionable' && !query && categoryFilter === 'all'
+            ? 'No open issues found — all checks passed! Switch to the Passed tab to inspect them.'
+            : 'No findings match your current filters. Try another search or clear the filters.'}
         </div>
       )}
 

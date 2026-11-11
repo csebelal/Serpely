@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { injectSchema, removeSchema } from '@/lib/schema';
-import { runPublicAudit, getPublicAudit, getAuditStatus, clientGetMe, type PublicAuditReport } from '@/lib/api';
+import { runPublicAudit, getPublicAudit, getAuditStatus, type PublicAuditReport } from '@/lib/api';
 import { AuditResults, parsePsiMeta } from '@/components/audit/AuditResults';
 import { AUDIT_REDESIGN } from '@/config/audit';
 import SiteAuditReport from '@/components/site-audit/SiteAuditReport';
-import { CompareCard } from '@/components/audit/CompareCard';
-import { GscInsights } from '@/components/audit/GscInsights';
 import { CrawlerAccess } from '@/components/audit/CrawlerAccess';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
 import '../components/audit/print.css';
@@ -79,7 +78,6 @@ export function Audit() {
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
   const [report, setReport] = useState<PublicAuditReport | null>(null);
-  const [plan, setPlan] = useState<string | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -95,12 +93,6 @@ export function Audit() {
 
   const stopPoll = () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   useEffect(() => stopPoll, []);
-
-  // Competitor compare is a paid feature — hidden unless Pro/Business.
-  useEffect(() => {
-    if (!localStorage.getItem('serpely_client_token')) return;
-    clientGetMe().then(r => setPlan(r.data.plan || null)).catch(() => {});
-  }, []);
 
   const loadReport = (data: PublicAuditReport) => {
     setReport(data);
@@ -181,7 +173,6 @@ export function Audit() {
 
   const submit = (e: React.FormEvent) => { e.preventDefault(); runAudit(url); };
   const reAudit = () => { if (report) { setUrl(report.normalizedUrl); runAudit(report.normalizedUrl); } };
-  const auditSite = (target: string) => { setUrl(target); runAudit(target); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   const domain = report ? report.normalizedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
   const completedAt = report ? new Date(report.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
@@ -196,6 +187,8 @@ export function Audit() {
     <div style={{ background: 'var(--bg)', color: 'var(--text)' }}>
       <section className="pt-32 pb-12 px-6 text-center relative overflow-hidden no-print">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,194,122,0.12) 0%, transparent 70%)' }} />
+        {/* Index-stream field: crawl ticks flowing down the hero band */}
+        <PageBackground variant="flow" />
         <div className="max-w-3xl mx-auto relative z-10">
           <span className="pill-s mb-5 inline-block">Free full-site audit</span>
           <h1 className="font-display font-black mb-4" style={{ fontSize: 'clamp(2.4rem,6vw,4rem)', letterSpacing: '-0.05em', lineHeight: 1.02 }}>
@@ -277,16 +270,6 @@ export function Audit() {
                 <div style={{ marginBottom: 20 }}>
                   <SiteAuditReport report={report} shareToken={report.shareToken ?? id ?? null} embedded />
                 </div>
-                {report.priority && (
-                  <div style={{ ...card, marginBottom: 20 }}>
-                    <div style={{ padding: 16, borderRadius: 14, background: '#0A1410', color: '#fff' }}>
-                      <div style={{ fontSize: 12, color: '#3BE39A', fontWeight: 800 }}>FIX FIRST · +{report.priority.impact} PTS</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, margin: '6px 0' }}>{report.priority.title}</div>
-                      <div style={{ fontSize: 13, color: '#B6C7BE' }}>{report.priority.fix}</div>
-                      <Link to="/register" className="btn-accent-s inline-flex" style={{ marginTop: 12 }}>Fix with Serpely agent</Link>
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               <>
@@ -312,14 +295,6 @@ export function Audit() {
                     <div style={{ fontSize: 13, color: '#55655D' }}>
                       {s?.critical ?? 0} critical · {s?.warning ?? 0} warnings · {s?.notice ?? 0} notices · {s?.passed ?? 0} checks passed
                     </div>
-                    {report.priority && (
-                      <div style={{ marginTop: 16, padding: 16, borderRadius: 14, background: '#0A1410', color: '#fff' }}>
-                        <div style={{ fontSize: 12, color: '#3BE39A', fontWeight: 800 }}>FIX FIRST · +{report.priority.impact} PTS</div>
-                        <div style={{ fontSize: 16, fontWeight: 800, margin: '6px 0' }}>{report.priority.title}</div>
-                        <div style={{ fontSize: 13, color: '#B6C7BE' }}>{report.priority.fix}</div>
-                        <Link to="/register" className="btn-accent-s inline-flex" style={{ marginTop: 12 }}>Fix with Serpely agent</Link>
-                      </div>
-                    )}
                 </div>
               </>
             )}
@@ -328,58 +303,41 @@ export function Audit() {
               <CrawlerAccess crawlers={report.aiCrawlers || []} />
             </div>
 
-            {(plan === 'pro' || plan === 'business') && (
-              <div className="no-print" style={{ ...card, marginBottom: 20 }}>
-                <CompareCard defaultUrl={report.normalizedUrl} onAuditSite={auditSite} />
-              </div>
-            )}
-
-            <div className="no-print" style={{ ...card, marginBottom: 20 }}>
-              <GscInsights origin={report.origin || report.normalizedUrl} />
-            </div>
-
             {!AUDIT_REDESIGN && (
               <div style={{ ...card }}>
                 <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800 }}>Issues</h3>
                 <IssuesList issues={report.issues} />
               </div>
             )}
-
-            <div style={{ ...card, marginTop: 20, textAlign: 'center' }}>
-              <span className="pill-s mb-4 inline-block">Serpely Pro</span>
-              <h2 className="font-display text-2xl font-bold mb-3">Want daily tracking + <span className="text-gradient">AI citation monitoring?</span></h2>
-              <div className="flex flex-wrap justify-center" style={{ gap: 10 }}>
-                <Link to="/register" className="btn-accent-s inline-flex">Start Free Trial</Link>
-                <Link to="/pricing" className="btn-secondary-s inline-flex">See plans</Link>
-              </div>
-            </div>
           </div>
         </section>
       )}
 
-      <section className="px-4 sm:px-6 py-14 no-print">
-        <div className="max-w-6xl mx-auto text-center">
-          <h2 className="font-display font-black mb-3" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', letterSpacing: '-0.03em', color: 'var(--text)' }}>
-            Run it. Read it. Fix it.
-          </h2>
-          <p className="mx-auto mb-8" style={{ color: 'var(--text-soft)', fontSize: 15, lineHeight: 1.7, maxWidth: 640 }}>
-            Three steps between you and a site Google and AI engines love.
-          </p>
-          <div className="grid sm:grid-cols-3" style={{ gap: 14, textAlign: 'left' }}>
-            {[
-              { n: '01', t: 'Run the scan', d: 'Drop in any URL. We crawl up to 300 pages and pull Google lab + real-visitor data.' },
-              { n: '02', t: 'Read the grades', d: 'Five letter grades — SEO, GEO, Links, Usability, Performance — with every issue explained.' },
-              { n: '03', t: 'Fix what matters', d: 'Start with the Fix-First box or hand issues to the Serpely agent one by one.' },
-            ].map(s => (
-              <div key={s.n} style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))', borderRadius: 18, padding: 22 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#00A868' }}>{s.n}</div>
-                <div style={{ fontSize: 17, fontWeight: 800, margin: '6px 0', color: 'var(--text)' }}>{s.t}</div>
-                <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--text-soft)' }}>{s.d}</div>
-              </div>
-            ))}
+      {!report && (
+        <section className="px-4 sm:px-6 py-14 no-print">
+          <div className="max-w-6xl mx-auto text-center">
+            <h2 className="font-display font-black mb-3" style={{ fontSize: 'clamp(1.6rem,4vw,2.4rem)', letterSpacing: '-0.03em', color: 'var(--text)' }}>
+              Run it. Read it. Fix it.
+            </h2>
+            <p className="mx-auto mb-8" style={{ color: 'var(--text-soft)', fontSize: 15, lineHeight: 1.7, maxWidth: 640 }}>
+              Three steps between you and a site Google and AI engines love.
+            </p>
+            <div className="grid sm:grid-cols-3" style={{ gap: 14, textAlign: 'left' }}>
+              {[
+                { n: '01', t: 'Run the scan', d: 'Drop in any URL. We crawl up to 300 pages and pull Google lab + real-visitor data.' },
+                { n: '02', t: 'Read the grades', d: 'Five letter grades — SEO, GEO, Links, Usability, Performance — with every issue explained.' },
+                { n: '03', t: 'Fix what matters', d: 'Start with the Fix-First box or hand issues to the Serpely agent one by one.' },
+              ].map(s => (
+                <div key={s.n} style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))', borderRadius: 18, padding: 22 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#00754A' }}>{s.n}</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, margin: '6px 0', color: 'var(--text)' }}>{s.t}</div>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--text-soft)' }}>{s.d}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

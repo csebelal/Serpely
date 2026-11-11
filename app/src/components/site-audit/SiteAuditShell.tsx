@@ -18,9 +18,9 @@
  */
 import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import SiteAuditFindings from './SiteAuditFindings';
+import SiteAuditFindings, { type SeverityFilter } from './SiteAuditFindings';
 import SiteAuditDrawer from './SiteAuditDrawer';
-import type { AuditViewModel, CategoryId, ReportFinding, Tone } from './report';
+import type { AuditViewModel, CategoryId, ReportFinding } from './report';
 import '../../styles/audit-prototype.css';
 
 interface Props {
@@ -28,8 +28,8 @@ interface Props {
   collapsed: ReadonlySet<CategoryId>;
   onToggleCategory: (id: CategoryId) => void;
   onSetCollapsed: (ids: CategoryId[]) => void;
-  severityFilter: 'all' | Tone;
-  onSeverityFilter: (tone: 'all' | Tone) => void;
+  severityFilter: SeverityFilter;
+  onSeverityFilter: (tone: SeverityFilter) => void;
   onOpenFinding: (finding: ReportFinding) => void;
   onCloseFinding: () => void;
   openFinding: ReportFinding | null;
@@ -72,6 +72,8 @@ export default function SiteAuditShell({
     input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     input?.focus({ preventScroll: true });
   };
+
+  const ContainerTag = embedded ? 'div' : 'main';
 
   return (
     <div className={`sa-root${embedded ? ' sa-embedded' : ''}`}>
@@ -118,7 +120,7 @@ export default function SiteAuditShell({
         </div> 
       </header>
       )}
-      <main className="container"> 
+      <ContainerTag className="container"> 
         {!embedded && (<>
         <nav className="breadcrumb" aria-label="Breadcrumb"> 
           <span>Workspace
@@ -321,107 +323,37 @@ export default function SiteAuditShell({
             </div> 
             {vm.forecast && (
               <div className="crawl-line">
-                <span>Score potential
+                <span>Projected score
                 </span>
-                <strong>{vm.forecast.quickWins} quick wins · {vm.forecast.allFixes} all fixes
+                <strong>{vm.forecast.quickWins}/100 quick wins · {vm.forecast.allFixes}/100 all fixes
                 </strong>
               </div>
             )}
-          </div> 
-        </section> 
-        <section className="top-grid"> 
-          <article className="card panel"> 
-            <div className="panel-header"> 
-              <div> 
-                <h3>Audit summary
-                </h3> 
-                <p>See the distribution of findings before diving into detail.
-                </p> 
-              </div> 
-              <span className="small-label">Crawl overview
-              </span> 
-            </div> 
-            <div className="issue-stats"> 
-              <div className="issue-stat">
-                <b className="critical">{vm.counts.high}
-                </b>
-                <span>Critical
-                </span>
-              </div> 
-              <div className="issue-stat">
-                <b className="warning">{vm.counts.medium}
-                </b>
-                <span>Warnings
-                </span>
-              </div> 
-              <div className="issue-stat">
-                <b style={{ "color": "var(--info-2)" }}>{vm.counts.low}
-                </b>
-                <span>Opportunities
-                </span>
-              </div> 
-              <div className="issue-stat">
-                <b className="passed">{vm.counts.pass}
-                </b>
-                <span>Passed
-                </span>
-              </div> 
-            </div> 
+          </div>
+          <div style={{ marginTop: 14 }}>
             <div className="progress-label">
-              <span>Checks passed
-              </span>
-              <strong>{passRate}% passed
-              </strong>
-            </div> 
-            <div className="progress">
-              <span style={{ width: `${passRate}%` }}>
-              </span>
-            </div> 
-            <div className="action-strip"> 
-              <div className="action-icon" aria-hidden="true"> 
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg> 
-              </div> 
-              <div className="action-text">
-                <b>Start with the {vm.counts.high} critical issues
-                </b>
-                <span>Fix high-impact crawl and indexing blockers first.
-                </span>
-              </div> 
-              <button className="btn" data-jump="high" type="button" onClick={() => onSeverityFilter('high')}>View critical
-              </button> 
-            </div> 
-          </article> 
-          <article className="card panel"> 
-            <div className="panel-header"> 
-              <div> 
-                <h3>Audit coverage
-                </h3> 
-                <p>Quick status across key SEO areas.
-                </p> 
-              </div> 
-              <button className="btn" style={{ "padding": "6px 11px" }} id="expandAll" type="button"> 
-                <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <polyline points="4 9 12 16 20 9" />
-                </svg>
-                Expand all
-
-              </button> 
-            </div> 
-            <div className="coverage-list">
-              {vm.coverage.map((row) => (
-                <div className="coverage-item" key={row.id}>
-                  <div>
-                    <div className="coverage-name">{row.name}</div>
-                    <div className="coverage-detail">{row.detail}</div>
-                  </div>
-                  <span className={`coverage-state ${row.state}`}>{row.label}</span>
-                </div>
-              ))}
+              <span>Checks passed</span>
+              <strong>{passRate}% passed ({vm.counts.pass}/{vm.counts.all})</strong>
             </div>
-          </article> 
-        </section> 
+            <div className="progress">
+              <span style={{ width: `${passRate}%` }} />
+            </div>
+            {vm.counts.high > 0 && (
+              <div className="action-strip">
+                <div className="action-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </div>
+                <div className="action-text">
+                  <b>Start with the {vm.counts.high} critical issue{vm.counts.high === 1 ? '' : 's'}</b>
+                  <span>Fix high-impact crawl and indexing blockers first.</span>
+                </div>
+                <button className="btn" data-jump="high" type="button" onClick={() => onSeverityFilter('high')}>View critical</button>
+              </div>
+            )}
+          </div>
+        </section>
       <SiteAuditFindings
         categories={vm.categories}
         collapsed={collapsed}
@@ -431,7 +363,7 @@ export default function SiteAuditShell({
         onSeverityFilter={onSeverityFilter}
         onOpenFinding={onOpenFinding}
       />
-      </main>
+      </ContainerTag>
       {!embedded && (
       <footer> 
         <span>© 2026 Serpely · Website intelligence

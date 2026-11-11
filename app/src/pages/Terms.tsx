@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { CheckCircle2, ShieldCheck, RotateCcw } from 'lucide-react';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 
 const SECTIONS = [
   { id: 'definitions', num: '01', title: 'Definitions' },
@@ -22,9 +24,9 @@ const SECTIONS = [
 ];
 
 const HIGHLIGHTS = [
-  { icon: '✅', title: 'Fair internal use', body: 'Use Serpely for your own SEO work — monitor, analyze, and optimize.' },
-  { icon: '©️', title: 'You own your content', body: 'Your uploads and generated content stay yours, always.' },
-  { icon: '↩️', title: 'Cancel anytime', body: 'Cancel in account settings — paid access runs till period end.' },
+  { Icon: CheckCircle2, title: 'Fair internal use', body: 'Use Serpely for your own SEO work — monitor, analyze, and optimize.' },
+  { Icon: ShieldCheck, title: 'You own your content', body: 'Your uploads and generated content stay yours, always.' },
+  { Icon: RotateCcw, title: 'Cancel anytime', body: 'Cancel in account settings — paid access runs till period end.' },
 ];
 
 export function Terms() {
@@ -77,6 +79,7 @@ export function Terms() {
 
       <section className="pt-32 pb-12 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,194,122,0.13) 0%, transparent 70%)' }} />
+        <PageBackground variant="aurora" intensity={0.6} />
         <div className="max-w-3xl mx-auto relative z-10">
           <span className="pill-s mb-5 inline-block">Legal · Terms</span>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-none mb-5" style={{ letterSpacing: '-0.05em' }}>
@@ -92,7 +95,9 @@ export function Terms() {
         <div className="max-w-5xl mx-auto grid sm:grid-cols-3 gap-4">
           {HIGHLIGHTS.map(h => (
             <div key={h.title} className="card-s p-5 flex gap-3.5 items-start">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: '#00C27A15', border: '1px solid #00C27A30' }}>{h.icon}</div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#00C27A15', border: '1px solid #00C27A30', color: '#00A868' }}>
+                <h.Icon className="w-5 h-5" aria-hidden="true" />
+              </div>
               <div>
                 <p className="font-black text-sm mb-1" style={{ letterSpacing: '-0.01em' }}>{h.title}</p>
                 <p className="text-[13px] leading-relaxed" style={{ color: 'var(--text-soft)' }}>{h.body}</p>

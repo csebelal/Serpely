@@ -6,13 +6,17 @@ export function SubscribersManager() {
   const [stats, setStats] = useState<SubscriberStats>({ total: 0, active: 0, thisWeek: 0, unsubscribed: 0 });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   async function load() {
     setLoading(true);
+    setError('');
     try {
       const res = await getSubscribers();
       setSubscribers(res.data.subscribers);
       setStats(res.data.stats);
+    } catch {
+      setError('Failed to load subscribers.');
     } finally {
       setLoading(false);
     }
@@ -21,7 +25,12 @@ export function SubscribersManager() {
   useEffect(() => { load(); }, []);
 
   function toggleSelect(id: string) {
-    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelected(s => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   }
 
   function toggleAll() {
@@ -29,32 +38,52 @@ export function SubscribersManager() {
   }
 
   async function toggleActive(id: string, active: boolean) {
-    await updateSubscriber(id, !active);
-    setSubscribers(s => s.map(x => x._id === id ? { ...x, active: !active } : x));
+    setError('');
+    try {
+      await updateSubscriber(id, !active);
+      setSubscribers(s => s.map(x => x._id === id ? { ...x, active: !active } : x));
+    } catch {
+      setError('Failed to update subscriber status.');
+    }
   }
 
   async function remove(id: string) {
     if (!confirm('Delete subscriber?')) return;
-    await deleteSubscriber(id);
-    setSubscribers(s => s.filter(x => x._id !== id));
-    setSelected(s => { const n = new Set(s); n.delete(id); return n; });
+    setError('');
+    try {
+      await deleteSubscriber(id);
+      setSubscribers(s => s.filter(x => x._id !== id));
+      setSelected(s => { const n = new Set(s); n.delete(id); return n; });
+    } catch {
+      setError('Failed to delete subscriber.');
+    }
   }
 
   async function bulkDelete() {
     if (!confirm(`Delete ${selected.size} subscribers?`)) return;
-    await bulkDeleteSubscribers(Array.from(selected));
-    setSubscribers(s => s.filter(x => !selected.has(x._id)));
-    setSelected(new Set());
+    setError('');
+    try {
+      await bulkDeleteSubscribers(Array.from(selected));
+      setSubscribers(s => s.filter(x => !selected.has(x._id)));
+      setSelected(new Set());
+    } catch {
+      setError('Failed to delete selected subscribers.');
+    }
   }
 
   async function doExport() {
-    const res = await exportSubscribers();
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'subscribers.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    setError('');
+    try {
+      const res = await exportSubscribers();
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'subscribers.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to export subscribers CSV.');
+    }
   }
 
   const statCards = [
@@ -72,6 +101,11 @@ export function SubscribersManager() {
           Export CSV
         </button>
       </div>
+      {error && (
+        <div style={{ padding: '10px 14px', background: '#fef2f2', color: '#dc2626', borderRadius: 10, fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+          {error}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
         {statCards.map(c => (

@@ -489,14 +489,14 @@ export function aggregateCrawl(pages: CrawledPage[], origin: string): CrawlAggre
   }
   const genericAnchors = [...anchorCounts.entries()]
     .map(([text, count]) => ({ text, count })).sort((a, b) => b.count - a.count).slice(0, 5);
-  // Log-less crawl-budget estimate: pages unlikely to ever index
+  // Log-less crawl-budget estimate: pages with actual indexability blockers
+  // (non-200 status, meta robots noindex/none, or canonical pointing elsewhere).
   const canonSet = new Set(canonicalConflicts.map(c => keyOf(c.url)));
   const nonIndexable = crawled.filter(p => {
     const k = keyOf(p.finalUrl || p.url);
     if (p.status !== 200) return true;
     if (/noindex|none/i.test(p.robotsMeta || '')) return true;
     if (canonSet.has(k)) return true;
-    if (p.wordCount > 0 && p.wordCount < 100) return true;
     return false;
   }).slice(0, 10).map(p => p.url);
 

@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { injectSchema, removeSchema } from '@/lib/schema';
 
 export function FAQ() {
@@ -86,6 +87,7 @@ export function FAQ() {
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,194,122,0.12) 0%, transparent 70%)' }} />
+        <PageBackground variant="aurora" intensity={0.7} />
         <div className="max-w-2xl mx-auto relative z-10">
           <span className="pill-s mb-5 inline-block">FAQ</span>
           <h1 className="font-display text-4xl sm:text-5xl font-bold leading-tight mb-5">

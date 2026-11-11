@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
-
-gsap.registerPlugin(ScrollTrigger);
+import { GlowCard, Reveal, useMotionPrefs } from '@/components/motion';
 
 interface StepType {
   num: string;
@@ -14,7 +11,10 @@ interface StepType {
 }
 
 export function HowItWorksSection() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const stepsWrapRef = useRef<HTMLDivElement>(null);
+  const { reducedMotion } = useMotionPrefs();
+  const [lineProgress, setLineProgress] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const [pillText, setPillText] = useState('How It Works');
   const [headline, setHeadline] = useState('A Continuous SEO\nWorkflow');
@@ -53,20 +53,6 @@ export function HowItWorksSection() {
   ]);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo('.hiw-header', { opacity: 0, y: 28 }, {
-        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 70%', toggleActions: 'play none none reverse' },
-      });
-      gsap.fromTo('.hiw-step', { opacity: 0, x: 18 }, {
-        opacity: 1, x: 0, duration: 0.45, stagger: 0.1, ease: 'power2.out',
-        scrollTrigger: { trigger: '.hiw-steps', start: 'top 75%', toggleActions: 'play none none reverse' },
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
-
-  useEffect(() => {
     getSection('how-it-works').then(r => {
       const d = r.data.data as Record<string, unknown>;
       if (typeof d.pillText === 'string') setPillText(d.pillText);
@@ -78,15 +64,53 @@ export function HowItWorksSection() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (reducedMotion) return;
+    let raf = 0;
+
+    const update = () => {
+      raf = 0;
+      const el = stepsWrapRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || 800;
+      const anchor = vh * 0.58;
+      const raw = (anchor - rect.top) / Math.max(rect.height, 1);
+      const clamped = Math.min(1, Math.max(0, raw));
+      setLineProgress(clamped);
+
+      const children = el.querySelectorAll<HTMLElement>('.hiw-step-row');
+      let current = 0;
+      children.forEach((child, idx) => {
+        const cr = child.getBoundingClientRect();
+        if (cr.top <= anchor + 40) current = idx;
+      });
+      setActiveIndex(current);
+    };
+
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [reducedMotion, steps.length]);
+
   const stepsWithAccent = steps.map((s, i) => ({ ...s, accent: i === steps.length - 1 }));
 
   return (
-    <section ref={sectionRef} id="how-it-works" className="py-28 px-6 relative">
+    <section id="how-it-works" className="py-28 px-6 relative section-glow-edge">
       <div className="max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 
           {/* Left — sticky */}
-          <div className="hiw-header lg:sticky lg:top-28">
+          <Reveal className="lg:sticky lg:top-28">
             <div className="pill-s mb-5" style={{ width: 'fit-content' }}>
               <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot flex-shrink-0" style={{ background: '#00C27A' }} />
               {pillText}
@@ -101,7 +125,7 @@ export function HowItWorksSection() {
             <p className="text-lg max-w-md mb-8 font-medium" style={{ color: 'var(--text-soft)' }}>
               {subtext}
             </p>
-            <div className="card-s p-5 max-w-sm">
+            <GlowCard className="card-s p-5 max-w-sm">
               <div className="flex items-center gap-2 mb-3">
                 <svg width="20" height="11" viewBox="0 0 36 20" fill="none">
                   <path d="M9 4 C 4 4 1 7 1 10 C 1 13 4 16 9 16 C 14 16 18 4 27 4 C 32 4 35 7 35 10 C 35 13 32 16 27 16 C 18 16 14 4 9 4 Z" stroke="#00C27A" strokeWidth="2.4"/>
@@ -111,51 +135,65 @@ export function HowItWorksSection() {
               <p className="text-sm leading-relaxed font-medium" style={{ color: 'var(--text-soft)' }}>
                 {loopCardBody}
               </p>
-            </div>
-          </div>
+            </GlowCard>
+          </Reveal>
 
-          {/* Right — steps */}
-          <div className="space-y-5 relative hiw-steps">
-            <div className="absolute left-7 top-2 bottom-2 w-px hidden md:block" style={{ background: 'linear-gradient(180deg, transparent, #00C27A 20%, #00C27A 80%, transparent)' }} />
+          {/* Right — connected steps with scroll-drawn line */}
+          <div ref={stepsWrapRef} className="space-y-5 relative">
+            {/* Static guide rail */}
+            <div
+              aria-hidden="true"
+              className="absolute left-7 top-4 bottom-4 w-[2px] hidden md:block rounded-full"
+              style={{ background: 'hsl(var(--border))' }}
+            />
+            {/* Scroll-drawn progress rail */}
+            <div
+              aria-hidden="true"
+              className="absolute left-7 top-4 bottom-4 w-[2px] hidden md:block rounded-full origin-top"
+              style={{
+                background: 'linear-gradient(180deg, #00C27A 0%, #00FF88 100%)',
+                transform: `scaleY(${reducedMotion ? 1 : lineProgress})`,
+                boxShadow: '0 0 12px rgba(0, 194, 122, 0.45)',
+              }}
+            />
 
-            {stepsWithAccent.map((step) => (
-              <div key={step.num} className="hiw-step flex gap-5 relative">
-                <div
-                  className="flex-shrink-0 z-10 w-14 h-14 rounded-[14px] flex items-center justify-center font-black text-[22px]"
-                  style={step.accent
-                    ? { background: '#00C27A', color: '#0A0A0A', letterSpacing: '-0.04em' }
-                    : { background: 'var(--text)', color: 'var(--bg)', letterSpacing: '-0.04em' }}
-                >
-                  {step.num}
-                </div>
-                <div
-                  className={`p-6 flex-1 rounded-2xl ${step.accent ? 'card-accent-s' : 'card-s'}`}
-                  style={{ transition: 'transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease' }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.transform = 'translateY(-3px)';
-                    el.style.boxShadow = step.accent
-                      ? '0 10px 28px rgba(0,194,122,0.18)'
-                      : '0 8px 24px rgba(0,0,0,0.10)';
-                    if (!step.accent) el.style.borderColor = 'rgba(0,194,122,0.35)';
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.transform = '';
-                    el.style.boxShadow = '';
-                    el.style.borderColor = '';
-                  }}
-                >
-                  <h3 className="font-extrabold text-xl mb-2" style={{ color: 'var(--text)', letterSpacing: '-0.025em' }}>{step.title}</h3>
-                  <p className="text-sm leading-relaxed mb-4 font-medium" style={{ color: step.accent ? 'var(--text-mid)' : 'var(--text-soft)' }}>{step.desc}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {step.tags.map(tag => (
-                      <span key={tag} className={step.accent ? 'tag-accent-s tag-s' : 'tag-s'}>{tag}</span>
-                    ))}
+            {stepsWithAccent.map((step, idx) => {
+              const isHighlighted = reducedMotion ? step.accent : idx <= activeIndex;
+              const isCurrent = !reducedMotion && idx === activeIndex;
+              return (
+                <Reveal key={step.num} delay={idx * 85} x={18} y={8} className="hiw-step-row">
+                  <div className="flex gap-5 relative">
+                    <div
+                      className="flex-shrink-0 z-10 w-14 h-14 rounded-[14px] flex items-center justify-center font-black text-[22px] transition-all duration-300"
+                      style={
+                        isHighlighted || step.accent
+                          ? {
+                              background: '#00C27A',
+                              color: '#0A0A0A',
+                              letterSpacing: '-0.04em',
+                              boxShadow: isCurrent ? '0 0 0 6px rgba(0, 194, 122, 0.16), 0 8px 20px rgba(0, 194, 122, 0.25)' : undefined,
+                            }
+                          : { background: 'var(--text)', color: 'var(--bg)', letterSpacing: '-0.04em' }
+                      }
+                    >
+                      {step.num}
+                    </div>
+                    <GlowCard
+                      featured={isCurrent}
+                      className={`p-6 flex-1 rounded-2xl ${step.accent ? 'card-accent-s' : 'card-s'}`}
+                    >
+                      <h3 className="font-extrabold text-xl mb-2" style={{ color: 'var(--text)', letterSpacing: '-0.025em' }}>{step.title}</h3>
+                      <p className="text-sm leading-relaxed mb-4 font-medium" style={{ color: step.accent ? 'var(--text-mid)' : 'var(--text-soft)' }}>{step.desc}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {step.tags.map(tag => (
+                          <span key={tag} className={step.accent ? 'tag-accent-s tag-s' : 'tag-s'}>{tag}</span>
+                        ))}
+                      </div>
+                    </GlowCard>
                   </div>
-                </div>
-              </div>
-            ))}
+                </Reveal>
+              );
+            })}
           </div>
 
         </div>

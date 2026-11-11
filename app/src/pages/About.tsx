@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -143,7 +144,8 @@ export function About() {
   const teamRef     = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       gsap.from('.about-hero-el', { opacity: 0, y: 28, duration: 0.7, stagger: 0.1, ease: 'power2.out', scrollTrigger: { trigger: heroRef.current, start: 'top 80%' } });
       gsap.from('.about-stat',    { opacity: 0, y: 20, scale: 0.95, duration: 0.5, stagger: 0.08, ease: 'power2.out', scrollTrigger: { trigger: statsRef.current, start: 'top 80%' } });
       gsap.from('.about-story-el',    { opacity: 0, x: -24, duration: 0.7, stagger: 0.12, ease: 'power2.out', scrollTrigger: { trigger: storyRef.current, start: 'top 75%' } });
@@ -165,7 +167,7 @@ export function About() {
       // Team
       gsap.from('.about-member', { opacity: 0, y: 20, scale: 0.96, duration: 0.5, stagger: 0.1, ease: 'power2.out', scrollTrigger: { trigger: teamRef.current, start: 'top 80%' } });
     });
-    return () => ctx.revert();
+    return () => mm.revert();
   }, []);
 
   return (
@@ -174,6 +176,7 @@ export function About() {
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section ref={heroRef} className="pt-32 pb-20 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,194,122,0.13) 0%, transparent 70%)' }} />
+        <PageBackground variant="aurora" intensity={0.7} />
         <div className="max-w-3xl mx-auto relative z-10">
           <span className="pill-s mb-5 inline-block about-hero-el">About Serpely</span>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-none mb-6 about-hero-el" style={{ letterSpacing: '-0.05em' }}>

@@ -269,6 +269,33 @@ if (env.MONGO_URI) {
 
       const anonResend = await req('POST', '/api/users/resend-verification', {});
       check('resend-verification: anonymous -> 401', anonResend.status === 401, `got ${anonResend.status}`);
+
+      // Client httpOnly cookie session + CSRF + scope isolation
+      const setCookies = r.headers.getSetCookie ? r.headers.getSetCookie() : [];
+      const rawClient = setCookies.find(c => c.startsWith('serpely_client='));
+      check('client cookie: register sets serpely_client', Boolean(rawClient));
+      if (rawClient) {
+        const clientCookie = rawClient.split(';')[0];
+        check('client cookie: HttpOnly flag set', /httponly/i.test(rawClient));
+        check('client cookie: SameSite=Lax', /samesite=lax/i.test(rawClient));
+
+        const me = await req('GET', '/api/users/me', { headers: { Cookie: clientCookie } });
+        check('client cookie: /api/users/me via cookie -> 200', me.status === 200, `got ${me.status}`);
+
+        const csrfEvil = await req('PUT', '/api/users/me', {
+          headers: { Cookie: clientCookie, Origin: 'https://evil.example' },
+          body: { name: 'Attacker' },
+        });
+        check('csrf: client cookie write with evil Origin -> 403', csrfEvil.status === 403, `got ${csrfEvil.status}`);
+
+        const crossAdmin = await req('GET', '/api/auth/me', { token });
+        check('scope: client JWT rejected on /api/auth/me -> 401', crossAdmin.status === 401, `got ${crossAdmin.status}`);
+
+        const out = await req('POST', '/api/users/logout', { headers: { Cookie: clientCookie } });
+        check('client cookie: logout -> 200', out.status === 200, `got ${out.status}`);
+        const cleared = out.headers.getSetCookie ? out.headers.getSetCookie().join(';') : '';
+        check('client cookie: logout clears serpely_client', /serpely_client=($|;)/.test(cleared), cleared);
+      }
     }
   } finally {
     if (userId) await users.deleteOne({ _id: new mongoose.Types.ObjectId(userId) });
@@ -404,6 +431,15 @@ if (!adminId) {
       const del = await req('DELETE', `/api/auth/users/${ownerId}`, { token });
       check('cookie: temp owner cleaned up', del.status === 200, `got ${del.status}`);
     }
+  }
+
+  // Admin JWT must never authorise client routes, and invalid consent-log dates must return 400.
+  {
+    const adminSessToken = jwt.sign({ sub: adminId, typ: 'admin' }, env.JWT_SECRET, { expiresIn: '5m' });
+    const crossClient = await req('GET', '/api/users/me', { token: adminSessToken });
+    check('scope: admin JWT rejected on /api/users/me -> 401', crossClient.status === 401, `got ${crossClient.status}`);
+    const badDate = await req('GET', '/api/analytics/consent-log?from=not-a-date', { token: adminSessToken });
+    check('validation: consent-log invalid date -> 400', badDate.status === 400, `got ${badDate.status}`);
   }
 
   // Reports are addressed only by their random 32-hex shareToken. A bare _id is

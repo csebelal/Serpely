@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSection } from '@/lib/api';
+import { Marquee, Reveal } from '@/components/motion';
 
 export function LogosMarqueeSection() {
   const [label, setLabel] = useState('Integrated with tools your team already uses');
@@ -24,31 +25,29 @@ export function LogosMarqueeSection() {
     { name: 'Webflow',               img: 'processed-logos/ribbon-webflow.png',     minWidth: 240, imgH: 44 },
   ];
 
-  const doubled = [...logos, ...logos];
-
   return (
-    <section className="py-10 px-6 border-y relative" style={{ borderColor: 'hsl(var(--border))' }}>
+    <section className="py-10 px-6 border-y relative section-glow-edge" style={{ borderColor: 'hsl(var(--border))' }}>
       <div className="max-w-6xl mx-auto">
-        <p className="text-[12px] font-bold uppercase text-center mb-5" style={{ color: 'var(--text-faint)', letterSpacing: '0.16em' }}>
-          {label}
-        </p>
-        <div className="overflow-hidden marquee-mask">
-          <div className="flex w-max animate-marquee items-center" style={{ gap: '52px' }}>
-            {doubled.map((logo, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center justify-center flex-shrink-0"
-                style={{ height: 56, minWidth: logo.minWidth }}
-              >
-                <img
-                  src={logo.img}
-                  alt={logo.name}
-                  style={{ height: logo.imgH, maxWidth: 220, width: 'auto', objectFit: 'contain', filter: 'var(--logo-filter)' }}
-                />
-              </span>
-            ))}
-          </div>
-        </div>
+        <Reveal y={14}>
+          <p className="text-[12px] font-bold uppercase text-center mb-5" style={{ color: 'var(--text-faint)', letterSpacing: '0.16em' }}>
+            {label}
+          </p>
+        </Reveal>
+        <Marquee direction="left" durationSec={35} gapPx={52} pauseOnHover maskClassName="marquee-mask">
+          {logos.map((logo) => (
+            <span
+              key={logo.name}
+              className="inline-flex items-center justify-center flex-shrink-0 opacity-85 hover:opacity-100 transition-opacity duration-200"
+              style={{ height: 56, minWidth: logo.minWidth }}
+            >
+              <img
+                src={logo.img}
+                alt={logo.name}
+                style={{ height: logo.imgH, maxWidth: 220, width: 'auto', objectFit: 'contain', filter: 'var(--logo-filter)' }}
+              />
+            </span>
+          ))}
+        </Marquee>
       </div>
     </section>
   );

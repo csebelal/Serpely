@@ -612,41 +612,48 @@ export function Integrations() {
 
       {/* ── Guide Modal ─────────────────────────────────────────────────── */}
       {guideItem && (
-        <div onClick={()=>setGuideItem(null)} style={{position:'fixed',inset:0,zIndex:80,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${guideItem.name} Setup Guide`}
+          onKeyDown={e => { if (e.key === 'Escape') setGuideItem(null); }}
+          onClick={()=>setGuideItem(null)}
+          style={{position:'fixed',inset:0,zIndex:80,background:'rgba(0,0,0,0.6)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}
+        >
           <div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:560,maxHeight:'90vh',overflow:'auto',borderRadius:16,background:'var(--card-bg)',border:'1px solid hsl(var(--border))',boxShadow:'0 24px 80px rgba(0,0,0,0.5)'}}>
             <div style={{display:'flex',alignItems:'center',gap:12,padding:'16px 20px',borderBottom:'1px solid hsl(var(--border))',position:'sticky',top:0,background:'var(--card-bg)',zIndex:2}}>
               <div style={{width:36,height:36,borderRadius:10,background:guideItem.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800,color:'#fff'}}>{guideItem.abbr}</div>
               <div style={{flex:1}}>
                 <p style={{fontWeight:800,fontSize:14,margin:0}}>{guideItem.name} — Setup Guide</p>
-                <p style={{fontSize:11.5,color:'var(--text-faint)',margin:'2px 0 0'}}>Connect in 3 steps, no VPS required</p>
+                <p style={{fontSize:11.5,color:'var(--text-soft)',margin:'2px 0 0'}}>Connect in 3 steps, no VPS required</p>
               </div>
-              <button onClick={()=>setGuideItem(null)} style={{border:'1px solid hsl(var(--border))',background:'transparent',color:'var(--text-soft)',borderRadius:8,width:28,height:28,cursor:'pointer',fontSize:14}}>✕</button>
+              <button type="button" aria-label="Close setup guide" onClick={()=>setGuideItem(null)} style={{border:'1px solid hsl(var(--border))',background:'transparent',color:'var(--text-soft)',borderRadius:8,width:28,height:28,cursor:'pointer',fontSize:14}}>✕</button>
             </div>
             <div style={{padding:'18px 20px 22px',display:'flex',flexDirection:'column',gap:14}}>
               <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px 14px'}}>
                 <p style={{fontWeight:700,fontSize:12,margin:'0 0 8px'}}>Step 1 — MCP URL</p>
                 <div style={{display:'flex',gap:8}}>
-                  <input value={mcpUrl} onChange={e=>setMcpUrl(e.target.value)} placeholder="https://serpely.com/mcp" style={{flex:1,border:'1px solid hsl(var(--border))',borderRadius:8,background:'var(--bg)',color:'var(--text)',fontSize:12,padding:'8px 10px',outline:'none',fontFamily:'monospace'}} />
-                  <button onClick={()=>copyText('url', mcpUrl)} style={{fontSize:11,fontWeight:700,padding:'8px 12px',borderRadius:8,border:'1px solid #00C27A',background:copied==='url'?'#00C27A':'transparent',color:copied==='url'?'#fff':'#00C27A',cursor:'pointer'}}>{copied==='url'?'Copied':'Copy'}</button>
+                  <input aria-label="MCP URL" value={mcpUrl} onChange={e=>setMcpUrl(e.target.value)} placeholder="https://serpely.com/mcp" className="font-mono" style={{flex:1,border:'1px solid hsl(var(--border))',borderRadius:8,background:'var(--bg)',color:'var(--text)',fontSize:12,padding:'8px 10px'}} />
+                  <button type="button" onClick={()=>copyText('url', mcpUrl)} style={{fontSize:11,fontWeight:700,padding:'8px 12px',borderRadius:8,border:'1px solid #00C27A',background:copied==='url'?'#00C27A':'transparent',color:copied==='url'?'#0A0A0A':'var(--accent-text)',cursor:'pointer'}}>{copied==='url'?'Copied':'Copy'}</button>
                 </div>
               </div>
               <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px 14px'}}>
-                <p style={{fontWeight:700,fontSize:12,margin:'0 0 8px'}}>Step 2 — API Key <span style={{fontWeight:500,color:'var(--text-faint)'}}>(Get it from Profile → API Keys)</span></p>
+                <p style={{fontWeight:700,fontSize:12,margin:'0 0 8px'}}>Step 2 — API Key <span style={{fontWeight:500,color:'var(--text-soft)'}}>(Get it from Profile → API Keys)</span></p>
                 <div style={{display:'flex',gap:8}}>
-                  <input value={mcpKey} onChange={e=>setMcpKey(e.target.value)} placeholder="sk_live_..." type="password" style={{flex:1,border:'1px solid hsl(var(--border))',borderRadius:8,background:'var(--bg)',color:'var(--text)',fontSize:12,padding:'8px 10px',outline:'none',fontFamily:'monospace'}} />
-                  <button onClick={()=>copyText('keytest', `${mcpUrl}/health`)} style={{fontSize:11,fontWeight:700,padding:'8px 12px',borderRadius:8,border:'1px solid hsl(var(--border))',background:'transparent',color:'var(--text-soft)',cursor:'pointer'}}>{copied==='keytest'?'Copied':'Copy URL'}</button>
+                  <input aria-label="API Key" value={mcpKey} onChange={e=>setMcpKey(e.target.value)} placeholder="sk_live_..." type="password" className="font-mono" style={{flex:1,border:'1px solid hsl(var(--border))',borderRadius:8,background:'var(--bg)',color:'var(--text)',fontSize:12,padding:'8px 10px'}} />
+                  <button type="button" onClick={()=>copyText('keytest', `${mcpUrl}/health`)} style={{fontSize:11,fontWeight:700,padding:'8px 12px',borderRadius:8,border:'1px solid hsl(var(--border))',background:'transparent',color:'var(--text-soft)',cursor:'pointer'}}>{copied==='keytest'?'Copied':'Copy URL'}</button>
                 </div>
-                <p style={{fontSize:11,color:'var(--text-faint)',margin:'8px 0 0'}}>Public tools work without a key. An API key is required for <b>audit_get</b>.</p>
+                <p style={{fontSize:11,color:'var(--text-soft)',margin:'8px 0 0'}}>Public tools work without a key. An API key is required for <b>audit_get</b>.</p>
               </div>
               <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,overflow:'hidden'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',background:'var(--tag-bg)',borderBottom:'1px solid hsl(var(--border))'}}>
                   <p style={{fontWeight:700,fontSize:12,margin:0}}>{guideItem.name==='Cursor' ? 'Step 3 — Paste into ~/.cursor/mcp.json' : guideItem.name==='Claude Desktop' ? 'Step 3 — Paste into claude_desktop_config.json' : 'Step 3 — Cursor / Claude config'}</p>
-                  <button onClick={()=>copyText('json', guideItem.name==='Cursor' ? mcpCursorJson() : mcpClaudeJson())} style={{fontSize:11,fontWeight:700,padding:'6px 12px',borderRadius:7,border:'none',background:'#00C27A',color:'#fff',cursor:'pointer'}}>{copied==='json'?'Copied ✓':'Copy JSON'}</button>
+                  <button type="button" onClick={()=>copyText('json', guideItem.name==='Cursor' ? mcpCursorJson() : mcpClaudeJson())} style={{fontSize:11,fontWeight:700,padding:'6px 12px',borderRadius:7,border:'none',background:'#00C27A',color:'#0A0A0A',cursor:'pointer'}}>{copied==='json'?'Copied':'Copy JSON'}</button>
                 </div>
-                <pre style={{margin:0,padding:'14px',fontSize:11.5,lineHeight:1.65,background:'#0d1117',color:'#e6edf3',fontFamily:"'Fira Code',monospace",whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{guideItem.name==='Cursor' ? mcpCursorJson() : mcpClaudeJson()}</pre>
+                <pre className="font-mono" style={{margin:0,padding:'14px',fontSize:11.5,lineHeight:1.65,background:'#0d1117',color:'#e6edf3',whiteSpace:'pre-wrap',wordBreak:'break-word'}}>{guideItem.name==='Cursor' ? mcpCursorJson() : mcpClaudeJson()}</pre>
               </div>
               {guideItem.name!=='Cursor' && guideItem.name!=='Claude Desktop' && (
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div style={{border:'1px solid hsl(var(--border))',borderRadius:10,padding:'12px'}}>
                     <p style={{fontWeight:700,fontSize:12,margin:'0 0 6px'}}>Cursor</p>
                     <pre style={{margin:'0 0 8px',fontSize:10.5,background:'#0d1117',color:'#e6edf3',padding:8,borderRadius:8,whiteSpace:'pre-wrap',wordBreak:'break-word',fontFamily:'monospace'}}>{mcpCursorJson().slice(0,160)}...</pre>

@@ -3,10 +3,11 @@ import rateLimit from 'express-rate-limit';
 import AuditReport from '../models/AuditReport';
 import AuditSnapshot from '../models/AuditSnapshot';
 import { createJob, findCachedReport, getJob, maybeRefreshStale } from '../lib/auditJobs';
-import { normalizeUrl, fetchPage, runChecks, scoreReportV2 } from '../lib/publicAudit';
+import { normalizeUrl, fetchPage, runChecks, scoreReportV2, assertPublicTarget } from '../lib/publicAudit';
 import { fetchPsi, fetchPsiRaw, type PsiRawPayload, type PsiStrategy } from '../lib/pagespeed';
 import { fetchCrux } from '../lib/crux';
 import { guardTurnstile } from '../lib/turnstile';
+import { runCriticalRequestChainForUrl, type CriticalRequestChainResult } from '../lib/agenticSeo';
 
 const router = Router();
 
@@ -161,9 +162,11 @@ const psiLimiter = rateLimit({
 const PSI_CACHE_TTL_MS = 30 * 60 * 1000;
 const PSI_CACHE_MAX = 60;
 const psiCache = new Map<string, { at: number; payload: PsiRawPayload }>();
+const CSS_CACHE_MAX = 100;
+const cssCache = new Map<string, { at: number; payload: CriticalRequestChainResult }>();
 
-/** Every absolute URL the report already knows about (site + affected examples). */
-function collectReportUrls(doc: { url?: unknown; normalizedUrl?: unknown; issues?: unknown }): Set<string> {
+/** Every absolute URL the report already knows about (site + affected examples + pageStats). */
+function collectReportUrls(doc: { url?: unknown; normalizedUrl?: unknown; issues?: unknown; pageStats?: unknown }): Set<string> {
   const urls = new Set<string>();
   const add = (value: unknown): void => {
     if (typeof value !== 'string') return;
@@ -177,6 +180,13 @@ function collectReportUrls(doc: { url?: unknown; normalizedUrl?: unknown; issues
   for (const issue of issues) {
     const examples = (issue as { affected?: { examples?: unknown } })?.affected?.examples;
     if (Array.isArray(examples)) examples.forEach(add);
+  }
+  const pageStats = Array.isArray(doc.pageStats) ? doc.pageStats : [];
+  for (const stat of pageStats) {
+    if (stat && typeof stat === 'object') {
+      add((stat as { url?: unknown }).url);
+      add((stat as { finalUrl?: unknown }).finalUrl);
+    }
   }
   return urls;
 }
@@ -201,7 +211,7 @@ router.get('/:id/psi', psiLimiter, async (req: Request, res: Response) => {
       res.status(400).json({ error: 'Invalid request' });
       return;
     }
-    const doc = await AuditReport.findOne({ shareToken: id }).select('url normalizedUrl issues').lean();
+    const doc = await AuditReport.findOne({ shareToken: id }).select('url normalizedUrl issues pageStats').lean();
     if (!doc) {
       res.status(404).json({ error: 'Report not found' });
       return;
@@ -212,7 +222,8 @@ router.get('/:id/psi', psiLimiter, async (req: Request, res: Response) => {
       return;
     }
     const key = `${target}|${strategy}`;
-    const hit = psiCache.get(key);
+    const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
+    const hit = !refresh ? psiCache.get(key) : undefined;
     if (hit && Date.now() - hit.at < PSI_CACHE_TTL_MS) {
       res.json({ ...hit.payload, cached: true });
       return;
@@ -229,6 +240,52 @@ router.get('/:id/psi', psiLimiter, async (req: Request, res: Response) => {
       if (oldest) psiCache.delete(oldest[0]);
     }
     res.json({ ...trimmed, cached: false });
+  } catch {
+    res.status(400).json({ error: 'Invalid request' });
+  }
+});
+
+const cssLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 15, standardHeaders: true, legacyHeaders: false,
+  handler: (_req, res) => res.status(429).json({ error: 'Too many CSS check requests — try again in a minute.' }),
+});
+
+// GET /api/public-audit/:id/css?url=<absolute> — critical_request_chain.py for one report URL
+router.get('/:id/css', cssLimiter, async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id || '');
+    const raw = String(req.query.url || '');
+    if (!/^[a-f0-9]{32}$/i.test(id) || !/^https?:\/\//i.test(raw)) {
+      res.status(400).json({ error: 'Invalid request' });
+      return;
+    }
+    const doc = await AuditReport.findOne({ shareToken: id }).select('url normalizedUrl issues pageStats').lean();
+    if (!doc) {
+      res.status(404).json({ error: 'Report not found' });
+      return;
+    }
+    const target = raw.replace(/\/+$/, '');
+    if (!collectReportUrls(doc as object).has(target)) {
+      res.status(403).json({ error: 'That URL is not part of this report' });
+      return;
+    }
+    const hit = cssCache.get(target);
+    if (hit && Date.now() - hit.at < PSI_CACHE_TTL_MS) {
+      res.json({ ...hit.payload, cached: true });
+      return;
+    }
+    await assertPublicTarget(target);
+    const payload = await runCriticalRequestChainForUrl(target);
+    if (!payload) {
+      res.status(502).json({ error: 'CSS & critical request audit did not return data for that URL' });
+      return;
+    }
+    cssCache.set(target, { at: Date.now(), payload });
+    if (cssCache.size > CSS_CACHE_MAX) {
+      const oldest = [...cssCache.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+      if (oldest) cssCache.delete(oldest[0]);
+    }
+    res.json({ ...payload, cached: false });
   } catch {
     res.status(400).json({ error: 'Invalid request' });
   }

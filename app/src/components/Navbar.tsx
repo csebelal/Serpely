@@ -1,26 +1,48 @@
 ﻿import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Sun, Moon } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      return localStorage.getItem('serpely-theme') === 'dark';
+    } catch {
+      return false;
+    }
+  });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<'why' | 'product' | 'resources' | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const desktopNavRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserMenuOpen(false);
       }
+      if (desktopNavRef.current && !desktopNavRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setOpenDropdown(null);
+        setUserMenuOpen(false);
+        setIsMobileMenuOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   function handleLogout() {
@@ -30,14 +52,12 @@ export function Navbar() {
   }
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('serpely-theme');
-      if (saved === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        setIsDark(true);
-      }
-    } catch (_) {}
-  }, []);
+    if (isDark) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }, [isDark]);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
@@ -48,12 +68,10 @@ export function Navbar() {
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
-    if (next) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      try { localStorage.setItem('serpely-theme', 'dark'); } catch (_) {}
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      try { localStorage.setItem('serpely-theme', 'light'); } catch (_) {}
+    try {
+      localStorage.setItem('serpely-theme', next ? 'dark' : 'light');
+    } catch {
+      /* ignore storage errors */
     }
   };
 
@@ -62,16 +80,20 @@ export function Navbar() {
   return (
     <header
       id="navbar"
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+      className="fixed top-3.5 left-3.5 right-3.5 max-w-[1260px] mx-auto z-50 rounded-[18px] transition-all duration-300"
       style={{
-        background: 'color-mix(in srgb, var(--bg) 78%, transparent)',
-        backdropFilter: 'blur(20px) saturate(150%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(150%)',
-        borderBottom: isScrolled ? '1px solid hsl(var(--border))' : '1px solid transparent',
-        boxShadow: isScrolled ? '0 2px 12px rgba(10,10,10,0.04)' : 'none',
+        background: isScrolled
+          ? 'color-mix(in srgb, var(--bg-elevated) 86%, transparent)'
+          : 'color-mix(in srgb, var(--card-bg) 78%, transparent)',
+        backdropFilter: 'blur(18px) saturate(150%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(150%)',
+        border: '1px solid hsl(var(--border))',
+        boxShadow: isScrolled
+          ? '0 18px 42px -18px rgba(10, 14, 12, 0.22)'
+          : '0 14px 36px -22px rgba(0, 60, 35, 0.28)',
       }}
     >
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className={`w-full pl-5 pr-3 flex items-center justify-between transition-all duration-300 ${isScrolled ? 'h-12 py-2' : 'h-14 py-2.5'}`}>
 
         {/* Logo */}
         <Link to="/" className="flex items-center flex-shrink-0">
@@ -83,42 +105,52 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-1">
+        <nav ref={desktopNavRef} aria-label="Primary navigation" className="hidden lg:flex items-center gap-1">
 
-          {/* Why Serpely â€” mega dropdown */}
-          <div className="relative group">
-            <button className={`nav-link-pill`}>
+          {/* Why Serpely — mega dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpenDropdown('why')}
+            onMouseLeave={() => setOpenDropdown(prev => (prev === 'why' ? null : prev))}
+          >
+            <button
+              type="button"
+              aria-haspopup="true"
+              aria-expanded={openDropdown === 'why'}
+              onClick={() => setOpenDropdown(prev => (prev === 'why' ? null : 'why'))}
+              className="nav-link-pill nav-link-underline"
+            >
               Why Serpely
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" style={{ transition: 'transform 0.2s' }}><path d="M2 4l4 4 4-4"/></svg>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" style={{ transition: 'transform 0.2s', transform: openDropdown === 'why' ? 'rotate(180deg)' : undefined }}><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div className="absolute top-full left-0 z-[9999] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out translate-y-1 group-hover:translate-y-0">
+            <div className={`absolute top-full left-0 z-[9999] transition-all duration-150 ease-out ${openDropdown === 'why' ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none translate-y-1'}`}>
               <div className="pt-2.5"><div className="rounded-2xl p-3"
               style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))', boxShadow: '0 24px 60px rgba(10,10,10,0.12)', minWidth: '520px' }}>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#00A868' }}>Explore</div>
+                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: 'var(--accent-text)' }}>Explore</div>
                   {[
                     { label: 'How It Works', desc: 'Continuous SEO workflow', href: '/how-it-works' },
-                    { label: 'Customer Stories', desc: 'Real results from real teams', href: '/' },
-                    { label: 'Product Roadmap', desc: "What's coming next", href: '/' },
+                    { label: 'Customer Stories', desc: 'Real results from real teams', href: '/#testimonials' },
+                    { label: 'Product Roadmap', desc: "What's coming next", href: '/changelog' },
                   ].map(item => (
-                    <Link key={item.label} to={item.href} className="nav-drop-item">
+                    <Link key={item.label} to={item.href} onClick={() => setOpenDropdown(null)} className="nav-drop-item">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(0,194,122,0.08)', border: '1px solid rgba(0,194,122,0.15)' }}>
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#00A868" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="var(--accent-text)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>
                       </div>
                       <div>
                         <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{item.label}</div>
-                        <div className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-faint)' }}>{item.desc}</div>
+                        <div className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-soft)' }}>{item.desc}</div>
                       </div>
                     </Link>
                   ))}
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#00A868' }}>Compare</div>
+                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: 'var(--accent-text)' }}>Compare</div>
                   {['vs Semrush', 'vs Ahrefs', 'vs Surfer SEO', 'vs Clearscope', 'vs MarketMuse'].map(item => (
-                    <Link key={item} to="/compare" className="nav-drop-item items-center">
+                    <Link key={item} to="/compare" onClick={() => setOpenDropdown(null)} className="nav-drop-item items-center">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,194,122,0.08)', border: '1px solid rgba(0,194,122,0.15)' }}>
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="#00A868" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h18M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="var(--accent-text)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h18M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg>
                       </div>
                       <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>Serpely {item}</span>
                     </Link>
@@ -128,41 +160,51 @@ export function Navbar() {
             </div></div></div>
           </div>
 
-          {/* Product â€” mega dropdown */}
-          <div className="relative group">
-            <button className="nav-link-pill">
+          {/* Product — mega dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpenDropdown('product')}
+            onMouseLeave={() => setOpenDropdown(prev => (prev === 'product' ? null : prev))}
+          >
+            <button
+              type="button"
+              aria-haspopup="true"
+              aria-expanded={openDropdown === 'product'}
+              onClick={() => setOpenDropdown(prev => (prev === 'product' ? null : 'product'))}
+              className="nav-link-pill nav-link-underline"
+            >
               Product
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" style={{ transition: 'transform 0.2s', transform: openDropdown === 'product' ? 'rotate(180deg)' : undefined }}><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div className="absolute top-full left-0 z-[9999] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out translate-y-1 group-hover:translate-y-0">
+            <div className={`absolute top-full left-0 z-[9999] transition-all duration-150 ease-out ${openDropdown === 'product' ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none translate-y-1'}`}>
               <div className="pt-2.5"><div className="rounded-2xl p-3"
               style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))', boxShadow: '0 24px 60px rgba(10,10,10,0.12)', minWidth: '540px' }}>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#00A868' }}>Features</div>
+                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: 'var(--accent-text)' }}>Features</div>
                   {[
                     { label: 'AI Rank Tracking', desc: 'Track Google, AI Overviews, and LLM visibility', href: '/features' },
                     { label: 'GEO Monitoring', desc: 'Brand presence across AI search surfaces', href: '/features' },
                     { label: 'Sitemap Checker', desc: 'Find broken, blocked & redirected URLs', href: '/sitemap-checker' },
                     { label: 'Content Prioritization', desc: 'AI-ranked page recommendations', href: '/features' },
                   ].map(item => (
-                    <Link key={item.label} to={item.href} className="nav-drop-item">
+                    <Link key={item.label} to={item.href} onClick={() => setOpenDropdown(null)} className="nav-drop-item">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(0,194,122,0.08)', border: '1px solid rgba(0,194,122,0.15)' }}>
-                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="#00A868" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16M7 15V9M12 15V5M17 15v-3"/></svg>
+                        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="var(--accent-text)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 19h16M7 15V9M12 15V5M17 15v-3"/></svg>
                       </div>
                       <div>
                         <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{item.label}</div>
-                        <div className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-faint)' }}>{item.desc}</div>
+                        <div className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-soft)' }}>{item.desc}</div>
                       </div>
                     </Link>
                   ))}
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#00A868' }}>Integrations</div>
+                  <div className="text-[11px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: 'var(--accent-text)' }}>Integrations</div>
                   {['Google Search Console', 'Google Analytics 4', 'DataForSEO', 'OpenAI / LLM Connectors'].map(item => (
-                    <Link key={item} to="/integrations" className="nav-drop-item items-center">
+                    <Link key={item} to="/integrations" onClick={() => setOpenDropdown(null)} className="nav-drop-item items-center">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,194,122,0.08)', border: '1px solid rgba(0,194,122,0.15)' }}>
-                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="#00A868" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M8 12h8M12 8v8M4 12a8 8 0 0 1 8-8M20 12a8 8 0 0 1-8 8"/></svg>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="var(--accent-text)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 12h8M12 8v8M4 12a8 8 0 0 1 8-8M20 12a8 8 0 0 1-8 8"/></svg>
                       </div>
                       <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{item}</span>
                     </Link>
@@ -172,13 +214,23 @@ export function Navbar() {
             </div></div></div>
           </div>
 
-          {/* Resources â€” dropdown */}
-          <div className="relative group">
-            <button className="nav-link-pill">
+          {/* Resources — dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpenDropdown('resources')}
+            onMouseLeave={() => setOpenDropdown(prev => (prev === 'resources' ? null : prev))}
+          >
+            <button
+              type="button"
+              aria-haspopup="true"
+              aria-expanded={openDropdown === 'resources'}
+              onClick={() => setOpenDropdown(prev => (prev === 'resources' ? null : 'resources'))}
+              className="nav-link-pill nav-link-underline"
+            >
               Resources
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" style={{ transition: 'transform 0.2s', transform: openDropdown === 'resources' ? 'rotate(180deg)' : undefined }}><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div className="absolute top-full left-0 z-[9999] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-150 ease-out translate-y-1 group-hover:translate-y-0">
+            <div className={`absolute top-full left-0 z-[9999] transition-all duration-150 ease-out ${openDropdown === 'resources' ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none translate-y-1'}`}>
               <div className="pt-2.5"><div className="rounded-2xl p-2"
               style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))', boxShadow: '0 24px 60px rgba(10,10,10,0.12)', minWidth: '220px' }}>
               {[
@@ -187,10 +239,10 @@ export function Navbar() {
                 { label: 'FAQ', desc: 'Common questions answered', href: '/faq' },
                 { label: 'Technical Docs', desc: 'API & integration guides', href: '/integrations' },
               ].map(item => (
-                <Link key={item.label} to={item.href} className="nav-drop-item">
+                <Link key={item.label} to={item.href} onClick={() => setOpenDropdown(null)} className="nav-drop-item">
                   <div>
                     <div className="text-sm font-bold" style={{ color: 'var(--text)' }}>{item.label}</div>
-                    <div className="text-xs font-medium" style={{ color: 'var(--text-faint)' }}>{item.desc}</div>
+                    <div className="text-xs font-medium" style={{ color: 'var(--text-soft)' }}>{item.desc}</div>
                   </div>
                 </Link>
               ))}
@@ -206,7 +258,7 @@ export function Navbar() {
             Free Site Audit
           </Link>
 
-          <Link to="/pricing" className={`nav-link-pill${isActive('/pricing') ? ' active' : ''}`}>
+          <Link to="/pricing" className={`nav-link-pill nav-link-underline${isActive('/pricing') ? ' active' : ''}`}>
             Pricing
           </Link>
         </nav>
@@ -267,11 +319,11 @@ export function Navbar() {
             </div>
           ) : (
             <>
-              <Link to="/login" className="hidden sm:block nav-link-pill"
+              <Link to="/login" className="hidden sm:block nav-link-pill nav-link-underline"
                 style={{ textDecoration: 'none' }}>
                 Login
               </Link>
-              <Link to="/register" className="btn-accent-s hidden sm:inline-flex" style={{ padding: '9px 16px', fontSize: '13.5px' }}>
+              <Link to="/register" className="btn-accent-s btn-shine btn-shine-auto hidden sm:inline-flex" style={{ padding: '9px 16px', fontSize: '13.5px', borderRadius: '12px' }}>
                 Start Free Trial
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
               </Link>
@@ -279,7 +331,15 @@ export function Navbar() {
           )}
 
           {/* Mobile hamburger */}
-          <button className="lg:hidden p-2" style={{ color: 'var(--text)' }} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          <button
+            type="button"
+            className="lg:hidden p-2"
+            style={{ color: 'var(--text)' }}
+            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
@@ -287,7 +347,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden px-6 pb-6 pt-2 border-t" style={{ borderColor: 'hsl(var(--border))', background: 'var(--card-bg)' }}>
+        <div id="mobile-menu" className="lg:hidden px-6 pb-6 pt-2 border-t" style={{ borderColor: 'hsl(var(--border))', background: 'var(--card-bg)' }}>
           <nav className="flex flex-col gap-0.5">
             {[
               { label: 'How It Works', href: '/how-it-works' },

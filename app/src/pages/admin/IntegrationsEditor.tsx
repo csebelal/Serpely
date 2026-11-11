@@ -257,7 +257,7 @@ export function IntegrationsEditor() {
                     <button style={s.btnDanger} onClick={() => removeItem(ci, ii)}>Remove</button>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-2.5">
                     <div>
                       <label style={s.label}>Name</label>
                       <input style={s.inp} value={item.name} onChange={e => updateItem(ci, ii, { name: e.target.value })} placeholder="Google Analytics" />

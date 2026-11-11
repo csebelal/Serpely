@@ -4,16 +4,24 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import AdminUser, { type AdminRole } from '../models/AdminUser';
 import LoginLog from '../models/LoginLog';
-import { verifyJWT, requireRole, AuthRequest, ADMIN_COOKIE } from '../middleware/auth';
+import { verifyJWT, requireRole, AuthRequest, ADMIN_COOKIE, adminCookieOptions, ADMIN_IDLE_MS } from '../middleware/auth';
+import { clearSessionCookieOptions } from '../lib/cookies';
 
 const ROLES: AdminRole[] = ['owner', 'admin', 'editor'];
 
 const router = Router();
 
+function signAdminToken(userId: unknown, tokenVersion: number): string {
+  return jwt.sign(
+    { sub: userId, typ: 'admin', tv: tokenVersion },
+    process.env.JWT_SECRET as string,
+    { expiresIn: '24h' },
+  );
+}
+
 function getIP(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) return (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim();
-  return req.socket.remoteAddress || req.ip || '';
+  // Relies on Express `trust proxy` (1 hop) rather than raw x-forwarded-for.
+  return req.ip || req.socket.remoteAddress || '';
 }
 
 const loginLimiter = rateLimit({
@@ -58,22 +66,13 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
       return;
     }
     await LoginLog.create({ email, ip, userAgent, success: true });
-    const role = (user as { role?: string }).role || 'admin';
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role, typ: 'admin' },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '24h' },
-    );
+    // Minimal payload: subject, scope, and token version. Email/role are always
+    // read from the database in /me and verifyJWT.
+    const token = signAdminToken(user._id, user.tokenVersion ?? 0);
     // httpOnly session cookie — JavaScript can never read it, so an XSS bug
-    // cannot exfiltrate a long-lived admin credential. The token is still
-    // returned for one release so cached frontends and scripts keep working.
-    res.cookie(ADMIN_COOKIE, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-    });
+    // cannot exfiltrate a long-lived admin credential. 8h cookie + 24h JWT.
+    res.cookie(ADMIN_COOKIE, token, adminCookieOptions(ADMIN_IDLE_MS));
+    const role: AdminRole = (user as { role?: AdminRole }).role || 'admin';
     res.json({ token, email: user.email, role });
   } catch (err) {
     console.error('Login route error:', err);
@@ -88,7 +87,7 @@ router.get('/me', verifyJWT, (req: AuthRequest, res: Response) => {
 
 // POST /api/auth/logout — clear the session cookie
 router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie(ADMIN_COOKIE, { path: '/' });
+  res.clearCookie(ADMIN_COOKIE, clearSessionCookieOptions());
   res.json({ success: true });
 });
 
@@ -105,7 +104,9 @@ router.put('/me/password', verifyJWT, async (req: AuthRequest, res: Response) =>
     const ok = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!ok) { res.status(401).json({ error: 'Current password incorrect' }); return; }
     user.passwordHash = await bcrypt.hash(password, 10);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
+    res.cookie(ADMIN_COOKIE, signAdminToken(user._id, user.tokenVersion), adminCookieOptions(ADMIN_IDLE_MS));
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });
@@ -125,7 +126,9 @@ router.post('/change-password', changePasswordLimiter, verifyJWT, async (req: Au
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) { res.status(401).json({ error: 'Current password incorrect' }); return; }
     user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
+    res.cookie(ADMIN_COOKIE, signAdminToken(user._id, user.tokenVersion), adminCookieOptions(ADMIN_IDLE_MS));
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });
@@ -168,6 +171,7 @@ router.put('/users/:id/password', verifyJWT, requireRole('owner'), async (req: A
     const user = await AdminUser.findById(req.params.id);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
     user.passwordHash = await bcrypt.hash(password, 10);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
     res.json({ success: true });
   } catch {

@@ -77,15 +77,12 @@ export interface UrlPageStat {
   error?: string;
 }
 
-/** The 12 L2 tabs, in sidebar order. */
+/** The 8 L2 tabs backed by real audit data, in sidebar order. */
 export const URL_TABS = [
   { id: 'issues', label: 'Issues' },
-  { id: 'search', label: 'Search' },
-  { id: 'gaps', label: 'Gaps' },
   { id: 'check', label: 'URL check' },
   { id: 'pagespeed', label: 'PageSpeed' },
   { id: 'crux', label: 'CrUX' },
-  { id: 'insights', label: 'Insights' },
   { id: 'schema', label: 'Schema' },
   { id: 'links', label: 'Links' },
   { id: 'images', label: 'Images' },
@@ -94,9 +91,8 @@ export const URL_TABS = [
 
 export type UrlTabId = (typeof URL_TABS)[number]['id'];
 
-/** Tabs wired to real collected data. Everything else is an honest empty state.
- *  (`check`/`schema`/`links`/`images` read the stored per-page crawl facts.) */
-export const REAL_TABS: UrlTabId[] = ['issues', 'pagespeed', 'crux', 'check', 'schema', 'links', 'images'];
+/** All tabs are backed by real collected or live per-URL audit data. */
+export const REAL_TABS: UrlTabId[] = ['issues', 'pagespeed', 'crux', 'check', 'schema', 'links', 'images', 'css'];
 
 export function statusTone(httpStatus: number | null): 'ok' | 'warn' | 'bad' | 'miss' {
   if (typeof httpStatus === 'number') {

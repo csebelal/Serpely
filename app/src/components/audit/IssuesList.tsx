@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import type { PublicAuditIssue } from '@/lib/api';
 
 // Issues list — All / Critical / Warnings / Notices tabs + expandable rows.
@@ -26,7 +27,7 @@ export function IssuesList({ issues }: { issues: PublicAuditIssue[] }) {
     <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
         {(['all', 'critical', 'warnings', 'notices'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)}
+          <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)}
             style={{ padding: '8px 16px', borderRadius: 999, fontSize: 13, fontWeight: 700, cursor: 'pointer',
               border: tab === t ? '1px solid #0B1411' : '1px solid #DCE3DF',
               background: tab === t ? '#0B1411' : '#fff', color: tab === t ? '#fff' : '#0B1411' }}>
@@ -41,8 +42,11 @@ export function IssuesList({ issues }: { issues: PublicAuditIssue[] }) {
               <div style={{ padding: '14px 16px 4px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{ width: 10, height: 10, borderRadius: '50%', marginTop: 5, background: i.passed ? '#00B96B' : SEV_COLOR[i.severity] || '#999', flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>
-                  <strong style={{ fontSize: 14, display: 'block' }}>{i.passed ? '✓ ' : ''}{i.title}</strong>
-                  <span style={{ fontSize: 12, color: '#55655D' }}>{i.category} · {i.evidence?.slice(0, 120)}</span>
+                  <strong style={{ fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {i.passed && <Check className="w-3.5 h-3.5 text-[#00754A]" aria-hidden="true" />}
+                    {i.title}
+                  </strong>
+                  <span style={{ fontSize: 12, color: '#55655D', display: 'block' }}>{i.category} · {i.evidence?.slice(0, 120)}</span>
                 </span>
               </div>
               <div style={{ padding: '8px 16px 16px 36px', fontSize: 13, lineHeight: 1.65 }}>
@@ -70,7 +74,7 @@ export function IssuesList({ issues }: { issues: PublicAuditIssue[] }) {
             </div>
           );
         })}
-        {list.length === 0 && <p style={{ fontSize: 13, color: '#9DB2A8' }}>Nothing in this tab.</p>}
+        {list.length === 0 && <p style={{ fontSize: 13, color: '#55655D' }}>Nothing in this tab.</p>}
       </div>
     </div>
   );

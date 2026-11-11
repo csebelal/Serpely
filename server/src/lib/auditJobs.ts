@@ -5,6 +5,7 @@ import { normalizeUrl, fetchPage, runChecks, scoreReportV2, buildSiteIssues, ass
 import { fetchPsi, type PsiResult } from './pagespeed';
 import { fetchCrux } from './crux';
 import { discoverUrls, crawlSite, aggregateCrawl } from './crawler';
+import { runAgenticSeoChecks } from './agenticSeo';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 export interface AuditJob {
@@ -42,12 +43,13 @@ export async function findCachedReport(input: string): Promise<CachedReport | nu
   try {
     const cached = await AuditReport.findOne({ origin, status: 'done' }).sort({ createdAt: -1 });
     if (cached && Date.now() - new Date(cached.createdAt).getTime() < 24 * 3600 * 1000) {
-      // Reports crawled by older code lack the per-page facts the redesigned
-      // drawer needs — treat them as stale so a re-run crawls fresh instead of
-      // serving an empty-format report from the 24h cache.
+      // Reports crawled by older code lack per-page facts or use pre-v3 scoring —
+      // treat them as stale so a re-run crawls fresh instead of serving old scores.
       const stats = (cached as unknown as { pageStats?: [{ htmlKb?: unknown }] }).pageStats;
+      const meta = (cached as unknown as { meta?: { scoreVersion?: string } }).meta;
       const usable = Array.isArray(stats) && stats.length > 0
-        && stats.some((s) => typeof (s as { htmlKb?: unknown }).htmlKb === 'number');
+        && stats.some((s) => typeof (s as { htmlKb?: unknown }).htmlKb === 'number')
+        && meta?.scoreVersion === '3';
       if (!usable) return null;
       // Public links are shareTokens only, so adopt a pre-token report instead of
       // returning an _id that can no longer be read. If the write fails we fall
@@ -156,6 +158,7 @@ async function runJob(job: AuditJob): Promise<void> {
     let baseIssues: Awaited<ReturnType<typeof runChecks>>['issues'] = [];
     let baseMeta: Record<string, string> = {};
     let homepageOffsite = '';
+    let agenticIssues: Awaited<ReturnType<typeof runAgenticSeoChecks>> = [];
     try {
       const hp = home && home.status === 200 && !home.error
         ? await fetchPage(home.url).catch(() => null)
@@ -167,14 +170,22 @@ async function runJob(job: AuditJob): Promise<void> {
         // SEO checks against the other site's content.
         homepageOffsite = hp.offsite;
       } else {
-        const r = await runChecks(hp, job.normalizedUrl, psiPromise);
+        const checkedUrl = hp.finalUrl || job.normalizedUrl;
+        const [r, pyIssues] = await Promise.all([
+          runChecks(hp, job.normalizedUrl, psiPromise),
+          runAgenticSeoChecks({
+            targetUrl: checkedUrl,
+            homepageHtml: hp.html || '',
+            crawledUrls: pages.map((p) => p.finalUrl || p.url),
+          }).catch(() => []),
+        ]);
         // These checks are run against one page (the homepage, after redirects).
         // Store that page as the affected URL so a fresh report can show which
         // page needs the fix instead of "no URL sample".
-        const checkedUrl = hp.finalUrl || job.normalizedUrl;
         baseIssues = r.issues.map((issue) =>
           issue.passed || issue.affected ? issue : { ...issue, affected: { count: 1, examples: [checkedUrl] } },
         );
+        agenticIssues = pyIssues;
         baseMeta = r.meta;
       }
     } catch { baseMeta = {}; }
@@ -185,7 +196,34 @@ async function runJob(job: AuditJob): Promise<void> {
     const llmsFound = !!baseIssues.find(i => i.code === 'llms-txt')?.passed;
     const schemaFound = !!baseIssues.find(i => i.code === 'org-schema' || i.code === 'article-schema')?.passed;
     const siteIssues = buildSiteIssues({ agg, aiBlocked, llmsFound, schemaFound, psiLcpMs: psi?.lcpMs, psiScore: psi?.score, origin: job.origin });
-    const allIssues = [...siteIssues, ...baseIssues];
+    const rawIssues = [...siteIssues, ...baseIssues, ...agenticIssues];
+    const presentCodes = new Set(rawIssues.map(i => i.code));
+    // Drop redundant per-page/heuristic checks when a broader or more accurate
+    // check for the exact same signal is already in the report.
+    const REDUNDANT_IF_PRESENT: Record<string, string[]> = {
+      'psi-lcp': ['site-lcp'],
+      'img-alt': ['site-alt'],
+      'psi-heading-order': ['site-headings'],
+      'anchor-generic': ['site-anchors'],
+      'psi-link-text': ['site-anchors', 'anchor-generic'],
+      'img-dims': ['site-images'],
+      'img-lazy': ['site-images'],
+      'psi-img-ratio': ['site-images', 'img-dims'],
+      'compression': ['psi-text-compression'],
+      'cache-headers': ['asset-caching'],
+      'critical-css-blocking': ['psi-render-blocking'],
+      'font-loading': ['psi-font-display'],
+      'content-depth': ['site-thin'],
+      'psi-redirects': ['site-redirect-chain'],
+    };
+    const seenCodes = new Set<string>();
+    const allIssues = rawIssues.filter((iss) => {
+      if (seenCodes.has(iss.code)) return false;
+      const superseders = REDUNDANT_IF_PRESENT[iss.code];
+      if (superseders && superseders.some(code => presentCodes.has(code))) return false;
+      seenCodes.add(iss.code);
+      return true;
+    });
     if (homepageOffsite) {
       allIssues.unshift({
         code: 'homepage-redirects-offsite', category: 'Technical SEO', severity: 'critical',
@@ -196,7 +234,7 @@ async function runJob(job: AuditJob): Promise<void> {
         affected: { count: 1, examples: [job.normalizedUrl] },
       });
     }
-    const { scores, overall, forecast, summary, priority } = scoreReportV2(allIssues);
+    const { scores, overall, forecast, summary, priority } = scoreReportV2(allIssues, psi);
 
     // AI crawler access table (mockup): per-bot parse + llms.txt row
     const bots = ['OAI-SearchBot', 'PerplexityBot', 'GPTBot', 'ClaudeBot', 'Googlebot', 'Google-Extended'];
@@ -207,7 +245,7 @@ async function runJob(job: AuditJob): Promise<void> {
     });
     if (!llmsFound) aiCrawlers.push({ bot: 'llms.txt', status: 'Missing', detail: 'No /llms.txt found' } as unknown as { bot: string; status: 'Allowed' | 'Blocked'; detail: string });
 
-    const meta: Record<string, string> = { ...baseMeta, origin: job.origin, finalUrl: home?.finalUrl || job.normalizedUrl, sitemaps: JSON.stringify(sitemaps.slice(0, 10)) };
+    const meta: Record<string, string> = { ...baseMeta, origin: job.origin, finalUrl: home?.finalUrl || job.normalizedUrl, sitemaps: JSON.stringify(sitemaps.slice(0, 10)), scoreVersion: '3' };
     if (homepageOffsite) meta.redirectOffsite = homepageOffsite;
     // Honest incomplete marker: homepage unreachable or ≥30% of pages failed.
     const homepageOk = !!(home && home.status === 200 && !home.error && !home.offsite);

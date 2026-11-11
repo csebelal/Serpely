@@ -5,6 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { submitContact } from '../lib/api';
 import { TurnstileWidget } from '../components/TurnstileWidget';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -123,7 +124,8 @@ export function Contact() {
   const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       // Hero
       gsap.fromTo('.c-hero-el', { opacity: 0, y: 28 }, {
         opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out', delay: 0.05,
@@ -148,7 +150,7 @@ export function Contact() {
         scrollTrigger: { trigger: '.c-other-grid', start: 'top 82%', toggleActions: 'play none none reverse' },
       });
     }, pageRef);
-    return () => ctx.revert();
+    return () => mm.revert();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -190,6 +192,7 @@ export function Contact() {
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="pt-32 pb-14 px-6 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,194,122,0.1) 0%, transparent 65%)' }} />
+        <PageBackground variant="aurora" intensity={0.7} />
         {/* subtle grid lines */}
         <div className="absolute inset-0 pointer-events-none" style={{
           backgroundImage: 'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)',

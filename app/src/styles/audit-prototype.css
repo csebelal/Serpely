@@ -8,7 +8,7 @@
   --bg:#f6f8f7; --bg-grad-1:#f8faf9; --bg-grad-2:#eef2f0;
   --surface:#ffffff; --surface-2:#fbfcfc; --surface-3:#f4f7f5;
   --ink:#0c1411; --ink-2:#1c2b25; --ink-3:#3a4742;
-  --muted:#6b7570; --muted-2:#8a948f; --muted-3:#a4aea9;
+  --muted:#525C57; --muted-2:#59635E; --muted-3:#646E69;
   --line:#e8ecec; --line-2:#f0f3f2; --line-3:#f5f7f6;
   /* Refined emerald/teal accent — muted & sophisticated */
   --accent:#0d9488; --accent-strong:#0f766e; --accent-soft:#ecfdf5;
@@ -38,7 +38,7 @@
     radial-gradient(1200px 600px at 50% -8%, #ffffff 0%, rgba(255,255,255,0) 70%),
     linear-gradient(180deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
     background-attachment:fixed;
-  font:13px/1.55 "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font:13px/1.55 "Satoshi", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   font-feature-settings:"cv05","ss01","cv11";
 }
@@ -666,7 +666,7 @@
 /* Task 7: with the L1 drawer widened 480→720px, re-balance the grid so the URL column gets ~340px (was ~75px). Tightened Status/Weight/Score from 40→38, Discovered 56→52, Action 130→116. align-items:center keeps the Status/Weight/Score/Action cells visually centered against a URL that may now wrap to 2-3 lines. */
 .sa-root .drawer-url-thead,.sa-root .drawer-url-row{
   display:grid;
-  grid-template-columns: minmax(0,1fr) 38px 38px 38px 52px 116px;
+  grid-template-columns: minmax(0,1fr) 52px 64px 116px;
   align-items:center; gap:7px; padding:9px 10px;
 }
 .sa-root .drawer-url-thead{
@@ -918,7 +918,7 @@
 .sa-root .full-page-btn svg{width:10px; height:10px; stroke-width:2.4; transition:transform .18s var(--ease)}
 .sa-root .full-page-btn:hover svg{transform:translateX(1.5px)}
 .sa-root .drawer-url-thead .col-action{text-align:right}
-.sa-root .drawer-url-thead .col-action,.sa-root .drawer-url-row > .full-page-btn{grid-column:6}
+.sa-root .drawer-url-thead .col-action,.sa-root .drawer-url-row > .full-page-btn{grid-column:4}
 
 /* ----------  Task 4 — L2 tab content panels  ---------- */
 /* KPI cards (Search metrics, GA4 Insights) */

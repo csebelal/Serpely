@@ -12,7 +12,8 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import type { PublicAuditReport } from '@/lib/api';
-import { buildAuditViewModel, type CategoryId, type ReportFinding, type Tone } from './report';
+import { buildAuditViewModel, type CategoryId, type ReportFinding } from './report';
+import type { SeverityFilter } from './SiteAuditFindings';
 import SiteAuditShell from './SiteAuditShell';
 import '@/styles/audit-preview-shell.css';
 
@@ -27,8 +28,15 @@ interface Props {
 export default function SiteAuditReport({ report, shareToken, embedded = false }: Props) {
   const vm = useMemo(() => buildAuditViewModel(report), [report]);
 
-  const [collapsed, setCollapsed] = useState<ReadonlySet<CategoryId>>(() => new Set());
-  const [severityFilter, setSeverityFilter] = useState<'all' | Tone>('all');
+  // Start concise: expand only the highest-priority category that has actionable
+  // issues, and collapse the rest so the report stays scannable.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<CategoryId>>(() => {
+    const actionableCats = vm.categories.filter((c) => c.findings.some((f) => f.tone !== 'pass'));
+    const firstCritical = actionableCats.find((c) => c.findings.some((f) => f.tone === 'high'));
+    const keepOpenId = (firstCritical ?? actionableCats[0])?.id;
+    return new Set(vm.categories.filter((c) => c.id !== keepOpenId).map((c) => c.id));
+  });
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('actionable');
   const [openFinding, setOpenFinding] = useState<ReportFinding | null>(null);
 
   const toggleCategory = useCallback((categoryId: CategoryId) => {
@@ -42,11 +50,20 @@ export default function SiteAuditReport({ report, shareToken, embedded = false }
 
   const setCollapsedIds = useCallback((ids: CategoryId[]) => setCollapsed(new Set(ids)), []);
 
-  // The hero's "View critical" button filters the table and scrolls to it.
-  const jumpToSeverity = useCallback((tone: 'all' | Tone) => {
+  // The hero's "View critical" button filters the table, expands matching
+  // categories, and scrolls to it.
+  const jumpToSeverity = useCallback((tone: SeverityFilter) => {
     setSeverityFilter(tone);
-    document.getElementById('issues')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
+    if (tone === 'high' || tone === 'medium' || tone === 'low') {
+      const matching = vm.categories
+        .filter((c) => !c.findings.some((f) => f.tone === tone))
+        .map((c) => c.id);
+      setCollapsed(new Set(matching));
+    }
+    if (tone === 'high') {
+      document.getElementById('issues')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [vm.categories]);
 
   const closeFinding = useCallback(() => setOpenFinding(null), []);
 

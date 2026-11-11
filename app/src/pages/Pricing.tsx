@@ -4,6 +4,7 @@ import { getPricing, getFaq } from '@/lib/api';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { injectSchema, removeSchema } from '@/lib/schema';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -160,7 +161,8 @@ export function Pricing() {
   }, []);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       gsap.fromTo('.pr-hero', { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out', delay: 0.1 });
       gsap.fromTo('.pr-card', { opacity: 0, y: 36 }, {
         opacity: 1, y: 0, duration: 0.55, stagger: 0.1, ease: 'power3.out',
@@ -179,7 +181,7 @@ export function Pricing() {
         scrollTrigger: { trigger: '.pr-faq-list', start: 'top 80%', toggleActions: 'play none none reverse' },
       });
     }, pageRef);
-    return () => ctx.revert();
+    return () => mm.revert();
   }, []);
 
   useEffect(() => {
@@ -205,7 +207,8 @@ export function Pricing() {
         <div className="absolute inset-0 pointer-events-none" style={{
           background: 'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,194,122,0.07) 0%, transparent 70%)',
         }} />
-        <div className="pr-hero max-w-3xl mx-auto relative">
+        <PageBackground variant="aurora" intensity={0.7} />
+        <div className="pr-hero max-w-3xl mx-auto relative z-10">
           <span className="pill-s mb-6 inline-flex">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00C27A' }} />
             Simple, Transparent Pricing
@@ -219,10 +222,12 @@ export function Pricing() {
           </p>
 
           {/* Billing toggle */}
-          <div className="inline-flex items-center gap-3 rounded-2xl px-4 py-2" style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))' }}>
+          <div className="inline-flex items-center gap-3 rounded-2xl px-4 py-2" role="group" aria-label="Billing frequency" style={{ background: 'var(--card-bg)', border: '1px solid hsl(var(--border))' }}>
             <button
+              type="button"
+              aria-pressed={!isAnnual}
               onClick={() => setIsAnnual(false)}
-              className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all"
+              className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all cursor-pointer"
               style={{
                 background: !isAnnual ? 'var(--text)' : 'transparent',
                 color: !isAnnual ? 'var(--bg)' : 'var(--text-soft)',
@@ -231,15 +236,17 @@ export function Pricing() {
               Monthly
             </button>
             <button
+              type="button"
+              aria-pressed={isAnnual}
               onClick={() => setIsAnnual(true)}
-              className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+              className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer"
               style={{
                 background: isAnnual ? 'var(--text)' : 'transparent',
                 color: isAnnual ? 'var(--bg)' : 'var(--text-soft)',
               }}
             >
               Annual
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: '#00C27A', color: '#fff' }}>−20%</span>
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: '#00C27A', color: '#0A0A0A' }}>−20%</span>
             </button>
           </div>
         </div>

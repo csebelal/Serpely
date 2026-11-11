@@ -9,7 +9,7 @@ runbook for anything that needs a human.
 
 1. `server` — `npm ci`, `tsc`, `npm audit --omit=dev --audit-level=high`.
 2. Seeds a throwaway MongoDB and starts the API.
-3. `server/scripts/security-check.mjs` — **107 live assertions** (auth, roles,
+3. `server/scripts/security-check.mjs` — **117 live assertions** (auth, roles,
    cookie sessions, CSRF, CSP nonce, consent defaults, Turnstile gating, email
    verification round-trip, headers, CORS, input validation, unguessable report
    ids, destructive-route guards, blog sanitisation, upload type/spoof checks).
@@ -27,16 +27,11 @@ blocks the build.
 
 ## Authentication
 
-- **Admin sessions are httpOnly cookies** (`serpely_admin`, `SameSite=Lax`,
-  `Secure` in production). JavaScript can never read the session, so an XSS bug
-  cannot exfiltrate a long-lived credential.
-- The `Authorization: Bearer` header is still accepted for one release so
-  cached frontends and scripts keep working; new sessions use cookies only.
-- **CSRF**: cookie-authenticated state changes (anything but GET/HEAD/OPTIONS)
-  must arrive from an allow-listed `Origin`. SameSite=Lax is the first lock, the
-  origin check is the second.
-- Tokens carry `typ: 'admin'`. A client-facing token (`typ: 'client'`) can never
-  authorise an admin route.
+- **Admin & client sessions are httpOnly cookies** (`__Host-serpely_admin` / `serpely_admin` for admins; `__Host-serpely_client` / `serpely_client` for clients — `SameSite=Lax`, `Secure` in production, `Path=/`). JavaScript can never read either session, so an XSS bug cannot exfiltrate credentials.
+- Both cookies use a sliding idle window (`8h` / `24h` cap for admins; `7d` / `30d` cap for clients), and `clearCookie` mirrors the `Secure` + `SameSite` attributes so `__Host-` cookies clear cleanly over HTTPS.
+- The `Authorization: Bearer` header is still accepted for one release so cached frontends and scripts keep working; new browser sessions use cookies only.
+- **CSRF**: cookie-authenticated state changes (admin or client, anything other than GET/HEAD/OPTIONS) must arrive from an allow-listed `Origin`. `SameSite=Lax` is the first lock, the origin check is the second.
+- **Token scope & revocation**: Admin tokens carry `typ: 'admin'` and client tokens carry `typ: 'client'`; neither is accepted on the other's routes. Both `AdminUser` and `ClientUser` track `tokenVersion` (`tv` claim), incremented on password change to immediately revoke other active sessions.
 
 ### Roles
 
@@ -76,28 +71,12 @@ styles; styles are not a script vector.)
 
 ## Privacy & consent
 
-Google Tag Manager / Analytics are **never** loaded — and no request is made to
-Google at all:
+Google Tag Manager / Analytics are **consent-gated** and never load before opt-in:
 
-- The consent UI was removed at the owner's request: the "Cookies & analytics"
-  banner, the "Your cookie preferences" card on `/cookie-policy`, and the footer
-  "Cookie settings" button are all gone.
-- GTM is fetched by `app/src/lib/consent.ts` only after an opt-in, and no UI can
-  opt in any more, so `googletagmanager.com` is never contacted.
-- `index.html` still declares Google Consent Mode v2 defaults with every signal
-  set to `denied` — it is the only Google-related code left in the shell and
-  loads nothing.
-- `app/src/lib/consent.ts` and `app/src/components/CookieConsent.tsx` are kept on
-  disk but no longer mounted, so the gate can be restored by re-mounting the
-  component alongside a control that calls `setConsent('granted')`.
-- GTM's `<noscript>` iframe stays removed: without JavaScript there is no way to
-  ask for consent, so nothing is loaded.
-
-> Turning analytics on for all visitors would not require bringing the popup
-> back, but Google requests would then happen with no consent gate — that is a
-> **policy decision, not a technical one**. The Cookie Policy's "Analytics"
-> category row still describes the consent-gated behaviour and must be updated if
-> that decision is made.
+- `index.html` declares Google Consent Mode v2 defaults with every ad/analytics signal set to `denied` and omits GTM's `<noscript>` iframe.
+- `CookieConsent` (`app/src/components/CookieConsent.tsx`) prompts public visitors and stores their policy-versioned choice (`serpely_consent_v1`); `app/src/lib/consent.ts` loads GTM only after `granted`.
+- Visitors can re-open preferences and withdraw consent at any time via `"Cookie settings"` in the footer or `/cookie-policy` (`resetConsent()`).
+- Decisions are logged server-side to `ConsentLog` (`POST /api/analytics/consent`) with only the choice, a random rotating `visitorId` (`serpely_vid`), page path, and truncated user-agent — never cookie values.
 
 Server-side page views (`/api/analytics/track`) are first-party, cookie-less and
 aggregate — page path, referring URL, truncated user-agent. Documented as such in
@@ -192,6 +171,16 @@ These are documented rather than fixed; each has an owner and a planned phase.
 | Dev-only advisories: `braces` (via chokidar) and `postcss-selector-parser` (via Tailwind 3) | Build tooling only; no fix without a Tailwind 4 migration. Production deps are clean. | Tailwind 4 branch |
 | No email verification on client registration | Implemented but dormant: works once `RESEND_API_KEY` is set. Until then the token is minted and logged, not emailed. | Supply keys |
 | Turnstile is wired but unkeyed | `TURNSTILE_SECRET_KEY` / `VITE_TURNSTILE_SITE_KEY` are unset, so the guard is a no-op and forms rely on rate limits. | Supply keys |
-| GA4/GTM never load | No opt-in UI remains, so `googletagmanager.com` is never contacted; Consent Mode v2 defaults stay `denied` in the shell. | Done (hardening) |
-| Client-facing tokens still live in `localStorage` | Admin is migrated to cookies; the public client token is scoped to user data only. | Follow-up |
+| GA4/GTM consent-gated | Consent Mode v2 defaults stay `denied`; GTM loads only after explicit opt-in via `CookieConsent`. | Done (hardening) |
+| Client-facing tokens live in `httpOnly` cookies | Migrated from `localStorage` to `__Host-serpely_client` with CSRF origin checks and `tokenVersion` revocation. | Done (hardening) |
 | Backup restore wipes collections | Now requires an explicit `confirm: "RESTORE"` string, a dry run, and writes a pre-restore snapshot. | Done (hardening) |
+
+## Audit Log (2026-11-11)
+
+- 🟢 **Passed — Secrets & `.gitignore`**: Live secrets reside in `server/.env` (git-ignored); `JWT_SECRET` length (>= 32 chars) is enforced at startup (`server/src/index.ts`); no API keys or private tokens found in `app/src/`.
+- 🟢 **Passed — Dependencies (`npm audit --omit=dev`)**: 0 production vulnerabilities in both `server` and `app`.
+- 🟢 **Passed — Auth, Roles & CSRF**: Admin and client sessions use `httpOnly` `__Host-` cookies with `SameSite=Lax`, CSRF origin validation on state-changing requests, `tokenVersion` revocation, and DB-backed role checks (`verifyJWT`, `requireRole`).
+- 🟢 **Passed — XSS & CSP**: Blog HTML is sanitized server-side (`sanitize-html`) and client-side (`DOMPurify` in `app/src/lib/sanitize.ts`); HTML responses use per-request CSP nonces with `strict-dynamic` and no `unsafe-inline` in `script-src`.
+- 🟢 **Passed — SSRF & Process Execution**: `execFile` (argument-array, no shell) is used in `server/src/lib/agenticSeo.ts`; `GET /api/public-audit/:id/css` was hardened with a dedicated `cssLimiter` (15 req/min) and `assertPublicTarget(target)` DNS/SSRF re-validation; `Open URL` in `SiteAuditDrawer.tsx` restricts `href` to `^https?://`.
+- 🟡 **Warning — External Script Directory & GitHub Security Workflow**: `Agentic-SEO-Skill-main/scripts` is not currently present on disk (`resolveScriptsDir()` degrades gracefully to `null`), and `.github/workflows/security.yml` is currently deleted in the working tree (`git status`).
+

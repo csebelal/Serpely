@@ -1,12 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useEffect, useState } from 'react';
 import { getSection } from '@/lib/api';
-
-gsap.registerPlugin(ScrollTrigger);
+import { CountUp, GlowCard, Reveal, useMotionPrefs } from '@/components/motion';
 
 export function ProblemSolutionSection() {
-  const sectionRef = useRef<HTMLElement>(null);
+  const { reducedMotion } = useMotionPrefs();
 
   const [pillText, setPillText] = useState('AI Search Visibility Gap');
   const [headline1, setHeadline1] = useState('Stop Losing Traffic to');
@@ -32,20 +29,6 @@ export function ProblemSolutionSection() {
     'Every page scored 0–100 for AI visibility and citation eligibility. Updated continuously.',
     'Identifies pages to refresh first, scored by traffic decay, GEO Score, and keyword movement.',
   ]);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo('.prob-sol-reveal', { opacity: 0, y: 28 }, {
-        opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 70%', toggleActions: 'play none none reverse' },
-      });
-      gsap.fromTo('.prob-sol-engine', { opacity: 0, y: 18 }, {
-        opacity: 1, y: 0, duration: 0.45, stagger: 0.09, ease: 'power2.out',
-        scrollTrigger: { trigger: '.prob-sol-engines', start: 'top 78%', toggleActions: 'play none none reverse' },
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
 
   useEffect(() => {
     getSection('problem-solution').then(r => {
@@ -81,10 +64,10 @@ export function ProblemSolutionSection() {
   }));
 
   return (
-    <section ref={sectionRef} id="problem-solution" className="pt-16 pb-28 px-6 relative section-band-accent-s">
+    <section id="problem-solution" className="pt-16 pb-28 px-6 relative section-band-accent-s">
       <div className="max-w-7xl mx-auto">
 
-        <div className="text-center mb-20 prob-sol-reveal">
+        <Reveal className="text-center mb-20">
           <div className="pill-s mb-5 mx-auto" style={{ width: 'fit-content' }}>
             <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot flex-shrink-0" style={{ background: '#00C27A' }} />
             {pillText}
@@ -96,35 +79,39 @@ export function ProblemSolutionSection() {
           <p className="text-lg max-w-xl mx-auto font-medium" style={{ color: 'var(--text-soft)' }}>
             {subtext}
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid lg:grid-cols-12 gap-6 items-stretch">
 
           {/* LEFT: Problem */}
-          <div className="lg:col-span-5 prob-sol-reveal">
-            <div className="card-s p-8 h-full" style={{ background: 'var(--bg-subtle)' }}>
+          <Reveal className="lg:col-span-5" delay={60}>
+            <div className="card-s p-8 h-full flex flex-col" style={{ background: 'var(--bg-subtle)' }}>
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 <span className="text-[11px] uppercase font-bold text-red-600" style={{ letterSpacing: '0.14em' }}>{problemLabel}</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 {problemItems.map((item, i) => (
-                  <div key={i} className="x-item-s">{item}</div>
+                  <Reveal key={i} delay={90 + i * 75} y={14}>
+                    <div className="x-item-s">{item}</div>
+                  </Reveal>
                 ))}
               </div>
               <div className="mt-7 p-5 rounded-xl border" style={{ background: 'rgba(239,68,68,0.05)', borderColor: 'rgba(239,68,68,0.2)' }}>
                 <div className="flex items-baseline gap-2 mb-1">
-                  <span className="font-extrabold text-4xl text-red-600" style={{ letterSpacing: '-0.04em' }}>{statNum}</span>
+                  <span className="font-extrabold text-4xl text-red-600" style={{ letterSpacing: '-0.04em' }}>
+                    <CountUp value={statNum} />
+                  </span>
                   <span className="text-[11px] text-red-600 uppercase font-bold" style={{ letterSpacing: '0.1em' }}>{statLabel}</span>
                 </div>
                 <p className="text-sm leading-relaxed font-medium" style={{ color: 'var(--text-soft)' }}>{statDesc}</p>
               </div>
             </div>
-          </div>
+          </Reveal>
 
-          {/* RIGHT: Solution */}
-          <div className="lg:col-span-7 prob-sol-reveal" style={{ transitionDelay: '0.12s' }}>
-            <div className="card-accent-s p-8 h-full flex flex-col">
+          {/* RIGHT: Solution with animated glowing border & flowing 4-step loop pulse */}
+          <Reveal className="lg:col-span-7" delay={140}>
+            <GlowCard featured className="card-accent-s p-8 h-full flex flex-col">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot" style={{ background: '#00C27A' }} />
                 <span className="text-[11px] uppercase font-bold accent-text" style={{ letterSpacing: '0.14em' }}>{solutionLabel}</span>
@@ -133,39 +120,69 @@ export function ProblemSolutionSection() {
                 {solutionHeadline}
               </h3>
 
-              <div className="grid grid-cols-2 gap-3 mb-7 prob-sol-engines">
-                {engines.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="card-s prob-sol-engine"
-                    style={{ padding: '16px', cursor: 'default', transition: 'transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease' }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform = 'translateY(-3px)';
-                      el.style.boxShadow = '0 8px 24px rgba(0,194,122,0.14)';
-                      el.style.borderColor = 'rgba(0,194,122,0.45)';
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.transform = '';
-                      el.style.boxShadow = '';
-                      el.style.borderColor = '';
-                    }}
-                  >
-                    <div className="icon-badge-s icon-accent-s mb-3" style={{ width: 40, height: 40 }}>
-                      <span className="w-5 h-5">{item.icon}</span>
-                    </div>
-                    <div className="font-bold text-sm mb-1.5" style={{ color: 'var(--text)' }}>{item.title}</div>
-                    <div className="text-xs leading-snug font-medium" style={{ color: 'var(--text-soft)' }}>{item.desc}</div>
-                  </div>
-                ))}
+              <div className="relative mb-7">
+                {/* Flowing loop connector SVG behind the 2x2 engine grid */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 400 200"
+                  preserveAspectRatio="none"
+                  className="hidden sm:block absolute inset-0 w-full h-full pointer-events-none"
+                  style={{ opacity: 0.55 }}
+                >
+                  <rect
+                    x="90"
+                    y="45"
+                    width="220"
+                    height="110"
+                    rx="18"
+                    fill="none"
+                    stroke="rgba(0, 194, 122, 0.25)"
+                    strokeWidth="1.5"
+                    strokeDasharray="6 6"
+                  />
+                  {!reducedMotion && (
+                    <rect
+                      x="90"
+                      y="45"
+                      width="220"
+                      height="110"
+                      rx="18"
+                      fill="none"
+                      stroke="#00C27A"
+                      strokeWidth="2"
+                      strokeDasharray="48 560"
+                      strokeLinecap="round"
+                    >
+                      <animate attributeName="stroke-dashoffset" from="608" to="0" dur="5.5s" repeatCount="indefinite" />
+                    </rect>
+                  )}
+                </svg>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 relative z-10">
+                  {engines.map((item, idx) => (
+                    <Reveal key={item.title} delay={120 + idx * 80} y={16}>
+                      <div className="card-s glow-card-s h-full" style={{ padding: '16px' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="icon-badge-s icon-accent-s" style={{ width: 40, height: 40 }}>
+                            <span className="w-5 h-5">{item.icon}</span>
+                          </div>
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,194,122,0.10)', color: '#00A868' }}>
+                            0{idx + 1}
+                          </span>
+                        </div>
+                        <div className="font-bold text-sm mb-1.5" style={{ color: 'var(--text)' }}>{item.title}</div>
+                        <div className="text-xs leading-snug font-medium" style={{ color: 'var(--text-soft)' }}>{item.desc}</div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </div>
               </div>
 
               <p className="text-sm leading-relaxed font-medium mt-auto" style={{ color: 'var(--text-soft)' }}>
                 {solutionBody}
               </p>
-            </div>
-          </div>
+            </GlowCard>
+          </Reveal>
 
         </div>
       </div>

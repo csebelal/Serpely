@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
 import { injectSchema, removeSchema } from '@/lib/schema';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { AnimatedBackground } from '@/components/backgrounds/AnimatedBackground';
+import { ScrollProgress } from '@/components/motion';
 import { HeroSection } from '@/sections/HeroSection';
 import { LogosMarqueeSection } from '@/sections/LogosMarqueeSection';
 import { ProblemSolutionSection } from '@/sections/ProblemSolutionSection';
@@ -14,11 +14,8 @@ import { FAQSection } from '@/sections/FAQSection';
 import { CTASection } from '@/sections/CTASection';
 import { NewsletterSection } from '@/sections/NewsletterSection';
 
-gsap.registerPlugin(ScrollTrigger);
-
 export function Home() {
   useSEOMeta('home', { title: 'Serpely — Agentic SEO for the AI-First Web', description: 'Daily AI audit that tracks whether you\'re cited across ChatGPT, Perplexity, and Google AI Overviews.' });
-  const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     injectSchema('schema-org', {
@@ -43,23 +40,22 @@ export function Home() {
     return () => { removeSchema('schema-org'); removeSchema('schema-software'); };
   }, []);
 
-  useEffect(() => {
-    ScrollTrigger.refresh();
-    return () => { ScrollTrigger.getAll().forEach(st => st.kill()); };
-  }, []);
-
   return (
-    <div ref={mainRef} className="relative">
-      <HeroSection />
-      <LogosMarqueeSection />
-      <ProblemSolutionSection />
-      <HowItWorksSection />
-      <CoreFeaturesSection />
-      <TargetAudienceSection />
-      <TestimonialsSection />
-      <FAQSection />
-      <CTASection />
-      <NewsletterSection />
+    <div className="relative overflow-x-clip">
+      <ScrollProgress />
+      <AnimatedBackground />
+      <div className="relative z-10">
+        <HeroSection />
+        <LogosMarqueeSection />
+        <ProblemSolutionSection />
+        <HowItWorksSection />
+        <CoreFeaturesSection />
+        <TargetAudienceSection />
+        <TestimonialsSection />
+        <FAQSection />
+        <CTASection />
+        <NewsletterSection />
+      </div>
     </div>
   );
 }

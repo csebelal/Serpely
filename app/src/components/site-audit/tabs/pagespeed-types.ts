@@ -89,6 +89,8 @@ export interface PageSpeedTabData {
   formFactor: PsStrategy | null;
   /** The strategy the payload was produced with. */
   strategy: PsStrategy | null;
+  /** Lighthouse version string (e.g. "12.4.0"). */
+  lighthouseVersion: string | null;
   timing: { total: number | null };
   finalUrl: string | null;
   finalDisplayedUrl: string | null;
@@ -239,6 +241,7 @@ export function emptyPageSpeedData(): PageSpeedTabData {
   return {
     formFactor: null,
     strategy: null,
+    lighthouseVersion: null,
     timing: { total: null },
     finalUrl: null,
     finalDisplayedUrl: null,
@@ -321,6 +324,7 @@ export function pagespeedFromLighthouse(lighthouseResult: unknown): PageSpeedTab
   /* Lighthouse run metadata ---------------------------------------------- */
   out.formFactor = asStrategy(asRecord(lhr.configSettings)?.formFactor);
   out.strategy = out.formFactor;
+  out.lighthouseVersion = str(lhr.lighthouseVersion);
   out.timing = { total: num(asRecord(lhr.timing)?.total) };
   out.screenshot = screenshotData(auditsRaw);
 
@@ -349,14 +353,18 @@ export function pagespeedFromLighthouse(lighthouseResult: unknown): PageSpeedTab
   }
   out.lighthouseResult = { audits };
 
-  /* Opportunities — audits that expose `details.type === 'opportunity'` and a
-     positive estimated saving. Sorted by impact, like the prototype. */
+  /* Opportunities — audits that expose `details.type === 'opportunity'` OR
+     non-zero `metricSavings` (Lighthouse v11/v12 moved opportunities into
+     `table` details with `metricSavings`). Sorted by impact desc. */
   for (const [id, raw] of Object.entries(auditsRaw)) {
     const a = asRecord(raw);
-    if (asRecord(a?.details)?.type !== 'opportunity') continue;
+    const mode = str(a?.scoreDisplayMode);
+    if (mode === 'informative' || mode === 'notApplicable' || mode === 'manual' || mode === 'error') continue;
     const score = num(a?.score);
     if (score !== null && score >= 1) continue;
+    const isOpp = asRecord(a?.details)?.type === 'opportunity';
     const savings = savingsOf(a);
+    if (!isOpp && (savings === null || savings <= 0)) continue;
     if (savings === null || savings <= 0) continue;
     out.opportunities.push({ id, title: str(a?.title) ?? id, savings });
   }

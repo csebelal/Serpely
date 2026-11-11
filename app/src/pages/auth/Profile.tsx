@@ -7,7 +7,7 @@ import {
   googleConnectUrl, googleStatus, googleDisconnect, googleGscSummary, googleGaSessions,
   type ClientUserNotifications, type GoogleStatus, type GscSummary, type GaSessions,
 } from '../../lib/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
 
 const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Professional', business: 'Business' };

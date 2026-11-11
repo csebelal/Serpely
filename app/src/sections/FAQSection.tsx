@@ -1,9 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getFaq } from '@/lib/api';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
+import { Reveal } from '@/components/motion';
 
 const faqs = [
   {
@@ -42,47 +39,55 @@ const faqs = [
 
 function FAQItem({ faq, index }: { faq: typeof faqs[0]; index: number }) {
   const [open, setOpen] = useState(false);
+  const panelId = `faq-panel-${index}`;
 
   return (
-    <div
-      className="faq-item-s faq-reveal"
-      style={{
-        borderColor: open ? '#00C27A' : undefined,
-        boxShadow: open ? '0 4px 20px rgba(0,194,122,0.08)' : undefined,
-        transitionDelay: `${index * 0.05}s`,
-      }}
-    >
-      <button
-        className="w-full flex items-center justify-between px-6 py-[22px] text-left gap-4"
-        style={{ color: 'var(--text)', fontWeight: 700, fontSize: 15.5, letterSpacing: '-0.012em' }}
-        onClick={() => setOpen(!open)}
+    <Reveal delay={index * 45} y={16}>
+      <div
+        className="faq-item-s"
+        style={{
+          borderColor: open ? '#00C27A' : undefined,
+          background: open ? 'color-mix(in srgb, #00C27A 4%, var(--card-bg))' : undefined,
+          boxShadow: open ? '0 8px 26px rgba(0,194,122,0.10)' : undefined,
+        }}
       >
-        <span>{faq.q}</span>
-        <span
-          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
-          style={{
-            background: open ? '#00C27A' : 'var(--bg-subtle)',
-            border: `1.5px solid ${open ? '#00C27A' : 'hsl(var(--border))'}`,
-            transition: 'background 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
-            transform: open ? 'rotate(180deg)' : 'none',
-          }}
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          className="w-full flex items-center justify-between px-6 py-[22px] text-left gap-4 cursor-pointer"
+          style={{ color: 'var(--text)', fontWeight: 700, fontSize: 15.5, letterSpacing: '-0.012em' }}
+          onClick={() => setOpen(o => !o)}
         >
-          <svg width="11" height="7" viewBox="0 0 11 7" fill="none">
-            <path d="M1 1.5l4.5 4 4.5-4" stroke={open ? '#0A0A0A' : 'var(--text-soft)'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </span>
-      </button>
-      {open && (
-        <div className="px-6 pb-6" style={{ color: 'var(--text-soft)', fontSize: 15, lineHeight: 1.72, fontWeight: 500 }}>
-          {faq.a}
+          <span>{faq.q}</span>
+          <span
+            aria-hidden="true"
+            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+            style={{
+              background: open ? '#00C27A' : 'var(--bg-subtle)',
+              border: `1.5px solid ${open ? '#00C27A' : 'hsl(var(--border))'}`,
+              transition: 'background 0.22s ease, border-color 0.22s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
+            <svg width="11" height="7" viewBox="0 0 11 7" fill="none">
+              <path d="M1 1.5l4.5 4 4.5-4" stroke={open ? '#0A0A0A' : 'var(--text-soft)'} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </button>
+        <div id={panelId} className={`faq-panel-grid ${open ? 'is-open' : ''}`}>
+          <div className="faq-panel-inner">
+            <div className="px-6 pb-6" style={{ color: 'var(--text-soft)', fontSize: 15, lineHeight: 1.72, fontWeight: 500 }}>
+              {faq.a}
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </Reveal>
   );
 }
 
 export function FAQSection() {
-  const sectionRef = useRef<HTMLElement>(null);
   const [liveFaqs, setLiveFaqs] = useState(faqs);
 
   useEffect(() => {
@@ -92,31 +97,17 @@ export function FAQSection() {
     }).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo('.faq-header', { opacity: 0, y: 28 }, {
-        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 70%', toggleActions: 'play none none reverse' },
-      });
-      gsap.fromTo('.faq-reveal', { opacity: 0, y: 18 }, {
-        opacity: 1, y: 0, duration: 0.4, stagger: 0.07, ease: 'power2.out',
-        scrollTrigger: { trigger: '.faq-list', start: 'top 78%', toggleActions: 'play none none reverse' },
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section ref={sectionRef} id="faq" className="py-28 px-6 relative">
+    <section id="faq" className="py-28 px-6 relative section-glow-edge">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-14 faq-header">
+        <Reveal className="text-center mb-14">
           <div className="pill-s mb-5 mx-auto" style={{ width: 'fit-content' }}>
             <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot flex-shrink-0" style={{ background: '#00C27A' }} />
             FAQ
           </div>
           <h2 className="font-black text-4xl lg:text-5xl" style={{ fontWeight: 900, letterSpacing: '-0.045em', color: 'var(--text)' }}>Common Questions</h2>
-        </div>
-        <div className="space-y-3 faq-list">
+        </Reveal>
+        <div className="space-y-3">
           {liveFaqs.map((faq, i) => <FAQItem key={i} faq={faq} index={i} />)}
         </div>
       </div>

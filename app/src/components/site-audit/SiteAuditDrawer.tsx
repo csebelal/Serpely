@@ -12,15 +12,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
-import { getAuditUrlPsi, type AuditUrlPsi } from '@/lib/api';
+import { getAuditUrlCss, getAuditUrlPsi, type AuditUrlCss, type AuditUrlPsi } from '@/lib/api';
 import type { AuditViewModel, ReportFinding, Tone } from './report';
 import type { UrlDetail, UrlIssue, UrlPageStat, UrlTabId } from './types';
 import { URL_TABS, statusTone } from './types';
 import PageSpeedTab from './tabs/PageSpeedTab';
-import { pagespeedFromLighthouse } from './tabs/pagespeed-types';
+import { pagespeedFromLighthouse, type PsStrategy } from './tabs/pagespeed-types';
 import CruxTab from './tabs/CruxTab';
 import { cruxFromLoadingExperience } from './tabs/crux-types';
-import { CheckTab, CssTab, EmptyTab, GapsTab, ImagesTab, InsightsTab, LinksTab, SchemaTab, SearchTab } from './tabs/UrlTabs';
+import { CheckTab, CssTab, EmptyTab, ImagesTab, LinksTab, SchemaTab } from './tabs/UrlTabs';
 
 /** Normalize a URL for matching (lowercase host, no trailing slash, no hash). *//**
  * PSI always answers with a `loadingExperience` object, but when Google has no
@@ -152,6 +152,10 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
 
   const [psi, setPsi] = useState<AuditUrlPsi | null>(null);
   const [psiState, setPsiState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [psiStrategy, setPsiStrategy] = useState<PsStrategy>('mobile');
+  const [psiRefresh, setPsiRefresh] = useState(false);
+  const [cssData, setCssData] = useState<AuditUrlCss | null>(null);
+  const [cssState, setCssState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const toastTimer = useRef<number | null>(null);
 
   const detail = useMemo(
@@ -172,6 +176,10 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
     setTab('issues');
     setPsi(null);
     setPsiState('idle');
+    setPsiStrategy('mobile');
+    setPsiRefresh(false);
+    setCssData(null);
+    setCssState('idle');
     setToast(null);
   }, [finding?.key, open]);
 
@@ -192,14 +200,16 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
   }, [open, level, onClose]);
 
   // Fetch real PageSpeed data only when a tab that needs it is actually open.
-  // `psiAttempt` re-runs the fetch when the user clicks Retry after an error.
+  // `psiAttempt` re-runs the fetch when the user clicks Retry or Refresh.
   const [psiAttempt, setPsiAttempt] = useState(0);
   useEffect(() => {
     if (!open || level !== 2 || !activeUrl || !shareToken) return;
     if (tab !== 'pagespeed' && tab !== 'crux') return;
     let alive = true;
     setPsiState('loading');
-    getAuditUrlPsi(shareToken, activeUrl, 'mobile')
+    const forceRefresh = psiRefresh;
+    if (forceRefresh) setPsiRefresh(false);
+    getAuditUrlPsi(shareToken, activeUrl, psiStrategy, forceRefresh)
       .then((res) => {
         if (!alive) return;
         setPsi(res.data);
@@ -213,14 +223,52 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
     return () => {
       alive = false;
     };
-  }, [open, level, activeUrl, tab, shareToken, psiAttempt]);
+  }, [open, level, activeUrl, tab, shareToken, psiStrategy, psiAttempt]);
 
   const retryPsi = useCallback(() => setPsiAttempt((n) => n + 1), []);
+  const refreshPsi = useCallback(() => {
+    setPsiRefresh(true);
+    setPsiAttempt((n) => n + 1);
+  }, []);
+  const handlePsiStrategyChange = useCallback((next: PsStrategy) => {
+    setPsiStrategy(next);
+  }, []);
+
+  // Fetch real stylesheet & critical-request-chain data when the CSS tab opens.
+  const [cssAttempt, setCssAttempt] = useState(0);
+  useEffect(() => {
+    if (!open || level !== 2 || !activeUrl || !shareToken) return;
+    if (tab !== 'css') return;
+    let alive = true;
+    setCssState('loading');
+    getAuditUrlCss(shareToken, activeUrl)
+      .then((res) => {
+        if (!alive) return;
+        setCssData(res.data);
+        setCssState('ready');
+      })
+      .catch(() => {
+        if (!alive) return;
+        setCssData(null);
+        setCssState('error');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, level, activeUrl, tab, shareToken, cssAttempt]);
+
+  const retryCss = useCallback(() => setCssAttempt((n) => n + 1), []);
 
   const openUrl = (url: string) => {
     setActiveUrl(url);
     setLevel(2);
     setTab('issues');
+    setPsi(null);
+    setPsiState('idle');
+    setPsiStrategy('mobile');
+    setPsiRefresh(false);
+    setCssData(null);
+    setCssState('idle');
   };
 
   const backToL1 = () => {
@@ -273,7 +321,9 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
         return <IssuesTab detail={detail} />;
       case 'pagespeed':
         if (!shareToken) return <TabNotice tabId="pagespeed">PageSpeed data is unavailable for this report.</TabNotice>;
-        if (psiState === 'loading') return <TabNotice tabId="pagespeed">Running PageSpeed Insights on this URL…</TabNotice>;
+        if (psiState === 'loading' && !pagespeedData) {
+          return <TabNotice tabId="pagespeed">Running PageSpeed Insights ({psiStrategy}) on this URL…</TabNotice>;
+        }
         if (psiState === 'error') {
           return (
             <TabNotice tabId="pagespeed">
@@ -285,7 +335,16 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
             </TabNotice>
           );
         }
-        return <PageSpeedTab detail={detail} data={pagespeedData} />;
+        return (
+          <PageSpeedTab
+            detail={detail}
+            data={pagespeedData}
+            strategy={psiStrategy}
+            loading={psiState === 'loading'}
+            onStrategyChange={handlePsiStrategyChange}
+            onRefresh={refreshPsi}
+          />
+        );
       case 'crux':
         if (!shareToken) return <TabNotice tabId="crux">CrUX field data is unavailable for this report.</TabNotice>;
         if (psiState === 'loading') return <TabNotice tabId="crux">Loading CrUX field data for this URL…</TabNotice>;
@@ -300,14 +359,8 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
           );
         }
         return <CruxTab detail={detail} data={cruxUrlData} fieldData={cruxOriginData} />;
-      case 'search':
-        return <SearchTab detail={detail} />;
-      case 'gaps':
-        return <GapsTab detail={detail} />;
       case 'check':
         return <CheckTab detail={detail} />;
-      case 'insights':
-        return <InsightsTab detail={detail} />;
       case 'schema':
         return <SchemaTab detail={detail} />;
       case 'links':
@@ -315,7 +368,19 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
       case 'images':
         return <ImagesTab detail={detail} />;
       case 'css':
-        return <CssTab detail={detail} />;
+        if (!shareToken) return <TabNotice tabId="css">Stylesheet analysis is unavailable for this report.</TabNotice>;
+        if (cssState === 'loading') return <TabNotice tabId="css">Analyzing stylesheets & render-blocking requests…</TabNotice>;
+        if (cssState === 'error') {
+          return (
+            <TabNotice tabId="css">
+              Could not analyze stylesheets for this URL — the site may be unreachable or blocking the crawler.
+              <button className="full-page-btn" type="button" style={{ margin: '10px auto 0', display: 'inline-flex' }} onClick={retryCss}>
+                Retry CSS check
+              </button>
+            </TabNotice>
+          );
+        }
+        return <CssTab detail={detail} data={cssData} />;
       default:
         return <EmptyTab tabId={tab} />;
     }
@@ -346,32 +411,6 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
               </svg>
               <span>Back to findings</span>
             </button>
-            <div className="drawer-mini-stats" id="drawerMiniStats" aria-hidden="true">
-              <div className="mini-stat-group">
-                <span className="mini-stat">
-                  <b>{vm.pagesCrawled ?? '—'}</b>
-                  <label>All HTML pages</label>
-                </span>
-                <span className="mini-stat">
-                  <b>{vm.pagesDiscovered ?? '—'}</b>
-                  <label>New pages</label>
-                </span>
-                <span className="mini-stat">
-                  <b>—</b>
-                  <label>External links</label>
-                </span>
-              </div>
-              <div className="mini-stat-group">
-                <span className="mini-stat">
-                  <b>{vm.counts.high}</b>
-                  <label>Critical issues</label>
-                </span>
-                <span className="mini-stat">
-                  <b>{vm.counts.medium}</b>
-                  <label>Warnings</label>
-                </span>
-              </div>
-            </div>
           </div>
           <div className="drawer-meta">
             <span className="drawer-category" id="drawerCategory">{finding?.typeLabel ?? ''}</span>
@@ -426,8 +465,6 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
                     <span>Page</span>
                     <span>Status</span>
                     <span>HTML (KB)</span>
-                    <span>Score</span>
-                    <span>Discovered</span>
                     <span />
                   </div>
                   {urls.map((url) => {
@@ -443,9 +480,6 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
                     // older code without `pageStats` — columns show "—" then).
                     const stat = statForUrl(vm, url);
                     const tone = statusTone(stat ? stat.status : null);
-                    const discovered = vm.generatedAt
-                      ? vm.generatedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                      : '—';
                     return (
                       <div
                         className="drawer-url-row"
@@ -468,8 +502,6 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
                         <span className="drawer-url-metric">
                           {stat && Number.isFinite(stat.htmlKb) && stat.htmlKb > 0 ? `${Math.round(stat.htmlKb)} KB` : '—'}
                         </span>
-                        <span className="drawer-url-metric score">—</span>
-                        <span className="drawer-url-date">{discovered}</span>
                         <button
                           className="full-page-btn"
                           type="button"
@@ -537,37 +569,8 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
               );
             })}
           </nav>
-          <main className="url-main" id="urlMain">{renderTab()}</main>
+          <div className="url-main" id="urlMain">{renderTab()}</div>
         </div>
-
-        <footer className="drawer-footer drawer-footer-l1" id="drawerFooter1">
-          <div className="drawer-toast" id="drawerToast" role="status" aria-live="polite" hidden={!toast}>
-            {toast ?? ''}
-          </div>
-          <div className="drawer-actions">
-            <button
-              className="btn"
-              id="drawerResolve"
-              type="button"
-              onClick={() => showToast('Resolving findings in-app is not wired up yet — it will land in a later release.')}
-            >
-              Mark as resolved
-            </button>
-            <button
-              className="btn primary"
-              id="drawerRecrawl"
-              type="button"
-              onClick={() => showToast('Re-crawling a single URL is not wired up yet — run a new audit instead.')}
-            >
-              <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-              Re-crawl this URL
-            </button>
-          </div>
-        </footer>
 
         <footer className="drawer-footer-l2" id="drawerFooter2">
           <div className="drawer-toast" id="drawerToast2" role="status" aria-live="polite" hidden={!toast}>
@@ -592,19 +595,21 @@ export default function SiteAuditDrawer({ vm, shareToken, finding, open, onClose
               </svg>
               Copy URL
             </button>
-            <button
-              className="btn primary"
-              id="drawerRecrawlUrl"
-              type="button"
-              onClick={() => showToast('Re-crawling a single URL is not wired up yet — run a new audit instead.')}
-            >
-              <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-              Re-crawl this URL
-            </button>
+            {activeUrl && /^https?:\/\//i.test(activeUrl) && (
+              <a
+                className="btn primary"
+                href={activeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <svg className="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                Open URL
+              </a>
+            )}
           </div>
         </footer>
       </aside>

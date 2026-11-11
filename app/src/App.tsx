@@ -1,12 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { Wrench } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import { getPublicSettings, trackPageView } from './lib/api';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PopupRenderer } from './components/PopupRenderer';
+import { CookieConsent } from './components/CookieConsent';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Public pages — code-split per route
 const Login = lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
@@ -61,6 +65,7 @@ const PopupManager = lazy(() => import('./pages/admin/PopupManager').then(m => (
 const ChangelogManager = lazy(() => import('./pages/admin/ChangelogManager').then(m => ({ default: m.ChangelogManager })));
 const SEOManager = lazy(() => import('./pages/admin/SEOManager').then(m => ({ default: m.SEOManager })));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage').then(m => ({ default: m.AuditLogPage })));
+const ConsentLogPage = lazy(() => import('./pages/admin/ConsentLogPage').then(m => ({ default: m.ConsentLogPage })));
 const APIKeysManager = lazy(() => import('./pages/admin/APIKeysManager').then(m => ({ default: m.APIKeysManager })));
 
 // Chat loads only when the browser is idle (or on first interaction) —
@@ -100,7 +105,7 @@ function DeferredChatWidget() {
 
 function PageLoader() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
+    <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 700, letterSpacing: '-0.01em' }}>
         <span className="w-4 h-4 rounded-full border-2 border-current animate-spin" style={{ borderTopColor: 'transparent', opacity: 0.6 }} />
         Loading…
@@ -111,11 +116,13 @@ function PageLoader() {
 
 function MaintenancePage() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)', textAlign: 'center', padding: '40px 20px' }}>
-      <div style={{ fontSize: 48, marginBottom: 24 }}>🔧</div>
+    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)', textAlign: 'center', padding: '40px 20px' }}>
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 icon-badge-s icon-accent-s">
+        <Wrench className="w-8 h-8" aria-hidden="true" />
+      </div>
       <h1 style={{ fontSize: 32, fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em' }}>Under Maintenance</h1>
       <p style={{ fontSize: 16, color: 'var(--text-soft)', maxWidth: 400 }}>We're making some improvements. Please check back shortly.</p>
-    </div>
+    </main>
   );
 }
 
@@ -136,20 +143,20 @@ function AnalyticsTracker() {
 }
 
 function PublicShell() {
-  const [maintenance, setMaintenance] = useState<boolean | null>(null);
+  const [maintenance, setMaintenance] = useState(false);
 
   useEffect(() => {
     getPublicSettings().then(r => setMaintenance(r.data.maintenanceMode)).catch(() => setMaintenance(false));
   }, []);
 
-  if (maintenance === null) return null;
   if (maintenance) return <MaintenancePage />;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg)', color: 'var(--text)' }}>
+      <a href="#main-content" className="skip-link-s">Skip to main content</a>
       <Navbar />
       <PopupRenderer />
-      <main>
+      <main id="main-content" tabIndex={-1} style={{ outline: 'none' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -183,6 +190,7 @@ function PublicShell() {
       </main>
       <Footer />
       <DeferredChatWidget />
+      <CookieConsent />
     </div>
   );
 }
@@ -193,8 +201,9 @@ function App() {
       <Router>
         <ScrollToTop />
         <AnalyticsTracker />
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             {/* Admin routes — no Navbar/Footer */}
             <Route path="/sp-super-admin/login" element={<AdminLogin />} />
             <Route
@@ -227,6 +236,7 @@ function App() {
               <Route path="changelog" element={<ChangelogManager />} />
               <Route path="seo" element={<SEOManager />} />
               <Route path="audit" element={<AuditLogPage />} />
+              <Route path="consent-log" element={<ConsentLogPage />} />
               <Route path="api-keys" element={<APIKeysManager />} />
             </Route>
 
@@ -239,8 +249,9 @@ function App() {
 
             {/* Public routes — maintenance mode aware */}
             <Route path="*" element={<PublicShell />} />
-          </Routes>
-        </Suspense>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </Router>
     </AuthProvider>
   );

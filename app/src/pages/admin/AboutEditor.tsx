@@ -264,17 +264,17 @@ export function AboutEditor() {
               {/* Social links */}
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 12 }}>
                 <label style={{ ...s.label, marginBottom: 10 }}>Social Links</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label style={{ ...s.label, color: '#0077B5' }}>🔗 LinkedIn URL</label>
+                    <label style={{ ...s.label, color: '#0077B5' }}>LinkedIn URL</label>
                     <input style={s.inp} value={m.socials.linkedin} onChange={e => updateSocial(i, 'linkedin', e.target.value)} placeholder="https://linkedin.com/in/..." />
                   </div>
                   <div>
-                    <label style={{ ...s.label, color: '#1d9bf0' }}>𝕏 Twitter / X URL</label>
+                    <label style={{ ...s.label, color: '#0369a1' }}>Twitter / X URL</label>
                     <input style={s.inp} value={m.socials.twitter} onChange={e => updateSocial(i, 'twitter', e.target.value)} placeholder="https://x.com/..." />
                   </div>
                   <div>
-                    <label style={{ ...s.label, color: '#1877F2' }}>𝒇 Facebook URL</label>
+                    <label style={{ ...s.label, color: '#1877F2' }}>Facebook URL</label>
                     <input style={s.inp} value={m.socials.facebook} onChange={e => updateSocial(i, 'facebook', e.target.value)} placeholder="https://facebook.com/..." />
                   </div>
                 </div>
@@ -291,7 +291,7 @@ export function AboutEditor() {
         <div style={s.card}>
           <h2 style={s.sectionHead}>Stats Strip</h2>
           <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 18 }}>The 4 numbers shown below the hero section.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {data.stats.map((st, i) => (
               <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
                 <div style={{ marginBottom: 10 }}>
@@ -431,7 +431,7 @@ export function AboutEditor() {
           <div style={s.card}>
             <h2 style={s.sectionHead}>Our Values</h2>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 18 }}>Section headline, subtext, and the value cards grid.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
               <div>
                 <label style={s.label}>Section Headline</label>
                 <input style={s.inp} value={data.valuesHeadline}

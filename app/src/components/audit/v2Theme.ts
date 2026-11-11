@@ -6,18 +6,19 @@ export const V2 = {
   cardBg: '#FFFFFF',
   border: '#E3E9E6',
   ink: '#0B1411',
-  soft: '#55655D',
-  faint: '#9DB2A8',
+  soft: '#4B5B53',
+  faint: '#A8C0B4',
   heroBg: '#0A1410',
   green: '#00B96B',
+  greenText: '#00754A',
   greenBright: '#19D987',
   greenSoft: '#3BE39A',
-  red: '#E5484D',
+  red: '#C92A30',
   redSoft: '#FF8A7A',
-  amber: '#D9A400',
-  fontBody: "'Figtree', system-ui, sans-serif",
-  fontDisplay: "'Outfit', sans-serif",
-  fontMono: "'JetBrains Mono', monospace",
+  amber: '#925800',
+  fontBody: "'Satoshi', system-ui, -apple-system, sans-serif",
+  fontDisplay: "'Satoshi', system-ui, -apple-system, sans-serif",
+  fontMono: "'JetBrains Mono', ui-monospace, monospace",
 };
 
 export interface V2CatStyle { name: string; tint: string; text: string; bar: string }
@@ -42,5 +43,5 @@ export function effortLabel(effort: string): string {
 export const v2Btn: CSSProperties = {
   minHeight: 40, padding: '0 18px', borderRadius: 999, border: '1px solid #C9D4CE',
   background: '#FFFFFF', color: '#0B1411', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-  fontFamily: "'Figtree', system-ui, sans-serif",
+  fontFamily: "'Satoshi', system-ui, -apple-system, sans-serif",
 };

@@ -165,12 +165,12 @@ function TableTab() {
       {priceRow && (
         <div style={s.card}>
           <p style={s.head}>Starting Price Row</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {(['serpely', 'ahrefs', 'semrush', 'moz'] as const).map(tool => {
               const pi = rows.indexOf(priceRow);
               return (
                 <div key={tool}>
-                  <label style={{ ...s.label, color: tool === 'serpely' ? '#00C27A' : '#64748b' }}>
+                  <label style={{ ...s.label, color: tool === 'serpely' ? '#00754A' : '#475569' }}>
                     {tool.charAt(0).toUpperCase() + tool.slice(1)}
                   </label>
                   <input

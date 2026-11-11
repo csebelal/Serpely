@@ -16,6 +16,7 @@ export interface IClientUser extends Document {
   emailVerified: boolean;
   verifyToken: string;
   verifyTokenExpires?: Date;
+  tokenVersion: number;
   createdAt: Date;
 }
 
@@ -35,6 +36,7 @@ const ClientUserSchema = new Schema<IClientUser>({
   emailVerified: { type: Boolean, default: false },
   verifyToken: { type: String, default: '' },
   verifyTokenExpires: { type: Date },
+  tokenVersion: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 

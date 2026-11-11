@@ -5,9 +5,10 @@ import remarkGfm from 'remark-gfm';
 import { useChatWidget, type WidgetMessage } from '../hooks/useChatWidget';
 
 const COLORS = {
-  accent: '#00A868',
-  accentDark: '#00C27A',
-  accentHover: '#00E08F',
+  brand: '#00C27A',
+  brandHover: '#00E08F',
+  onBrand: 'var(--accent-on-brand)',
+  accentText: 'var(--accent-text)',
 };
 
 export function ChatWidget() {
@@ -20,7 +21,12 @@ export function ChatWidget() {
   useEffect(() => {
     if (!open) return;
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -47,8 +53,10 @@ export function ChatWidget() {
     <>
       {/* ── Floating button ── */}
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         aria-label={open ? 'Close chat' : 'Open chat'}
+        aria-expanded={open}
         style={{
           position: 'fixed',
           bottom: 24,
@@ -57,8 +65,8 @@ export function ChatWidget() {
           width: 56,
           height: 56,
           borderRadius: 28,
-          background: COLORS.accent,
-          color: '#fff',
+          background: COLORS.brand,
+          color: COLORS.onBrand,
           border: 'none',
           cursor: 'pointer',
           boxShadow: '0 4px 20px rgba(0, 168, 104, 0.35), 0 2px 8px rgba(0,0,0,0.08)',
@@ -69,21 +77,23 @@ export function ChatWidget() {
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'scale(1.06)';
-          e.currentTarget.style.background = COLORS.accentHover;
+          e.currentTarget.style.background = COLORS.brandHover;
           e.currentTarget.style.boxShadow = '0 6px 28px rgba(0, 168, 104, 0.45), 0 4px 14px rgba(0,0,0,0.1)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.background = COLORS.accent;
+          e.currentTarget.style.background = COLORS.brand;
           e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 168, 104, 0.35), 0 2px 8px rgba(0,0,0,0.08)';
         }}
       >
-        {open ? <X size={24} strokeWidth={2.4} /> : <MessageCircle size={24} strokeWidth={2.2} />}
+        {open ? <X size={24} strokeWidth={2.4} aria-hidden="true" /> : <MessageCircle size={24} strokeWidth={2.2} aria-hidden="true" />}
       </button>
 
       {/* ── Chat window ── */}
       {open && (
         <div
+          role="dialog"
+          aria-label="Serpely AI Assistant"
           style={{
             position: 'fixed',
             bottom: 92,
@@ -98,7 +108,7 @@ export function ChatWidget() {
             borderRadius: 18,
             overflow: 'hidden',
             boxShadow: '0 24px 64px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.1)',
-            border: '1px solid var(--border)',
+            border: '1px solid hsl(var(--border))',
             background: 'var(--bg)',
             color: 'var(--text)',
             fontFamily: "'Satoshi', system-ui, sans-serif",
@@ -112,7 +122,7 @@ export function ChatWidget() {
               alignItems: 'center',
               justifyContent: 'space-between',
               background: 'var(--card-bg)',
-              borderBottom: '1px solid var(--border)',
+              borderBottom: '1px solid hsl(var(--border))',
               flexShrink: 0,
             }}
           >
@@ -122,28 +132,31 @@ export function ChatWidget() {
                   width: 32,
                   height: 32,
                   borderRadius: 10,
-                  background: COLORS.accent,
+                  background: COLORS.brand,
+                  color: COLORS.onBrand,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <MessageCircle size={16} color="#fff" strokeWidth={2.2} />
+                <MessageCircle size={16} strokeWidth={2.2} aria-hidden="true" />
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: '-0.015em', lineHeight: 1.2 }}>Serpely AI</div>
-                <div style={{ fontSize: 12, color: 'var(--text-ghost)', lineHeight: 1.3 }}>Ask anything about SEO</div>
+                <div style={{ fontSize: 12, color: 'var(--text-soft)', lineHeight: 1.3 }}>Ask anything about SEO</div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               {messages.length > 0 && (
                 <button
+                  type="button"
                   onClick={clearConversation}
+                  aria-label="New conversation"
                   title="New conversation"
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--text-ghost)',
+                    color: 'var(--text-soft)',
                     cursor: 'pointer',
                     padding: 6,
                     borderRadius: 8,
@@ -152,18 +165,20 @@ export function ChatWidget() {
                     justifyContent: 'center',
                     transition: 'color 0.15s',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.accent; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-ghost)'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = COLORS.accentText; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-soft)'; }}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               )}
               <button
+                type="button"
                 onClick={() => setOpen(false)}
+                aria-label="Close chat"
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'var(--text-ghost)',
+                  color: 'var(--text-soft)',
                   cursor: 'pointer',
                   padding: 6,
                   borderRadius: 8,
@@ -173,9 +188,9 @@ export function ChatWidget() {
                   transition: 'color 0.15s',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-ghost)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-soft)'; }}
               >
-                <X size={18} />
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -205,7 +220,7 @@ export function ChatWidget() {
             onSubmit={handleSubmit}
             style={{
               padding: '10px 12px',
-              borderTop: '1px solid var(--border)',
+              borderTop: '1px solid hsl(var(--border))',
               display: 'flex',
               alignItems: 'flex-end',
               gap: 8,
@@ -215,6 +230,7 @@ export function ChatWidget() {
           >
             <textarea
               ref={inputRef}
+              aria-label="Ask a question"
               placeholder="Ask a question..."
               rows={1}
               value={draft}
@@ -223,32 +239,32 @@ export function ChatWidget() {
               style={{
                 flex: 1,
                 resize: 'none',
-                border: '1px solid var(--border)',
+                border: '1px solid hsl(var(--border))',
                 borderRadius: 12,
                 padding: '10px 14px',
                 fontSize: 14,
                 fontFamily: "'Satoshi', system-ui, sans-serif",
                 background: 'var(--input-bg)',
                 color: 'var(--text)',
-                outline: 'none',
                 lineHeight: 1.5,
                 maxHeight: 100,
                 transition: 'border-color 0.15s',
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = COLORS.accent; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = COLORS.brand; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'hsl(var(--border))'; }}
             />
             {busy ? (
               <button
                 type="button"
                 onClick={stopGenerating}
+                aria-label="Stop generating"
                 title="Stop generating"
                 style={{
                   width: 40,
                   height: 40,
                   borderRadius: 10,
                   background: 'var(--bg-subtle)',
-                  border: '1px solid var(--border)',
+                  border: '1px solid hsl(var(--border))',
                   color: 'var(--text-soft)',
                   cursor: 'pointer',
                   display: 'flex',
@@ -260,19 +276,20 @@ export function ChatWidget() {
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-subtle)'; }}
               >
-                <Square size={16} fill="currentColor" />
+                <Square size={16} fill="currentColor" aria-hidden="true" />
               </button>
             ) : (
               <button
                 type="submit"
                 disabled={!draft.trim() || busy}
+                aria-label="Send message"
                 title="Send"
                 style={{
                   width: 40,
                   height: 40,
                   borderRadius: 10,
-                  background: COLORS.accent,
-                  color: '#fff',
+                  background: COLORS.brand,
+                  color: COLORS.onBrand,
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
@@ -282,10 +299,10 @@ export function ChatWidget() {
                   opacity: draft.trim() ? 1 : 0.5,
                   transition: 'background 0.15s, opacity 0.15s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = COLORS.accentHover; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = COLORS.accent; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = COLORS.brandHover; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = COLORS.brand; }}
               >
-                <Send size={16} />
+                <Send size={16} aria-hidden="true" />
               </button>
             )}
           </form>
@@ -325,18 +342,18 @@ function EmptyState({ onSend }: { onSend: (q: string) => void }) {
           height: 48,
           borderRadius: 14,
           background: 'var(--bg-subtle)',
-          border: '1px solid var(--border)',
+          border: '1px solid hsl(var(--border))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <MessageCircle size={22} color="var(--text-ghost)" strokeWidth={1.8} />
+        <MessageCircle size={22} color="var(--text-soft)" strokeWidth={1.8} aria-hidden="true" />
       </div>
       <p style={{ margin: 0, fontSize: 14, fontWeight: 700, letterSpacing: '-0.015em', color: 'var(--text)' }}>
         How can I help?
       </p>
-      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-ghost)', lineHeight: 1.5, maxWidth: 260 }}>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.5, maxWidth: 260 }}>
         Ask me about Serpely's features, SEO, AI search visibility, or anything else.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 4 }}>
@@ -348,7 +365,7 @@ function EmptyState({ onSend }: { onSend: (q: string) => void }) {
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: COLORS.accent,
+              color: COLORS.accentText,
               background: 'rgba(0, 168, 104, 0.08)',
               border: '1px solid rgba(0, 168, 104, 0.2)',
               borderRadius: 8,
@@ -359,7 +376,7 @@ function EmptyState({ onSend }: { onSend: (q: string) => void }) {
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(0, 168, 104, 0.18)';
-              e.currentTarget.style.borderColor = COLORS.accent;
+              e.currentTarget.style.borderColor = COLORS.brand;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'rgba(0, 168, 104, 0.08)';
@@ -388,9 +405,9 @@ function MessageBubble({ message: msg, busy }: { message: WidgetMessage; busy: b
           maxWidth: '85%',
           padding: '10px 14px',
           borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-          background: isUser ? COLORS.accent : 'var(--bg-subtle)',
-          color: isUser ? '#fff' : 'var(--text)',
-          border: isUser ? 'none' : '1px solid var(--border)',
+          background: isUser ? COLORS.brand : 'var(--bg-subtle)',
+          color: isUser ? COLORS.onBrand : 'var(--text)',
+          border: isUser ? 'none' : '1px solid hsl(var(--border))',
           fontSize: 14,
           lineHeight: 1.6,
           wordBreak: 'break-word',
@@ -428,6 +445,9 @@ function TypingIndicator() {
         @keyframes chat-dot-bounce {
           0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
           40% { transform: scale(1); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          @keyframes chat-dot-bounce { 0%, 100% { transform: none; opacity: 0.8; } }
         }
       `}</style>
     </div>

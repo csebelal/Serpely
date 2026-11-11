@@ -10,14 +10,22 @@ export type ConsentChoice = 'granted' | 'denied';
 
 const STORAGE_KEY = 'serpely_consent_v1';
 const GTM_SCRIPT_ID = 'serpely-gtm';
+const VISITOR_KEY = 'serpely_vid';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /** Dispatched on `window` whenever the choice changes (or is reset). */
 export const CONSENT_EVENT = 'serpely:consent';
+
+/** Bumped whenever the Cookie Policy materially changes — a mismatch re-prompts. */
+export const CONSENT_POLICY_VERSION = '2026-10-26';
 
 interface StoredConsent {
   choice: ConsentChoice;
   /** Unix ms — kept as a simple consent record. */
   at: number;
+  /** Cookie Policy version the user agreed to. */
+  policy: string;
 }
 
 declare global {
@@ -27,13 +35,17 @@ declare global {
   }
 }
 
-/** The visitor's stored choice, or null if they have not decided yet. */
+/** The visitor's stored choice, or null if they have not decided yet (or agreed to an older policy). */
 export function getConsent(): ConsentChoice | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredConsent>;
-    return parsed.choice === 'granted' || parsed.choice === 'denied' ? parsed.choice : null;
+    if (parsed.choice !== 'granted' && parsed.choice !== 'denied') return null;
+    // Records made under an older policy version count as undecided, so the
+    // banner comes back and visitors agree to the current text.
+    if (parsed.policy !== CONSENT_POLICY_VERSION) return null;
+    return parsed.choice;
   } catch {
     // Private mode / blocked storage — treat as undecided rather than crashing.
     return null;
@@ -43,11 +55,15 @@ export function getConsent(): ConsentChoice | null {
 /** Records the choice, applies it, and notifies the UI. */
 export function setConsent(choice: ConsentChoice): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ choice, at: Date.now() } satisfies StoredConsent));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ choice, at: Date.now(), policy: CONSENT_POLICY_VERSION } satisfies StoredConsent),
+    );
   } catch {
     /* storage unavailable — the choice still applies for this page view */
   }
   applyConsent(choice);
+  reportConsent(choice);
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
 }
 
@@ -58,7 +74,44 @@ export function resetConsent(): void {
   } catch {
     /* ignore */
   }
+  // Withdraw consent immediately in the current session: GTM may already be
+  // loaded, so push a denied update before showing the banner again.
+  applyConsent('denied');
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: null }));
+}
+
+/** A random id kept in localStorage to group decisions without any tracking identifier. */
+function visitorId(): string {
+  try {
+    let id = localStorage.getItem(VISITOR_KEY);
+    if (!id) {
+      id =
+        (typeof crypto !== 'undefined' && 'randomUUID' in crypto && crypto.randomUUID()) ||
+        `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      try { localStorage.setItem(VISITOR_KEY, id); } catch { /* private mode */ }
+    }
+    return id;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Fire-and-forget report to the server so the admin panel can log the decision.
+ * No cookie values are sent — only the choice, the random visitor id, and the
+ * page path. Failures are ignored; logging consent must never break the UI.
+ */
+function reportConsent(choice: ConsentChoice): void {
+  try {
+    void fetch(`${API_BASE}/api/analytics/consent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choice, visitorId: visitorId(), page: window.location.pathname }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Pushes the consent state into the dataLayer and loads GTM when granted. */

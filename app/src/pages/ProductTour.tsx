@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -284,7 +285,8 @@ export function ProductTour() {
   const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       gsap.fromTo('.pt-hero', { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out', delay: 0.1 });
 
       gsap.fromTo('.pt-steps-nav span', { opacity: 0, y: 10 }, {
@@ -321,7 +323,7 @@ export function ProductTour() {
         scrollTrigger: { trigger: '.pt-cta', start: 'top 84%', toggleActions: 'play none none reverse' },
       });
     }, pageRef);
-    return () => ctx.revert();
+    return () => mm.revert();
   }, []);
 
   return (
@@ -330,6 +332,7 @@ export function ProductTour() {
       {/* ── Hero ── */}
       <section className="pt-32 pb-20 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,194,122,0.09) 0%, transparent 70%)' }} />
+        <PageBackground variant="aurora" intensity={0.7} />
         <div className="pt-hero max-w-3xl mx-auto relative z-10">
           <span className="pill-s mb-5 inline-flex">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00C27A' }} />

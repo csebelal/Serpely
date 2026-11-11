@@ -1,14 +1,18 @@
 import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import ClientUser from '../models/ClientUser';
+import GoogleConnection from '../models/GoogleConnection';
+import GoogleSnapshot from '../models/GoogleSnapshot';
 import { guardTurnstile } from '../lib/turnstile';
 import { sendEmail, verificationEmail, appUrl, apiPublicUrl, emailEnabled } from '../lib/email';
+import {
+  resolveActiveClient, signClientToken,
+  clearClientCookie, clientCookieOptions, CLIENT_COOKIE, CLIENT_IDLE_MS,
+} from '../lib/clientSession';
 
 const router = Router();
-const SECRET = () => process.env.JWT_SECRET as string;
 
 /** Verification links stay valid for 24 hours. */
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -28,15 +32,14 @@ const verifyLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
 });
 
-function verifyClientToken(req: Request): { clientId: string } | null {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) return null;
-  try {
-    const payload = jwt.verify(header.split(' ')[1], SECRET()) as { clientId?: string };
-    return payload.clientId ? { clientId: payload.clientId } : null;
-  } catch {
-    return null;
-  }
+/**
+ * Resolves the signed-in client and, when the session came from the httpOnly
+ * cookie, re-arms the cookie's lifetime (sliding idle window — the JWT stays
+ * the absolute 30-day cap).
+ */
+async function authClient(req: Request, res: Response): Promise<{ clientId: string } | null> {
+  const clientId = await resolveActiveClient(req, res);
+  return clientId ? { clientId } : null;
 }
 
 function safeUser(user: InstanceType<typeof ClientUser>) {
@@ -113,7 +116,11 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     let verifyToken = '';
     try { verifyToken = await mintVerificationToken(user); } catch { /* resend can retry */ }
     if (verifyToken) sendVerificationEmail(user, verifyToken);
-    const token = jwt.sign({ clientId: user._id }, SECRET(), { expiresIn: '30d' });
+    // Session lives in an httpOnly cookie — JavaScript never holds a usable
+    // credential in localStorage. The token is still echoed in the body once
+    // for scripts, but the cookie is the credential the app relies on.
+    const token = signClientToken(String(user._id), user.tokenVersion ?? 0);
+    res.cookie(CLIENT_COOKIE, token, clientCookieOptions(CLIENT_IDLE_MS));
     res.json({ token, user: safeUser(user) });
   } catch {
     res.status(500).json({ error: 'Server error' });
@@ -129,16 +136,23 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     if (!user) { res.status(401).json({ error: 'Invalid email or password' }); return; }
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) { res.status(401).json({ error: 'Invalid email or password' }); return; }
-    const token = jwt.sign({ clientId: user._id }, SECRET(), { expiresIn: '30d' });
+    const token = signClientToken(String(user._id), user.tokenVersion ?? 0);
+    res.cookie(CLIENT_COOKIE, token, clientCookieOptions(CLIENT_IDLE_MS));
     res.json({ token, user: safeUser(user) });
   } catch {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
+// POST /api/users/logout — clears the httpOnly session cookie.
+router.post('/logout', (_req: Request, res: Response) => {
+  clearClientCookie(res);
+  res.json({ success: true });
+});
+
 // GET /api/users/me
 router.get('/me', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
     const user = await ClientUser.findById(auth.clientId);
@@ -151,12 +165,15 @@ router.get('/me', async (req: Request, res: Response) => {
 
 // PUT /api/users/me  — update name
 router.put('/me', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
-    const { name } = req.body as { name: string };
-    if (!name?.trim()) { res.status(400).json({ error: 'Name required' }); return; }
-    const user = await ClientUser.findByIdAndUpdate(auth.clientId, { name: name.trim() }, { new: true });
+    const rawName = (req.body as { name?: unknown })?.name;
+    if (typeof rawName !== 'string' || rawName.trim().length < 2 || rawName.trim().length > 120) {
+      res.status(400).json({ error: 'Name must be 2-120 characters' });
+      return;
+    }
+    const user = await ClientUser.findByIdAndUpdate(auth.clientId, { name: rawName.trim() }, { new: true });
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
     res.json(safeUser(user));
   } catch {
@@ -166,18 +183,26 @@ router.put('/me', async (req: Request, res: Response) => {
 
 // POST /api/users/change-password
 router.post('/change-password', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
     const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
-    if (!currentPassword || !newPassword) { res.status(400).json({ error: 'Both passwords required' }); return; }
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string' || !currentPassword || !newPassword) {
+      res.status(400).json({ error: 'Both passwords required' });
+      return;
+    }
     if (newPassword.length < 8) { res.status(400).json({ error: 'New password must be at least 8 characters' }); return; }
     const user = await ClientUser.findById(auth.clientId);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) { res.status(401).json({ error: 'Current password incorrect' }); return; }
     user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     await user.save();
+    // Refresh the current browser's cookie with the new tokenVersion so every
+    // other signed-in device is signed out immediately.
+    const freshToken = signClientToken(String(user._id), user.tokenVersion);
+    res.cookie(CLIENT_COOKIE, freshToken, clientCookieOptions(CLIENT_IDLE_MS));
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });
@@ -186,13 +211,23 @@ router.post('/change-password', async (req: Request, res: Response) => {
 
 // PUT /api/users/websites
 router.put('/websites', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
-    const { websites } = req.body as { websites: { domain: string }[] };
+    const { websites } = req.body as { websites?: unknown };
+    if (!Array.isArray(websites)) { res.status(400).json({ error: 'websites array required' }); return; }
+    if (websites.length > 50) { res.status(400).json({ error: 'Too many websites' }); return; }
+    const cleaned: { domain: string; addedAt: Date }[] = [];
+    for (const item of websites) {
+      const domain = typeof (item as { domain?: unknown })?.domain === 'string'
+        ? (item as { domain: string }).domain.trim().slice(0, 253)
+        : '';
+      if (!domain) { res.status(400).json({ error: 'Each website requires a valid domain' }); return; }
+      cleaned.push({ domain, addedAt: new Date() });
+    }
     const user = await ClientUser.findById(auth.clientId);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-    user.websites = (websites || []).map(w => ({ domain: w.domain.trim(), addedAt: new Date() }));
+    user.websites = cleaned;
     await user.save();
     res.json(safeUser(user));
   } catch {
@@ -202,13 +237,18 @@ router.put('/websites', async (req: Request, res: Response) => {
 
 // PUT /api/users/notifications
 router.put('/notifications', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
-    const notifs = req.body as { weeklyDigest?: boolean; rankAlerts?: boolean; geoAlerts?: boolean; auditAlerts?: boolean };
+    const raw = (req.body || {}) as Record<string, unknown>;
     const user = await ClientUser.findById(auth.clientId);
     if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-    user.notifications = { ...user.notifications, ...notifs };
+    const keys = ['weeklyDigest', 'rankAlerts', 'geoAlerts', 'auditAlerts'] as const;
+    for (const k of keys) {
+      if (typeof raw[k] === 'boolean') {
+        user.notifications[k] = raw[k] as boolean;
+      }
+    }
     await user.save();
     res.json(safeUser(user));
   } catch {
@@ -218,7 +258,7 @@ router.put('/notifications', async (req: Request, res: Response) => {
 
 // POST /api/users/api-key  — generate new API key
 router.post('/api-key', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
     const user = await ClientUser.findById(auth.clientId);
@@ -234,10 +274,15 @@ router.post('/api-key', async (req: Request, res: Response) => {
 
 // DELETE /api/users/me
 router.delete('/me', async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
-    await ClientUser.findByIdAndDelete(auth.clientId);
+    await Promise.all([
+      ClientUser.findByIdAndDelete(auth.clientId),
+      GoogleConnection.deleteMany({ clientId: auth.clientId }),
+      GoogleSnapshot.deleteMany({ clientId: auth.clientId }),
+    ]);
+    clearClientCookie(res);
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: 'Server error' });
@@ -268,7 +313,7 @@ router.get('/verify-email', verifyLimiter, async (req: Request, res: Response) =
 
 // POST /api/users/resend-verification
 router.post('/resend-verification', authLimiter, async (req: Request, res: Response) => {
-  const auth = verifyClientToken(req);
+  const auth = await authClient(req, res);
   if (!auth) { res.status(401).json({ error: 'Unauthorized' }); return; }
   try {
     const user = await ClientUser.findById(auth.clientId);

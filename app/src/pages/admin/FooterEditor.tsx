@@ -69,18 +69,18 @@ export function FooterEditor() {
   );
 
   return (
-    <div style={{ padding: '36px 44px', maxWidth: 900 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+    <div className="p-4 sm:p-6 lg:p-10 max-w-[900px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-7">
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: '#0f172a' }}>Footer Editor</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#94a3b8' }}>Manage footer links, logos, and social links</p>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#475569' }}>Manage footer links, logos, and social links</p>
         </div>
-        <button onClick={save} disabled={saving} style={{ padding: '8px 20px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-          {saved ? '✓ Saved' : saving ? 'Saving…' : 'Save Footer'}
+        <button type="button" onClick={save} disabled={saving} style={{ padding: '8px 20px', background: '#00C27A', border: 'none', borderRadius: 10, color: '#0A0A0A', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+          {saved ? 'Saved' : saving ? 'Saving…' : 'Save Footer'}
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <div style={{ background: '#fff', borderRadius: 16, padding: '20px 22px', marginBottom: 16, boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
             <h2 style={{ margin: '0 0 14px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>General</h2>

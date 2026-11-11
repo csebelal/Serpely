@@ -29,6 +29,22 @@ function setLink(rel: string, href: string) {
   el.href = href;
 }
 
+function overrideIconLinks(rel: string, href: string) {
+  const existing = document.querySelectorAll<HTMLLinkElement>(`link[rel="${rel}"]`);
+  existing.forEach((el, idx) => {
+    if (idx === 0) {
+      el.removeAttribute('sizes');
+      el.removeAttribute('type');
+      el.href = href;
+    } else {
+      el.remove();
+    }
+  });
+  if (existing.length === 0) {
+    setLink(rel, href);
+  }
+}
+
 export function useSEOMeta(pageKey: string, fallback?: Fallback) {
   useEffect(() => {
     getSEOByKey(pageKey)
@@ -54,8 +70,9 @@ export function useSEOMeta(pageKey: string, fallback?: Fallback) {
         if (d?.siteName) setMeta('og:site_name', d.siteName);
 
         if (d?.faviconUrl) {
-          setLink('icon', d.faviconUrl);
-          setLink('apple-touch-icon', d.faviconUrl);
+          overrideIconLinks('icon', d.faviconUrl);
+          overrideIconLinks('shortcut icon', d.faviconUrl);
+          overrideIconLinks('apple-touch-icon', d.faviconUrl);
         }
 
         const canonical = d?.canonicalUrl || (window.location.origin + window.location.pathname);

@@ -14,12 +14,12 @@
  *  - "Recrawl" shows the drawer toast inline (the prototype called the
  *    drawer-level `showL2Toast`, which lives outside this tab).
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 import { MetricText, psClassify, psScoreTier, TinyHist } from '../charts';
 import type { CruxMetricId } from '../charts';
 import type { UrlDetail } from '../types';
-import { isPsIconKey, PS_ICONS, PsEmptyIcon, PsToastIcon } from './pagespeed-icons';
+import { isPsIconKey, PS_ICONS, PsEmptyIcon } from './pagespeed-icons';
 import type { PageSpeedTabData, PsCategories, PsStrategy } from './pagespeed-types';
 
 /** Category gauges, in the prototype's order, with its exact data-api strings. */
@@ -136,29 +136,21 @@ function formatFetchTime(iso: string | null): string | null {
 export interface PageSpeedTabProps {
   detail: UrlDetail;
   data: PageSpeedTabData | null;
+  strategy: PsStrategy;
+  loading?: boolean;
+  onStrategyChange: (strategy: PsStrategy) => void;
+  onRefresh: () => void;
 }
 
-export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): ReactElement {
-  /* Toggle state. `override` wins, so late-arriving props still seed the toggle
-     the first time (the prototype's `psStrategy` was initialised to 'mobile'). */
-  const [strategyOverride, setStrategyOverride] = useState<PsStrategy | null>(null);
-  const strategy: PsStrategy = strategyOverride ?? data?.formFactor ?? 'mobile';
-
+export default function PageSpeedTab({
+  detail,
+  data,
+  strategy,
+  loading = false,
+  onStrategyChange,
+  onRefresh,
+}: PageSpeedTabProps): ReactElement {
   const [passedExpanded, setPassedExpanded] = useState(false);
-
-  /* Recrawl toast — two-stage hide, matching `showL2Toast` (2500ms + 200ms). */
-  const [toastSeq, setToastSeq] = useState(0);
-  const [toastState, setToastState] = useState<'idle' | 'shown' | 'hiding'>('idle');
-  useEffect(() => {
-    if (toastSeq === 0) return undefined;
-    setToastState('shown');
-    const hide = window.setTimeout(() => setToastState('hiding'), 2500);
-    const clear = window.setTimeout(() => setToastState('idle'), 2700);
-    return () => {
-      window.clearTimeout(hide);
-      window.clearTimeout(clear);
-    };
-  }, [toastSeq]);
 
   if (!data) {
     return (
@@ -167,8 +159,8 @@ export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): React
           <PsEmptyIcon />
           <b>PageSpeed Insights has not been collected for this URL</b>
           <span>
-            No Lighthouse run is stored for {detail.url}. PageSpeed data is collected on demand — use Recrawl to
-            request a fresh audit.
+            No Lighthouse run is stored for {detail.url}. PageSpeed data is collected on demand — click Refresh to
+            request a live audit.
           </span>
         </div>
       </div>
@@ -194,21 +186,12 @@ export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): React
   const passedCount = data.passedAudits.length;
   const maxSavings = data.opportunities.length > 0 ? data.opportunities[0].savings : 0;
   const savingsDenominator = maxSavings > 0 ? maxSavings : 1;
+  const effectiveFormFactor = data.formFactor ?? strategy;
+  const lighthouseLabel = data.lighthouseVersion ? `Lighthouse v${data.lighthouseVersion}` : 'Lighthouse';
 
   return (
     <div className="url-tab active" data-tab="pagespeed">
-      {toastState !== 'idle' ? (
-        <div
-          className={`drawer-toast${toastState === 'hiding' ? ' hiding' : ''}`}
-          role="status"
-          aria-live="polite"
-        >
-          <PsToastIcon />
-          <span>PageSpeed recrawl queued for this URL</span>
-        </div>
-      ) : null}
-
-      {/* (1) Header strip — title + Mobile/Desktop toggle + last audit + Recrawl */}
+      {/* (1) Header strip — title + Mobile/Desktop toggle + last audit + Refresh */}
       <div className="ps-header">
         <div className="ps-header-title">
           <Speedometer />
@@ -217,16 +200,18 @@ export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): React
             <button
               type="button"
               data-strat="mobile"
+              disabled={loading}
               className={strategy === 'mobile' ? 'active' : undefined}
-              onClick={() => setStrategyOverride('mobile')}
+              onClick={() => onStrategyChange('mobile')}
             >
               Mobile
             </button>
             <button
               type="button"
               data-strat="desktop"
+              disabled={loading}
               className={strategy === 'desktop' ? 'active' : undefined}
-              onClick={() => setStrategyOverride('desktop')}
+              onClick={() => onStrategyChange('desktop')}
             >
               Desktop
             </button>
@@ -243,10 +228,11 @@ export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): React
             className="ps-ghost-btn"
             type="button"
             id="psRecrawl"
-            onClick={() => setToastSeq((n) => n + 1)}
+            disabled={loading}
+            onClick={onRefresh}
           >
             <Refresh />
-            Recrawl
+            {loading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
       </div>
@@ -256,7 +242,7 @@ export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): React
         <div className="ps-h">
           <span className="ps-h-title">Lighthouse scores</span>
           <span className="ps-h-sub">
-            Lighthouse v10 · formFactor: <b>{data.formFactor ?? DASH}</b>
+            {lighthouseLabel} · formFactor: <b>{data.formFactor ?? DASH}</b>
           </span>
         </div>
         <div className="ps-gauges">
@@ -316,8 +302,9 @@ export default function PageSpeedTab({ detail, data }: PageSpeedTabProps): React
         <div className="ps-h">
           <span className="ps-h-title">Lab Data</span>
           <span className="ps-h-sub">
-            Lighthouse simulated <b>{strategy === 'desktop' ? 'desktop' : 'mobile'}</b> · Motorola Moto G Power / 4×
-            CPU throttle
+            {effectiveFormFactor === 'desktop'
+              ? <>Lighthouse simulated <b>desktop</b> · 1× CPU / Broadband</>
+              : <>Lighthouse simulated <b>mobile</b> · Motorola Moto G Power / 4× CPU throttle</>}
           </span>
         </div>
         <div className="ps-metric-row lab">

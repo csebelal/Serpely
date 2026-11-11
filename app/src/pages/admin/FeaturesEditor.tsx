@@ -204,7 +204,7 @@ export function FeaturesEditor() {
 
           <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16, marginBottom: 16 }}>
             <label style={{ ...s.label, marginBottom: 12 }}>Primary Button</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label style={s.label}>Button Text</label>
                 <input style={s.inp} value={heroPrimText} onChange={e => setHeroPrimText(e.target.value)} placeholder="Start Free Trial" />
@@ -218,7 +218,7 @@ export function FeaturesEditor() {
 
           <div>
             <label style={{ ...s.label, marginBottom: 12 }}>Secondary Button</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label style={s.label}>Button Text</label>
                 <input style={s.inp} value={heroSecText} onChange={e => setHeroSecText(e.target.value)} placeholder="See How It Works" />
@@ -241,17 +241,22 @@ export function FeaturesEditor() {
           {mainFeats.map((f, i) => (
             <div key={i} style={s.featCard}>
               {/* Panel header — click to expand/collapse */}
-              <div style={s.featHeader} onClick={() => setOpenIdx(openIdx === i ? null : i)}>
+              <button
+                type="button"
+                aria-expanded={openIdx === i}
+                style={{ ...s.featHeader, width: '100%', border: 'none', textAlign: 'left' }}
+                onClick={() => setOpenIdx(openIdx === i ? null : i)}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>
                     {String(i + 1).padStart(2, '0')}. {f.title || 'Untitled Feature'}
                   </span>
-                  <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(0,194,122,0.1)', color: '#00A868', padding: '2px 8px', borderRadius: 20, border: '1px solid rgba(0,194,122,0.2)' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(0,194,122,0.1)', color: '#00754A', padding: '2px 8px', borderRadius: 20, border: '1px solid rgba(0,194,122,0.2)' }}>
                     {f.tag}
                   </span>
                 </div>
-                <span style={{ color: '#94a3b8', fontSize: 14 }}>{openIdx === i ? '▲' : '▼'}</span>
-              </div>
+                <span style={{ color: '#475569', fontSize: 14 }} aria-hidden="true">{openIdx === i ? '▲' : '▼'}</span>
+              </button>
 
               {openIdx === i && (
                 <div style={s.featBody}>
@@ -295,7 +300,7 @@ export function FeaturesEditor() {
       {tab === 'add' && (
         <div style={s.card}>
           <h2 style={s.sectionHead}>Additional Features Section</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
             <div>
               <label style={s.label}>Section Headline</label>
               <input style={s.inp} value={addHeadline} onChange={e => setAddHeadline(e.target.value)} placeholder="The complete SEO platform" />
@@ -307,7 +312,7 @@ export function FeaturesEditor() {
           </div>
 
           <label style={{ ...s.label, marginBottom: 14 }}>Feature Cards (2-column grid)</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {addFeats.map((f, i) => (
               <div key={i} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 18px' }}>
                 <div style={{ marginBottom: 10 }}>
@@ -339,7 +344,7 @@ export function FeaturesEditor() {
 
           <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 16, marginBottom: 16 }}>
             <label style={{ ...s.label, marginBottom: 12 }}>Primary Button</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label style={s.label}>Button Text</label>
                 <input style={s.inp} value={ctaPrimText} onChange={e => setCtaPrimText(e.target.value)} placeholder="Start Free Trial" />
@@ -353,7 +358,7 @@ export function FeaturesEditor() {
 
           <div>
             <label style={{ ...s.label, marginBottom: 12 }}>Secondary Button</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label style={s.label}>Button Text</label>
                 <input style={s.inp} value={ctaSecText} onChange={e => setCtaSecText(e.target.value)} placeholder="Compare Plans" />

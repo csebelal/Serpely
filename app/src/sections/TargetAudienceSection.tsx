@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
-
-gsap.registerPlugin(ScrollTrigger);
+import { GlowCard, Reveal, useInViewOnce, useMotionPrefs } from '@/components/motion';
 
 interface AudienceCard {
   label: string;
@@ -14,9 +11,11 @@ interface AudienceCard {
 }
 
 export function TargetAudienceSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [dynamicWord, setDynamicWord] = useState('Modern SEO Teams');
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const cardsInView = useInViewOnce(cardsRef, { threshold: 0.12 });
+  const { reducedMotion } = useMotionPrefs();
 
+  const [dynamicWord, setDynamicWord] = useState('Modern SEO Teams');
   const [pillText, setPillText] = useState('Solutions');
   const [rotatingLabel, setRotatingLabel] = useState('Built for your workflow');
   const [words, setWords] = useState<string[]>(['Modern SEO Teams', 'Growing Agencies', 'AI-First Startups', 'Enterprise Brands']);
@@ -54,20 +53,6 @@ export function TargetAudienceSection() {
     }, 3200);
     return () => clearInterval(interval);
   }, [words]);
-
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.fromTo('.uc-header', { opacity: 0, y: 28 }, {
-        opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-        scrollTrigger: { trigger: sectionRef.current, start: 'top 70%', toggleActions: 'play none none reverse' },
-      });
-      gsap.fromTo('.uc-card', { opacity: 0, y: 24 }, {
-        opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: 'power2.out',
-        scrollTrigger: { trigger: '.uc-cards', start: 'top 78%', toggleActions: 'play none none reverse' },
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
 
   useEffect(() => {
     getSection('target-audience').then(r => {
@@ -109,10 +94,10 @@ export function TargetAudienceSection() {
   const cardPopular = [false, true, false];
 
   return (
-    <section ref={sectionRef} id="use-cases" className="py-28 px-6 relative">
+    <section id="use-cases" className="py-28 px-6 relative section-glow-edge">
       <div className="max-w-6xl mx-auto">
 
-        <div className="text-center mb-6 uc-header">
+        <Reveal className="text-center mb-6">
           <div className="pill-s mb-5 mx-auto" style={{ width: 'fit-content' }}>
             <span className="w-1.5 h-1.5 rounded-full animate-pulse-dot flex-shrink-0" style={{ background: '#00C27A' }} />
             {pillText}
@@ -120,55 +105,68 @@ export function TargetAudienceSection() {
           <p className="text-[10.5px] font-bold uppercase mb-4" style={{ color: 'var(--text-faint)', letterSpacing: '0.16em' }}>{rotatingLabel}</p>
           <h2 className="font-black text-4xl lg:text-6xl mb-5" style={{ fontWeight: 900, letterSpacing: '-0.05em', lineHeight: 1.1, color: 'var(--text)' }}>
             {headline1}<br/>
-            <span className="text-gradient" style={{ display: 'inline-block', paddingBottom: 6, transition: 'opacity 0.4s ease' }}>{dynamicWord}</span>
+            <span key={dynamicWord} className="text-gradient hero-stagger" style={{ display: 'inline-block', paddingBottom: 6 }}>
+              {dynamicWord}
+            </span>
           </h2>
           <p className="text-lg max-w-md mx-auto font-medium" style={{ color: 'var(--text-soft)' }}>
             {subtext}
           </p>
-        </div>
+        </Reveal>
 
-        <div className="grid lg:grid-cols-3 gap-5 mt-14 uc-cards">
+        <div ref={cardsRef} className="grid lg:grid-cols-3 gap-5 mt-14">
           {cards.map((card, idx) => {
             const accent = cardAccent[idx] ?? false;
             const popular = cardPopular[idx] ?? false;
             const icon = cardIcons[idx];
             return (
-              <div
-                key={card.label}
-                className={`uc-card p-8 rounded-2xl relative flex flex-col ${accent ? 'card-accent-s' : 'card-s'}`}
-                style={{ transition: 'transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease' }}
-                onMouseEnter={e => {
-                  if (accent) return;
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.transform = 'translateY(-4px)';
-                  el.style.boxShadow = '0 10px 28px rgba(0,0,0,0.10)';
-                  el.style.borderColor = 'rgba(0,194,122,0.35)';
-                }}
-                onMouseLeave={e => {
-                  if (accent) return;
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.transform = '';
-                  el.style.boxShadow = '';
-                  el.style.borderColor = '';
-                }}
-              >
-                {popular && (
-                  <div className="absolute top-5 right-5">
-                    <span className="pill-s text-[10.5px]" style={{ padding: '3px 11px', background: '#0A0A0A', color: '#00FF88', borderColor: '#0A0A0A', fontSize: '10.5px' }}>Most Popular</span>
+              <Reveal key={card.label} delay={idx * 100}>
+                <GlowCard
+                  featured={accent}
+                  className={`p-8 rounded-2xl relative flex flex-col h-full ${accent ? 'card-accent-s' : 'card-s'}`}
+                >
+                  {popular && (
+                    <div className="absolute top-5 right-5 z-10">
+                      <span className="pill-s text-[10.5px]" style={{ padding: '3px 11px', background: '#0A0A0A', color: '#00FF88', borderColor: '#0A0A0A', fontSize: '10.5px' }}>Most Popular</span>
+                    </div>
+                  )}
+                  <div className="icon-badge-s mb-5" style={accent ? { background: '#00C27A', color: '#0A0A0A', borderColor: '#00C27A', width: 44, height: 44 } : { width: 44, height: 44 }}>
+                    {icon}
                   </div>
-                )}
-                <div className="icon-badge-s mb-5" style={accent ? { background: '#00C27A', color: '#0A0A0A', borderColor: '#00C27A', width: 44, height: 44 } : { width: 44, height: 44 }}>
-                  {icon}
-                </div>
-                <span className="text-[11px] uppercase font-bold" style={{ color: accent ? '#00A868' : 'var(--text-faint)', letterSpacing: '0.14em' }}>{card.label}</span>
-                <h3 className="font-black text-2xl mt-3 mb-5" style={{ fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, color: 'var(--text)', whiteSpace: 'pre-line' }}>{card.title}</h3>
-                <div className="flex-1">
-                  {card.items.map(item => (
-                    <div key={item} className="check-item-s">{item}</div>
-                  ))}
-                </div>
-                <a href={card.ctaHref} className="mt-6 inline-flex items-center gap-1.5 accent-text text-sm font-bold">{card.cta}</a>
-              </div>
+                  <span className="text-[11px] uppercase font-bold" style={{ color: accent ? '#00A868' : 'var(--text-faint)', letterSpacing: '0.14em' }}>{card.label}</span>
+                  <h3 className="font-black text-2xl mt-3 mb-5" style={{ fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1, color: 'var(--text)', whiteSpace: 'pre-line' }}>{card.title}</h3>
+                  <div className="flex-1 space-y-3">
+                    {card.items.map((item, itemIdx) => {
+                      const delayMs = idx * 80 + itemIdx * 70;
+                      const drawn = reducedMotion || cardsInView;
+                      return (
+                        <div
+                          key={item}
+                          className={`flex items-center gap-3 text-sm font-medium check-item-anim ${drawn ? 'is-in' : ''}`}
+                          style={{ color: 'var(--text-mid)', lineHeight: 1.45, transitionDelay: `${delayMs}ms` }}
+                        >
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ background: '#00C27A' }}
+                            aria-hidden="true"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path
+                                d="M3.5 8.5l3 3 6-6"
+                                strokeDasharray={20}
+                                strokeDashoffset={drawn ? 0 : 20}
+                                style={{ transition: reducedMotion ? 'none' : `stroke-dashoffset 0.42s cubic-bezier(0.22, 1, 0.36, 1) ${delayMs + 120}ms` }}
+                              />
+                            </svg>
+                          </span>
+                          <span>{item}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <a href={card.ctaHref} className="mt-6 inline-flex items-center gap-1.5 accent-text text-sm font-bold">{card.cta}</a>
+                </GlowCard>
+              </Reveal>
             );
           })}
         </div>

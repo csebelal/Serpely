@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { injectSchema, removeSchema } from '@/lib/schema';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -228,7 +229,8 @@ export function Features() {
 
   /* ── GSAP animations ── */
   useEffect(() => {
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       gsap.fromTo('.feat-hero', { opacity: 0, y: 32 }, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out', delay: 0.1 });
 
       document.querySelectorAll('.feat-main-row').forEach((row, i) => {
@@ -253,7 +255,7 @@ export function Features() {
         scrollTrigger: { trigger: '.feat-cta', start: 'top 84%', toggleActions: 'play none none reverse' },
       });
     }, pageRef);
-    return () => ctx.revert();
+    return () => mm.revert();
   }, []);
 
   /* ── Merge state + hardcoded arrays at render time ── */
@@ -274,6 +276,8 @@ export function Features() {
       {/* ── Hero ── */}
       <section className="pt-32 pb-20 px-6 text-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,194,122,0.09) 0%, transparent 70%)' }} />
+        {/* Neural-mesh field: the AI layer reasoning behind the product */}
+        <PageBackground variant="mesh" interactive />
         <div className="feat-hero max-w-3xl mx-auto relative z-10">
           <span className="pill-s mb-5 inline-flex">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00C27A' }} />

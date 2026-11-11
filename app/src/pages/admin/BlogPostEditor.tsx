@@ -303,15 +303,15 @@ export function BlogPostEditor() {
           </div>
 
           {editingFaq !== null && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setEditingFaq(null)}>
-              <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: 480, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 24px 48px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label={editingFaq < faqItems.length ? 'Edit FAQ' : 'Add FAQ'} onKeyDown={e => { if (e.key === 'Escape') setEditingFaq(null); }} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setEditingFaq(null)}>
+              <div style={{ background: '#fff', borderRadius: 20, padding: 28, width: '100%', maxWidth: 480, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 24px 48px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
                 <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{editingFaq < faqItems.length ? 'Edit FAQ' : 'Add FAQ'}</h3>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Question</label>
                 <input value={faqForm.question} onChange={e => setFaqForm(f => ({ ...f, question: e.target.value }))} placeholder="e.g. What is AI SEO?" style={{ width: '100%', padding: '8px 11px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, marginBottom: 14, boxSizing: 'border-box' }} />
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Answer</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Answer</label>
                 <textarea value={faqForm.answer} onChange={e => setFaqForm(f => ({ ...f, answer: e.target.value }))} placeholder="Type the answer…" rows={4} style={{ width: '100%', padding: '8px 11px', background: '#f1f5f9', border: 'none', borderRadius: 8, color: '#0f172a', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
                 <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => setEditingFaq(null)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#f1f5f9', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                  <button type="button" onClick={() => setEditingFaq(null)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#f1f5f9', color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                   <button type="button" onClick={() => {
                     if (!faqForm.question.trim()) return;
                     if (editingFaq < faqItems.length) {
@@ -320,19 +320,19 @@ export function BlogPostEditor() {
                       setFaqItems(items => [...items, { question: faqForm.question, answer: faqForm.answer, order: items.length }]);
                     }
                     setEditingFaq(null);
-                  }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#00C27A', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                  }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#00C27A', color: '#0A0A0A', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Save</button>
                 </div>
               </div>
             </div>
           )}
 
           <div style={{ background: '#fff', borderRadius: 14, padding: '18px 16px', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CTA Section</h3>
+            <h3 style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CTA Section</h3>
             <div style={{ marginBottom: 10 }}>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtitle</label>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#475569', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subtitle</label>
               <input value={ctaForm.subtitle} onChange={e => setCtaForm(f => ({ ...f, subtitle: e.target.value }))} placeholder="Start for free — no credit card needed" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Button Text</label>
                 <input value={ctaForm.secondaryText} onChange={e => setCtaForm(f => ({ ...f, secondaryText: e.target.value }))} placeholder="See How It Works" style={{ width: '100%', padding: '7px 10px', background: '#f1f5f9', border: 'none', borderRadius: 7, color: '#0f172a', fontSize: 12, boxSizing: 'border-box' }} />

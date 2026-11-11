@@ -45,12 +45,14 @@ router.post('/', submitLimiter, async (req: Request, res: Response) => {
   }
 });
 
+const VALID_STATUSES = new Set(['new', 'replied', 'archived']);
+
 // GET /api/contact (auth)
 router.get('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
-    const { status, starred } = req.query as Record<string, string>;
+    const { status, starred } = req.query as Record<string, unknown>;
     const filter: Record<string, unknown> = {};
-    if (typeof status === 'string' && status) filter.status = status;
+    if (typeof status === 'string' && VALID_STATUSES.has(status)) filter.status = status;
     if (starred === 'true') filter.starred = true;
     const submissions = await ContactSubmission.find(filter).sort({ createdAt: -1 });
     const unreadCount = await ContactSubmission.countDocuments({ read: false });
@@ -65,9 +67,10 @@ router.patch('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   try {
     const { read, starred, status } = req.body as Record<string, unknown>;
     const update: Record<string, unknown> = {};
-    if (read !== undefined) update.read = read;
-    if (starred !== undefined) update.starred = starred;
-    if (status !== undefined) update.status = status;
+    if (typeof read === 'boolean') update.read = read;
+    if (typeof starred === 'boolean') update.starred = starred;
+    if (typeof status === 'string' && VALID_STATUSES.has(status)) update.status = status;
+    if (!Object.keys(update).length) { res.status(400).json({ error: 'No valid fields to update' }); return; }
     const submission = await ContactSubmission.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!submission) { res.status(404).json({ error: 'Not found' }); return; }
     await logAction(req, 'update', 'contact', `id:${req.params.id}`);

@@ -1,5 +1,6 @@
 ﻿import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { FileText } from 'lucide-react';
 import { getPost, getPosts, subscribe, type BlogPostData as ApiPost } from '@/lib/api';
 import { injectSchema, removeSchema } from '@/lib/schema';
 import { sanitizeHtml } from '@/lib/sanitize';
@@ -29,13 +30,19 @@ function calcReadTime(html: string): string {
 function BlogFAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="faq-item" onClick={() => setOpen(!open)} style={{ cursor: 'pointer' }}>
-      <div className="faq-q" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="faq-item">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="faq-q w-full text-left cursor-pointer"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', padding: 0 }}
+      >
         <span>{question}</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0)', color: open ? '#00C27A' : '#94a3b8' }}>
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0)', color: open ? 'var(--accent-text)' : 'var(--text-soft)' }}>
           <polyline points="6 9 12 15 18 9" />
         </svg>
-      </div>
+      </button>
       {open && <div className="faq-a">{answer}</div>}
     </div>
   );
@@ -568,8 +575,9 @@ export function BlogPost() {
         [data-theme="dark"] .newsletter-card{background:rgba(0,255,136,0.03);border-color:rgba(0,255,136,0.13);}
         .nl-title{font-size:13px;font-weight:800;color:var(--text);letter-spacing:-0.02em;margin-bottom:4px;}
         .nl-sub{font-size:11.5px;color:var(--text-soft);line-height:1.55;margin-bottom:11px;font-weight:450;}
-        .nl-input{width:100%;height:33px;border-radius:8px;border:1px solid hsl(var(--border));background:var(--input-bg);padding:0 10px;font-size:12px;color:var(--text);font-family:'Satoshi',sans-serif;outline:none;margin-bottom:6px;}
-        .nl-input:focus{border-color:rgba(0,194,122,0.38);}
+        .nl-input{width:100%;height:33px;border-radius:8px;border:1px solid hsl(var(--border));background:var(--input-bg);padding:0 10px;font-size:12px;color:var(--text);font-family:'Satoshi',sans-serif;outline:2px solid transparent;margin-bottom:6px;}
+        .nl-input:focus{border-color:#00C27A;}
+        .nl-input:focus-visible{outline:2px solid #00C27A;outline-offset:1px;}
         .nl-btn{width:100%;padding:8px;border-radius:8px;background:#00C27A;border:none;cursor:pointer;color:#0A0A0A;font-size:12px;font-weight:800;font-family:'Satoshi',sans-serif;transition:background 0.15s;}
         .nl-btn:hover{background:#00E08F;}
         .nl-note{font-size:10px;color:var(--text-ghost);text-align:center;margin-top:5px;}
@@ -658,8 +666,9 @@ export function BlogPost() {
         .sidebar-newsletter-heading{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
         .sidebar-newsletter-sub{font-size:12.5px;color:var(--text-soft);line-height:1.55;margin-bottom:14px;}
         .sidebar-newsletter-form{display:flex;flex-direction:column;gap:8px;}
-        .sidebar-newsletter-form input{padding:9px 12px;border:1px solid hsl(var(--border));border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;outline:none;transition:border-color .15s;}
+        .sidebar-newsletter-form input{padding:9px 12px;border:1px solid hsl(var(--border));border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;outline:2px solid transparent;transition:border-color .15s;}
         .sidebar-newsletter-form input:focus{border-color:#00c27a;}
+        .sidebar-newsletter-form input:focus-visible{outline:2px solid #00c27a;outline-offset:1px;}
         .sidebar-newsletter-form button{padding:9px 14px;background:#00c27a;color:#000;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;}
         .sidebar-newsletter-form button:hover{background:#00a868;}
         .sidebar-newsletter-note{font-size:11px;color:var(--text-faint);margin-top:8px;}
@@ -826,7 +835,7 @@ export function BlogPost() {
       </nav>
 
       {/* ═══ MAIN ═══ */}
-      <main className="pt-24 pb-0">
+      <div className="pt-24 pb-0">
         <div className="max-w-7xl mx-auto px-6">
 
           {/* Breadcrumb */}
@@ -1038,7 +1047,7 @@ export function BlogPost() {
 
           </div>{/* /.blog-layout */}
         </div>{/* /.container */}
-      </main>
+      </div>
 
       {relatedPosts.length > 0 && (
       <section className="related-section">
@@ -1054,7 +1063,7 @@ export function BlogPost() {
                   <div className="related-card-img" style={{ background: 'linear-gradient(135deg,#0a0a0a,#1a1a2e)' }}>
                     {p.coverImage
                       ? <img src={p.coverImage} alt={p.title} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#fff', fontSize: 32 }}>&#128203;</div>
+                      : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#00FF88' }}><FileText className="w-8 h-8" aria-hidden="true" /></div>
                     }
                   </div>
                 </Link>

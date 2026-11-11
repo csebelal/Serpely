@@ -1,129 +1,344 @@
 import { Link } from 'react-router-dom';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { resetConsent } from '@/lib/consent';
+import { LegalShell, LegalSection, LegalTable } from '@/components/legal/LegalShell';
+
+const SUMMARY = [
+  {
+    title: 'Consent comes first',
+    body: 'Google Analytics is only loaded after you accept. Until then, no analytics request leaves your browser.',
+  },
+  {
+    title: 'No ad tracking',
+    body: 'We do not run advertising pixels, retargeting, or cross-site tracking, and we never sell data.',
+  },
+  {
+    title: 'You stay in control',
+    body: 'Clear our cookies in your browser at any time and the banner will ask again on your next visit.',
+  },
+];
 
 const CATEGORIES = [
   {
     name: 'Strictly necessary',
+    badge: 'Always on',
     required: true,
-    body: 'Required for the site and your account to work. These cannot be switched off — for example keeping you signed in to the admin panel or remembering your theme preference.',
-    examples: 'serpely_admin, serpely_client_token, serpely-theme, sidebar:state',
+    body: 'Required for the site and your account to work. These cannot be switched off — for example keeping a signed-in session alive or protecting forms from bots.',
+    examples: '__Host-serpely_admin, __Host-serpely_client',
+  },
+  {
+    name: 'Functional',
+    badge: 'Optional',
+    required: false,
+    body: 'Remember choices you make so the interface behaves the way you left it, such as your light or dark theme and whether the dashboard sidebar is open.',
+    examples: 'serpely-theme, sidebar_state, serpely_consent_v1',
   },
   {
     name: 'Analytics',
+    badge: 'Optional',
     required: false,
-    body: 'Google Analytics runs in a cookie-less mode for every visitor: it reports aggregate page reads so we can improve the product, but it stores no cookies, sets no identifiers and does not build a profile of you. It is never used for advertising.',
-    examples: 'No cookies are set — analytics runs without storing anything on your device',
+    body: 'Loaded only with your consent. Google Analytics reports aggregate page reads so we can see which pages and features are used. It is never used for advertising.',
+    examples: '_ga, _ga_<container-id>',
   },
   {
     name: 'Marketing',
+    badge: 'Not used',
     required: false,
-    body: 'We do not currently run advertising or retargeting, so no marketing pixels are loaded. If that changes, this page will be updated first.',
+    body: 'We do not currently run advertising or retargeting, so no marketing cookies or pixels are loaded on this site.',
     examples: 'None',
+  },
+];
+
+const COOKIES: { name: string; provider: string; category: string; purpose: string; duration: string }[] = [
+  {
+    name: '__Host-serpely_admin',
+    provider: 'Serpely',
+    category: 'Strictly necessary',
+    purpose: 'Signed-in session for the admin panel. HttpOnly, SameSite=Lax, Secure over HTTPS and locked to this exact host, so page scripts cannot read it.',
+    duration: '8 hours of inactivity, at most 1 day',
+  },
+  {
+    name: '__Host-serpely_client',
+    provider: 'Serpely',
+    category: 'Strictly necessary',
+    purpose: 'Keeps you signed in to the client dashboard. HttpOnly, SameSite=Lax, Secure over HTTPS and locked to this exact host, so page scripts cannot read it.',
+    duration: '7 days of inactivity, at most 30 days',
+  },
+  {
+    name: 'sidebar_state',
+    provider: 'Serpely',
+    category: 'Functional',
+    purpose: 'Remembers whether the dashboard sidebar is expanded or collapsed.',
+    duration: '7 days',
+  },
+  {
+    name: '_ga',
+    provider: 'Google',
+    category: 'Analytics (consent)',
+    purpose: 'Distinguishes browsers so Google Analytics can report aggregate visitor and page-view counts.',
+    duration: '2 years',
+  },
+  {
+    name: '_ga_<container-id>',
+    provider: 'Google',
+    category: 'Analytics (consent)',
+    purpose: 'Keeps session state for the Google Analytics 4 property connected to our site.',
+    duration: '2 years',
+  },
+];
+
+const STORAGE: { name: string; category: string; purpose: string; duration: string }[] = [
+  {
+    name: 'serpely_consent_v1',
+    category: 'Functional',
+    purpose: 'Records your cookie choice, when you made it, and which policy version you agreed to, so we do not ask again on every visit.',
+    duration: 'Until you clear it',
+  },
+  {
+    name: 'serpely-theme',
+    category: 'Functional',
+    purpose: 'Remembers whether you picked the light or dark theme.',
+    duration: 'Until you clear it',
+  },
+  {
+    name: 'serpely_vid',
+    category: 'Functional',
+    purpose: 'A random, anonymous id that groups your consent choice in our server-side logs. Contains no tracking identifier.',
+    duration: 'Until cleared (server logs expire after 12 months)',
   },
 ];
 
 export function CookiePolicy() {
   useSEOMeta('cookie-policy', {
     title: 'Cookie Policy — Serpely',
-    description: 'The cookies and local storage Serpely uses, and what each one is for.',
+    description: 'The cookies and local storage Serpely uses, why we use them, and how to control them.',
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', paddingBottom: 90 }}>
-      <section className="pt-32 pb-10 px-6 text-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,194,122,0.13) 0%, transparent 70%)' }} />
-        <div className="max-w-3xl mx-auto relative z-10">
-          <span className="pill-s mb-5 inline-block">Legal · Cookies</span>
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-none mb-5" style={{ letterSpacing: '-0.05em' }}>
-            Cookie <span className="text-gradient">Policy</span>
-          </h1>
-          <p className="text-base sm:text-lg leading-relaxed max-w-xl mx-auto" style={{ color: 'var(--text-soft)' }}>
-            What we store on your device, why we store it, and how to control it.
-          </p>
+    <LegalShell
+      eyebrow="Legal · Cookies"
+      title={<>Cookie <em>Policy</em></>}
+      subtitle="What we store on your device, why we store it, and how to change your choice."
+      meta={['Effective 20 May 2026', 'Last updated 26 October 2026', 'Version 2.1']}
+    >
+      <p className="legal-lead">
+        This Cookie Policy explains how Serpely Inc. (&ldquo;Serpely,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) uses cookies and
+        similar technologies on <strong>serpely.com</strong> and in the Serpely dashboard. It should be read together with our{' '}
+        <Link to="/privacy">Privacy Policy</Link>, which covers how we handle personal data more generally.
+      </p>
+
+      <p className="legal-kicker">At a glance</p>
+      <div className="legal-summary">
+        <div className="legal-summary-inner is-three">
+          {SUMMARY.map((s, i) => (
+            <div className="legal-summary-item" key={s.title}>
+              <span>{String(i + 1).padStart(2, '0')}</span>
+              <p><strong>{s.title}</strong>{s.body}</p>
+            </div>
+          ))}
         </div>
-      </section>
-
-      <div className="max-w-3xl mx-auto px-6">
-        <article className="card-s" style={{ padding: 'clamp(24px, 4vw, 44px)', fontSize: 15, lineHeight: 1.8, color: 'var(--text-soft)' }}>
-          <p style={{ marginTop: 0 }}>
-            This policy explains how Serpely Inc. uses cookies and similar technologies (such as browser
-            local storage) on <strong>serpely.com</strong>. It should be read together with our{' '}
-            <Link to="/privacy" style={{ color: '#00A868', fontWeight: 700 }}>Privacy Policy</Link>.
-          </p>
-
-          <h2 style={h2}>1. What are cookies?</h2>
-          <p>
-            Cookies are small files a website stores in your browser. Local storage is a similar mechanism
-            that keeps data on your device. We use both to keep the site working — for example, keeping you
-            signed in to the admin panel and remembering your theme.
-          </p>
-
-          <h2 style={h2}>2. Categories we use</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {CATEGORIES.map(c => (
-              <div key={c.name} style={{ border: '1px solid hsl(var(--border))', borderRadius: 14, padding: '16px 18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <strong style={{ color: 'var(--text)', fontSize: 15 }}>{c.name}</strong>
-                  <span style={{
-                    fontSize: 11, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
-                    padding: '3px 9px', borderRadius: 999,
-                    background: c.required ? '#00C27A15' : 'transparent',
-                    border: c.required ? '1px solid #00C27A40' : '1px solid hsl(var(--border))',
-                    color: c.required ? '#00A868' : 'var(--text-faint)',
-                  }}>
-                    {c.required ? 'Always on' : 'Optional'}
-                  </span>
-                </div>
-                <p style={{ margin: '0 0 8px' }}>{c.body}</p>
-                <p style={{ margin: 0, fontSize: 13 }}>
-                  <span style={{ color: 'var(--text-faint)', fontWeight: 700 }}>Examples: </span>
-                  <code style={{ fontSize: 12.5 }}>{c.examples}</code>
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <h2 style={h2}>3. First-party measurement without cookies</h2>
-          <p style={{ marginBottom: 0 }}>
-            We also keep an aggregate count of page views on our own servers (the page path, referring URL,
-            and a truncated user-agent string — no identifiers, no cookies, and nothing shared with third
-            parties). This is used to understand overall traffic and is not linked to you as an individual.
-          </p>
-
-          <h2 style={h2}>4. Bot protection</h2>
-          <p style={{ marginBottom: 0 }}>
-            When bot protection is enabled on our forms, Cloudflare Turnstile may set a functional cookie to
-            distinguish humans from automated submissions. It is used only to protect the Service and is not
-            used for advertising.
-          </p>
-
-          <h2 style={h2}>5. Managing cookies</h2>
-          <p style={{ marginBottom: 0 }}>
-            You can block or delete cookies in your browser settings at any time. Blocking essential cookies
-            may prevent you from signing in or using parts of the Service. Our analytics does not rely on
-            cookies, so if you want to block it as well, use your browser's tracking protection or an ad blocker.
-          </p>
-
-          <h2 style={h2}>6. Changes &amp; contact</h2>
-          <p>
-            We'll update this page whenever the cookies we use change. Questions? Email{' '}
-            <a href="mailto:privacy@serpely.com" style={{ color: '#00A868', fontWeight: 700 }}>privacy@serpely.com</a>.
-          </p>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
-            <Link to="/privacy" className="btn-accent-s inline-flex">Read the Privacy Policy</Link>
-            <Link to="/" className="btn-secondary-s inline-flex">Back to Home</Link>
-          </div>
-        </article>
       </div>
-    </div>
+
+      <LegalSection id="scope" num="01" title="Scope and controller" first>
+        <p>
+          Serpely Inc. is the controller for the cookies described here. This policy covers the public website, the client
+          dashboard, and the admin panel. It does not cover third-party websites we link to, including the AI and SEO providers
+          listed in our Privacy Policy.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="what" num="02" title="Cookies and local storage">
+        <p>
+          A cookie is a small text file a website asks your browser to store and send back on later requests. Local storage is a
+          similar browser feature that keeps data on your device but is never sent automatically to our servers. We use both, and
+          we list each item we set in the tables below.
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          Cookies can be <strong>first-party</strong> (set by us) or <strong>third-party</strong> (set by a service we use, such as
+          Google). They can also be <strong>session</strong> cookies, which disappear when you close the browser, or{' '}
+          <strong>persistent</strong> cookies, which last for the period shown in the table.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="consent" num="03" title="Your consent">
+        <p>
+          When you first visit the site, a banner asks whether you accept analytics cookies. Nothing optional is stored or loaded
+          before you decide. We record your choice in <code className="legal-code">serpely_consent_v1</code> and apply Google
+          Consent Mode v2, with advertising and analytics storage set to &ldquo;denied&rdquo; by default.
+        </p>
+        <p>
+          If you accept, we load Google Tag Manager, which in turn loads Google Analytics 4. If you reject, or simply never answer,
+          no request is made to Google and no analytics cookies are set.
+        </p>
+        <p>
+          You can change your choice at any time by reopening your preferences below or clearing Serpely cookies and site data in
+          your browser. Until you decide again, analytics stays off.
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          <button
+            type="button"
+            onClick={resetConsent}
+            className="btn-secondary-s inline-flex"
+            style={{ fontSize: 13 }}
+          >
+            Cookie settings
+          </button>
+        </p>
+      </LegalSection>
+
+      <LegalSection id="categories" num="04" title="Categories we use">
+        <div className="legal-cat-grid">
+          {CATEGORIES.map(c => (
+            <div key={c.name} className="legal-cat">
+              <div className="legal-cat-top">
+                <strong>{c.name}</strong>
+                <span className={`legal-badge${c.required ? ' is-on' : ''}`}>{c.badge}</span>
+              </div>
+              <p>{c.body}</p>
+              <p className="legal-cat-examples">
+                Examples: <code>{c.examples}</code>
+              </p>
+            </div>
+          ))}
+        </div>
+      </LegalSection>
+
+      <LegalSection id="cookie-table" num="05" title="Cookies we set">
+        <p>These are the cookies you may receive while using Serpely.</p>
+        <LegalTable
+          head={['Name', 'Set by', 'Category', 'Purpose', 'Duration']}
+          minWidth={700}
+          rows={COOKIES.map(c => [
+            <code key="n" className="legal-code">{c.name}</code>,
+            c.provider,
+            c.category,
+            c.purpose,
+            c.duration,
+          ])}
+        />
+        <p style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 0 }}>
+          Google cookies appear only after you accept analytics. Durations are set by Google and may change; check your
+          browser&apos;s developer tools for the exact values on your device.
+        </p>
+        <p style={{ marginTop: 14, marginBottom: 0 }}>
+          <strong>Third-party sign-in and payments.</strong> When you sign in with Google, connect Search Console or Analytics, or
+          pay through Stripe, you briefly visit Google&apos;s or Stripe&apos;s own pages. Those companies may set cookies on their own
+          domains under their own policies. They are not set by Serpely and we cannot read them.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="storage-table" num="06" title="Local storage we use">
+        <p>These items stay on your device and are never sent with every request.</p>
+        <LegalTable
+          head={['Key', 'Category', 'Purpose', 'Duration']}
+          minWidth={640}
+          rows={STORAGE.map(s => [
+            <code key="n" className="legal-code">{s.name}</code>,
+            s.category,
+            s.purpose,
+            s.duration,
+          ])}
+        />
+      </LegalSection>
+
+      <LegalSection id="analytics" num="07" title="Analytics in detail">
+        <p>
+          We use Google Analytics 4 through Google Tag Manager to count page views and understand which content is useful.
+          Analytics runs in consent mode: until you accept, Google receives no analytics identifiers from us. Once accepted,
+          Google may set the <code className="legal-code">_ga</code> and{' '}
+          <code className="legal-code">_ga_&lt;container-id&gt;</code> cookies and process event data on our behalf as a processor.
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          We do not enable Google signals, ads personalisation, or data sharing with Google&apos;s advertising products. For details
+          of Google&apos;s own processing, see{' '}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">Google&apos;s Privacy Policy</a> and{' '}
+          <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">
+            how Google uses information from partner sites
+          </a>.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="measurement" num="08" title="Our own measurement">
+        <p style={{ marginBottom: 0 }}>
+          We also keep an aggregate count of page views on our own servers: the page path, the referring URL, and a truncated
+          user-agent string. This record contains no cookie, no persistent identifier, and is not shared with third parties. It is
+          used only to understand overall traffic and is not linked to you as an individual.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="bot-protection" num="09" title="Bot protection">
+        <p style={{ marginBottom: 0 }}>
+          Some forms are protected by Cloudflare Turnstile, which distinguishes people from automated submissions. Turnstile is
+          designed to work without tracking cookies; if Cloudflare issues a challenge it may set a short-lived security cookie such
+          as <code className="legal-code">cf_clearance</code>. That cookie is used only to protect the site and never for
+          advertising.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="advertising" num="10" title="No advertising or cross-site tracking">
+        <p style={{ marginBottom: 0 }}>
+          Serpely does not run advertising, retargeting, or social media pixels, and we do not use cookies to build a profile of
+          your browsing across other websites. We do not sell or share personal information for cross-context behavioural
+          advertising, as those terms are defined under California law.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="manage" num="11" title="Managing cookies and other controls">
+        <p>
+          You can block or delete cookies in your browser at any time. Blocking strictly necessary cookies will prevent you from
+          signing in to the admin panel or the client dashboard and using parts of the Service.
+        </p>
+        <ul>
+          <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noreferrer">Google Chrome</a></li>
+          <li><a href="https://support.apple.com/guide/safari/sfri11471/mac" target="_blank" rel="noreferrer">Safari</a></li>
+          <li><a href="https://support.mozilla.org/kb/clear-cookies-and-site-data-firefox" target="_blank" rel="noreferrer">Firefox</a></li>
+          <li><a href="https://support.microsoft.com/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" target="_blank" rel="noreferrer">Microsoft Edge</a></li>
+        </ul>
+        <p style={{ marginBottom: 0 }}>
+          We honour Global Privacy Control (GPC) signals where our systems can read them, and we treat them as an opt-out of
+          analytics. Browser &ldquo;Do Not Track&rdquo; headers are not standardised; we do not rely on them, so use your browser
+          settings to block analytics instead.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="retention" num="12" title="How long information stays">
+        <p style={{ marginBottom: 0 }}>
+          Cookie and storage lifetimes are listed above. Server-side page-view records are aggregated and kept for up to twelve
+          months. Your consent record stays until you clear it or change your choice. For account data and deletion requests, see
+          the retention section of our <Link to="/privacy">Privacy Policy</Link>.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="changes" num="13" title="Changes to this policy">
+        <p style={{ marginBottom: 0 }}>
+          We update this page whenever the cookies or storage we use change. Material changes will be announced on the site or by
+          email, and the &ldquo;Last updated&rdquo; date above will change. If a change requires a new consent, we will ask again
+          before setting anything new.
+        </p>
+      </LegalSection>
+
+      <LegalSection id="contact" num="14" title="Contact">
+        <p>Questions or requests about this policy or your personal information? Contact us:</p>
+        <div className="legal-contact-grid">
+          <div className="legal-contact">
+            <span>Company</span>
+            <strong>Serpely</strong>
+          </div>
+          <div className="legal-contact">
+            <span>Email</span>
+            <strong>privacy@serpely.com</strong>
+          </div>
+          <div className="legal-contact">
+            <span>Address</span>
+            <strong style={{ fontSize: 13.5 }}>1209 Mountain Road Pl Ne Ste N Albuquerque, NM 87110</strong>
+          </div>
+        </div>
+        <div className="legal-actions">
+          <Link to="/privacy" className="btn-accent-s inline-flex">Read the Privacy Policy</Link>
+          <Link to="/contact" className="btn-secondary-s inline-flex">Contact Us</Link>
+          <Link to="/" className="btn-secondary-s inline-flex">Back to Home</Link>
+        </div>
+      </LegalSection>
+    </LegalShell>
   );
 }
-
-const h2: React.CSSProperties = {
-  fontSize: 19,
-  fontWeight: 850,
-  letterSpacing: '-0.02em',
-  color: 'var(--text)',
-  margin: '30px 0 10px',
-};

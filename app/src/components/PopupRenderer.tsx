@@ -90,14 +90,20 @@ function PopupItem({ popup: p, onDismiss }: { popup: PopupData; onDismiss: () =>
 
   // modal
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={onDismiss} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={p.title}
+      onKeyDown={(e) => { if (e.key === 'Escape') onDismiss(); }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+    >
+      <div onClick={onDismiss} aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} />
       <div style={{ position: 'relative', background: bg, color: textColor, borderRadius: 20, padding: '32px', maxWidth: 440, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
-        <button onClick={onDismiss} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: textColor, opacity: 0.7, fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
+        <button type="button" aria-label="Close popup" onClick={onDismiss} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: textColor, opacity: 0.75, fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 4 }}>×</button>
         <p style={{ margin: '0 0 10px', fontWeight: 900, fontSize: 22, letterSpacing: '-0.02em' }}>{p.title}</p>
         {p.body && <p style={{ margin: '0 0 20px', fontSize: 15, opacity: 0.85, lineHeight: 1.6 }}>{p.body}</p>}
         {p.ctaText && p.ctaHref && (
-          <a href={p.ctaHref} style={{ display: 'inline-block', background: '#00C27A', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>{p.ctaText}</a>
+          <a href={p.ctaHref} style={{ display: 'inline-block', background: '#00C27A', color: '#0A0A0A', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>{p.ctaText}</a>
         )}
       </div>
     </div>

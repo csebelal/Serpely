@@ -7,9 +7,13 @@ module.exports = {
       fontFamily: {
         sans: ['Satoshi', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Satoshi', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
+        "border-subtle": "var(--border-color)",
+        "accent-text": "var(--accent-text)",
+        "accent-on-brand": "var(--accent-on-brand)",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",

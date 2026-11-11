@@ -189,4 +189,8 @@
 @media (max-width: 720px) {
   .sa-root .score-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (max-width: 560px) {
+  .sa-root .crawl-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sa-root .crawl-line { grid-column: span 2; }
+}
 

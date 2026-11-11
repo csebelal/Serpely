@@ -1,0 +1,11 @@
+export { BackgroundField } from './BackgroundField';
+export { IntelligentGrid, type IntelligentGridProps } from './IntelligentGrid';
+export { AuroraDrift, type AuroraDriftProps } from './AuroraDrift';
+export { AmbientCorona, type AmbientCoronaProps } from './AmbientCorona';
+export { DataStream, type DataStreamProps } from './DataStream';
+export { NeuralMesh, type NeuralMeshProps } from './NeuralMesh';
+export { ShaderAurora, type ShaderAuroraProps } from './ShaderAurora';
+export { AnimatedBackground } from './AnimatedBackground';
+export { HeroBackground } from './HeroBackground';
+export { PageBackground, type PageBackgroundVariant, type PageBackgroundProps } from './PageBackground';
+export { useAmbientCanvas, deviceTier, prefersReducedMotion, type AmbientFrame } from './useAmbientCanvas';

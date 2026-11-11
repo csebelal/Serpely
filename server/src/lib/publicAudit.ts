@@ -713,9 +713,9 @@ export async function runChecks(page: FetchedPage, normalizedUrl: string, psi?: 
       'Fix JSON-LD syntax errors and add required properties (Article: headline/author/datePublished, Product: name/offers, Organization: name).', 5, 'normal',
       !jsonLdBlocks.length ? true : schemaProblems.length === 0));
   }
-  issues.push(issue('faq-schema', 'AI Visibility / GEO', 'high', 'FAQ code for Google',
+  issues.push(issue('faq-schema', 'AI Visibility / GEO', 'low', 'FAQ code for Google',
     has('faqpage') ? 'FAQ code detected' : 'No FAQ code found in the page',
-    'Add FAQ code directly in the page HTML (code added by JavaScript alone is invisible to crawlers).', 6, 'normal', has('faqpage')));
+    'Add FAQPage JSON-LD only where eligible (note: Google restricts FAQ rich results mostly to authoritative sites).', 1, 'normal', has('faqpage')));
   issues.push(issue('org-schema', 'AI Visibility / GEO', 'high', 'Business info code',
     has('organization') ? 'Business info detected' : 'No business info code found',
     'Add business info code with logo + links (Wikipedia, Wikidata, LinkedIn, X).', 5, 'normal', has('organization')));
@@ -727,7 +727,7 @@ export async function runChecks(page: FetchedPage, normalizedUrl: string, psi?: 
     'Add breadcrumb code + visible breadcrumb navigation.', 2, 'normal', has('breadcrumblist')));
   issues.push(issue('speakable', 'AI Visibility / GEO', 'low', 'Voice-answer code',
     has('speakable') ? 'Voice-answer code detected' : 'No voice-answer code found',
-    'Add voice-answer code pointing at the summary + key headings for answer engines.', 2, 'normal', has('speakable')));
+    'Add voice-answer code pointing at the summary + key headings for answer engines.', 1, 'normal', has('speakable')));
   issues.push(issue('faq-html', 'AI Visibility / GEO', 'medium', 'Visible FAQ or summary block',
     /faq|frequently asked|tl;dr|key takeaways/i.test(html) ? 'FAQ/summary copy found in the page' : 'No FAQ or summary block in the page',
     'Add a 40–60 word summary + FAQ with headings phrased as questions; lead each section with the direct answer.', 4, 'normal', /faq|frequently asked|tl;dr|key takeaways/i.test(html)));
@@ -821,13 +821,13 @@ function toV2Cat(i: IAuditIssue): string {
   switch (i.code) {
     case 'title-present': case 'title-length': case 'meta-description': case 'h1-one':
     case 'link-hygiene': case 'psi-link-text': case 'psi-crawl-anchors':
-    case 'anchor-generic':
+    case 'anchor-generic': case 'readability-score': case 'eeat-signals':
       return 'On-page content';
     case 'viewport': case 'lang-attr': case 'img-alt': case 'psi-heading-order':
     case 'psi-link-name': case 'psi-font-size': case 'psi-tap-targets':
     case 'psi-contrast': case 'psi-form-labels': case 'psi-button-names':
     case 'psi-no-notif-spam': case 'psi-no-geo-spam': case 'psi-img-ratio':
-    case 'mobile-zoom': case 'mobile-font-static':
+    case 'mobile-zoom': case 'mobile-font-static': case 'a11y-landmarks-labels':
       return 'Accessibility';
     case 'psi-score': case 'psi-lcp': case 'psi-cls': case 'psi-inp': case 'psi-ttfb':
     case 'psi-field-lcp': case 'psi-field-cls': case 'psi-field-inp':
@@ -838,26 +838,68 @@ function toV2Cat(i: IAuditIssue): string {
     case 'psi-unused-js': case 'psi-unminified-css': case 'psi-unminified-js':
     case 'psi-modern-images': case 'psi-responsive-images': case 'psi-optimized-images':
     case 'psi-efficient-anim': case 'psi-font-display': case 'psi-text-compression':
+    case 'critical-css-blocking': case 'third-party-scripts': case 'font-loading':
       return 'Performance';
     case 'robots-ai-allow': case 'llms-txt': case 'og-tags': case 'twitter-card':
     case 'faq-schema': case 'org-schema': case 'article-schema': case 'breadcrumb-schema':
     case 'speakable': case 'faq-html': case 'content-depth': case 'psi-robots-valid':
-    case 'og-image-valid': case 'schema-valid':
+    case 'og-image-valid': case 'schema-valid': case 'rich-results-guard':
+    case 'citation-readiness': case 'answer-blocks':
       return 'AI citation readiness';
     default:
       return 'Technical SEO';
   }
 }
 
-export function scoreReportV2(issues: IAuditIssue[]) {  const scores: Record<string, number> = {};
+const SEV_DEFAULT_WEIGHT: Record<AuditSeverity, number> = {
+  critical: 8,
+  high: 5,
+  medium: 3,
+  low: 1.5,
+};
+
+function computeCategoryScores(issues: IAuditIssue[], psi?: PsiResult | null): Record<string, number> {
+  const scores: Record<string, number> = {};
   for (const c of V2_CATS) {
     const list = issues.filter(i => toV2Cat(i) === c);
-    const lost = list.filter(i => !i.passed).reduce((s, i) => s + i.impact, 0);
-    scores[c] = Math.max(0, 100 - lost * 2);
+    let totalWeight = 0;
+    let lostWeight = 0;
+    let criticalFailed = 0;
+    for (const i of list) {
+      const w = i.impact > 0 ? i.impact : SEV_DEFAULT_WEIGHT[i.severity];
+      totalWeight += w;
+      if (!i.passed) {
+        lostWeight += w;
+        if (i.severity === 'critical') criticalFailed += 1;
+      }
+    }
+    let checkScore = totalWeight > 0 ? Math.round(((totalWeight - lostWeight) / totalWeight) * 100) : 100;
+    if (criticalFailed > 0) {
+      checkScore = Math.min(checkScore, Math.max(20, 74 - (criticalFailed - 1) * 10));
+    }
+    if (c === 'Performance' && psi && psi.score >= 0 && typeof psi.scores?.performance === 'number') {
+      checkScore = Math.round(psi.scores.performance * 0.65 + checkScore * 0.35);
+    } else if (c === 'Accessibility' && psi && psi.score >= 0 && typeof psi.scores?.accessibility === 'number') {
+      checkScore = Math.round(psi.scores.accessibility * 0.65 + checkScore * 0.35);
+    }
+    scores[c] = Math.max(0, Math.min(100, checkScore));
   }
+  return scores;
+}
+
+export function scoreReportV2(issues: IAuditIssue[], psi?: PsiResult | null) {
+  const scores = computeCategoryScores(issues, psi);
   const overall = Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / V2_CATS.length);
-  const quick = issues.filter(i => !i.passed && i.effort === 'quick').reduce((s, i) => s + i.impact, 0);
-  const all = issues.filter(i => !i.passed).reduce((s, i) => s + i.impact, 0);
+
+  // Forecast scores by simulating quick fixes and all fixes under the same formula.
+  const quickSimulated = issues.map(i => (!i.passed && i.effort === 'quick' ? { ...i, passed: true } : i));
+  const quickScores = computeCategoryScores(quickSimulated, psi);
+  const quickOverall = Math.round(Object.values(quickScores).reduce((a, b) => a + b, 0) / V2_CATS.length);
+
+  const allSimulated = issues.map(i => (!i.passed ? { ...i, passed: true } : i));
+  const allScores = computeCategoryScores(allSimulated, psi);
+  const allOverall = Math.round(Object.values(allScores).reduce((a, b) => a + b, 0) / V2_CATS.length);
+
   const critical = issues.filter(i => !i.passed && i.severity === 'critical').length;
   const warning = issues.filter(i => !i.passed && (i.severity === 'high' || i.severity === 'medium')).length;
   const notice = issues.filter(i => !i.passed && i.severity === 'low').length;
@@ -865,7 +907,11 @@ export function scoreReportV2(issues: IAuditIssue[]) {  const scores: Record<str
   const top = [...issues].filter(i => !i.passed).sort((a, b) => b.impact - a.impact)[0];
   return {
     scores, overall,
-    forecast: { now: overall, quickWins: Math.min(100, overall + Math.round(quick * 0.9)), allFixes: Math.min(100, overall + Math.round(all * 0.9)) },
+    forecast: {
+      now: overall,
+      quickWins: Math.max(overall, Math.min(100, quickOverall)),
+      allFixes: Math.max(overall, Math.min(100, allOverall)),
+    },
     summary: { critical, warning, notice, passed },
     priority: top ? { code: top.code, title: top.title, fix: top.fix, impact: top.impact } : null,
   };
@@ -937,7 +983,7 @@ export function buildSiteIssues(args: {
       5, 'normal', psiLcpMs !== undefined ? psiLcpMs <= 2500 : agg.avgLoadMs <= 2500,
       // The LCP probe runs against the homepage — name it so the drawer's
       // affected-URL table lists the page the finding actually measured.
-      { count: agg.crawled, examples: psiLcpMs !== undefined ? [`${origin || 'https://yoursite.com'}/`] : [] }),
+      { count: psiLcpMs !== undefined ? 1 : agg.crawled, examples: psiLcpMs !== undefined ? [`${origin || 'https://yoursite.com'}/`] : [] }),
     mk('site-llms', 'AI citation readiness', 'low', 'llms.txt for AI agents',
       llmsFound ? 'llms.txt found' : 'No llms.txt — AI agents guess your key pages',
       'llms.txt is the fastest way to point answer engines at canonical, citable content.',

@@ -15,6 +15,7 @@
  * =========================================================================== */
 
 import type { ReactElement } from 'react';
+import type { AuditUrlCss } from '@/lib/api';
 import type { UrlDetail, UrlTabId } from '../types';
 
 /* Prototype EMPTY_ICON (line 2715). */
@@ -31,17 +32,11 @@ function EmptyIcon(): ReactElement {
 /** Honest empty state with per-tab copy. */
 export function EmptyTab({ tabId, detail }: { tabId: UrlTabId; detail?: UrlDetail | null }): ReactElement {
   const labels: Partial<Record<UrlTabId, string>> = {
-    search: 'Search metrics',
-    gaps: 'Keyword gaps',
     check: 'URL check',
-    insights: 'GA4 Insights',
-    css: 'CSS files',
+    css: 'CSS & critical requests',
   };
   const hints: Partial<Record<UrlTabId, string>> = {
-    search: 'Search performance comes from Google Search Console, which this public audit does not connect to. Open the workspace to see GSC data for your own property.',
-    gaps: 'Keyword gaps are computed from Search Console queries, which this public audit does not connect to.',
-    insights: 'GA4 insights require a connected Google Analytics property. This public audit does not include GA4 data.',
-    css: 'CSS asset discovery is not collected by this audit yet.',
+    css: 'No stylesheet or render-blocking request chain data was returned for this URL.',
     check: detail
       ? 'This URL isn\'t in the stored page sample (the report keeps crawl facts for the first ~120 crawled pages).'
       : undefined,
@@ -98,18 +93,106 @@ function statusText(stat: { status: number; error?: string; offsite?: string }):
   return `${stat.status}`;
 }
 
-/* Thin wrappers for the four tabs with no backend data yet — honest states only. */
-export function SearchTab({ detail }: { detail: UrlDetail }): ReactElement {
-  return <EmptyTab tabId="search" detail={detail} />;
-}
-export function GapsTab({ detail }: { detail: UrlDetail }): ReactElement {
-  return <EmptyTab tabId="gaps" detail={detail} />;
-}
-export function InsightsTab({ detail }: { detail: UrlDetail }): ReactElement {
-  return <EmptyTab tabId="insights" detail={detail} />;
-}
-export function CssTab({ detail }: { detail: UrlDetail }): ReactElement {
-  return <EmptyTab tabId="css" detail={detail} />;
+/* ---------------------------------------------------------------------------
+ * Tab — CSS & Critical Request Chains (real data from critical_request_chain.py)
+ * ------------------------------------------------------------------------- */
+export function CssTab({ data }: { detail: UrlDetail; data: AuditUrlCss | null }): ReactElement {
+  if (!data) return <EmptyTab tabId="css" />;
+  if (data.fetch_error) {
+    return (
+      <div className="url-tab active" data-tab="css">
+        <div className="url-empty">
+          <EmptyIcon />
+          <b>Could not inspect stylesheets</b>
+          <span>{data.fetch_error}</span>
+        </div>
+      </div>
+    );
+  }
+  const chains = data.chains ?? [];
+  const stylesheets = chains.filter((c) => c.type === 'stylesheet');
+  const scripts = chains.filter((c) => c.type === 'script');
+  const blockingScripts = scripts.filter((s) => s.blocking);
+  const issues = data.issues ?? [];
+
+  return (
+    <div className="url-tab active" data-tab="css">
+      <div className="url-section">
+        <div className="url-section-label">Render-blocking summary</div>
+        <div className="tab-kpi-grid">
+          <Kpi label="Stylesheets" value={String(stylesheets.length)} />
+          <Kpi label="Critical blocking requests" value={String(data.critical_request_count ?? 0)} />
+          <Kpi label="Scripts in head/body" value={String(scripts.length)} />
+          <Kpi label="Parser-blocking scripts" value={String(blockingScripts.length)} />
+        </div>
+      </div>
+
+      {stylesheets.length > 0 ? (
+        <div className="url-section">
+          <div className="url-section-label">Stylesheets ({stylesheets.length})</div>
+          <ul className="url-issue-list">
+            {stylesheets.map((sheet, i) => {
+              const tags = [
+                sheet.blocking ? 'Render-blocking' : 'Non-blocking',
+                sheet.preloaded ? 'Preloaded' : null,
+                sheet.cross_origin ? (sheet.preconnected ? 'Cross-origin (preconnected)' : 'Cross-origin (no preconnect)') : 'Same-origin',
+                sheet.children && sheet.children.length > 0 ? `${sheet.children.length} @import(s)` : null,
+              ].filter(Boolean);
+              return (
+                <li className={`url-issue ${sheet.blocking && !sheet.preloaded ? 'medium' : 'low'}`} key={`${sheet.url}-${i}`}>
+                  <span className={`url-issue-dot ${sheet.blocking && !sheet.preloaded ? 'medium' : 'low'}`} aria-hidden="true" />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="url-issue-title" style={{ wordBreak: 'break-all' }}>{pathOf(sheet.url)}</div>
+                    <div className="url-issue-meta">{tags.join(' · ')}</div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : (
+        <div className="url-section">
+          <div className="ps-device-empty">No external &lt;link rel=&quot;stylesheet&quot;&gt; resources detected on this URL.</div>
+        </div>
+      )}
+
+      {blockingScripts.length > 0 && (
+        <div className="url-section">
+          <div className="url-section-label">Parser-blocking scripts ({blockingScripts.length})</div>
+          <ul className="url-issue-list">
+            {blockingScripts.map((script, i) => (
+              <li className="url-issue high" key={`${script.url}-${i}`}>
+                <span className="url-issue-dot high" aria-hidden="true" />
+                <div style={{ minWidth: 0 }}>
+                  <div className="url-issue-title" style={{ wordBreak: 'break-all' }}>{pathOf(script.url)}</div>
+                  <div className="url-issue-meta">
+                    Missing async/defer{script.cross_origin ? ' · Cross-origin' : ''}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {issues.length > 0 && (
+        <div className="url-section">
+          <div className="url-section-label">Optimization notes ({issues.length})</div>
+          <ul className="url-issue-list">
+            {issues.slice(0, 12).map((iss, idx) => (
+              <li className={`url-issue ${iss.severity === 'warning' ? 'medium' : 'low'}`} key={`${iss.message}-${idx}`}>
+                <span className={`url-issue-dot ${iss.severity === 'warning' ? 'medium' : 'low'}`} aria-hidden="true" />
+                <div style={{ minWidth: 0 }}>
+                  <div className="url-issue-title">{iss.message}</div>
+                  {iss.url && <div className="url-issue-meta" style={{ wordBreak: 'break-all' }}>{pathOf(iss.url)}</div>}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ---------------------------------------------------------------------------
@@ -212,11 +295,6 @@ export function LinksTab({ detail }: { detail: UrlDetail }): ReactElement {
           <Kpi label="External link hosts (sampled)" value={String(external.length)} />
         </div>
       </div>
-      {internal === null ? (
-        <div className="url-section">
-          <div className="ps-device-empty">Internal link totals beyond the stored sample are not collected yet.</div>
-        </div>
-      ) : null}
       {external.length > 0 ? (
         <div className="url-section">
           <div className="url-section-label">External links (first {external.length})</div>

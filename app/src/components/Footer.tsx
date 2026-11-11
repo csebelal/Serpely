@@ -1,10 +1,12 @@
 ﻿import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getFooter } from '../lib/api';
+import { resetConsent } from '../lib/consent';
+import { useIsDarkTheme } from '@/hooks/useIsDarkTheme';
 
 const cols = {
   Product: ['Features', 'Product Tour', 'Integrations', 'Rank Tracker', 'GEO Monitoring', 'Technical Audit', 'White-Label', 'Changelog'],
-  Company: ['About Us', 'Contact', 'Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Refund & Cancellation Policy', 'Security Policy'],
+  Company: ['About Us', 'Contact', 'Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security Policy'],
   Resources: ['SEO Blog', 'GEO Guide', 'API Docs', 'FAQ', 'Help Center', 'Feedback', 'Technical Docs', 'Serpely Brand Kit'],
   Compare: ['Serpely vs Semrush', 'Serpely vs Ahrefs', 'Serpely vs Nightwatch', 'Serpely vs Rankability', 'Serpely vs SE Ranking', 'Serpely vs Surfer SEO', 'Serpely vs SERPStat', 'Serpely vs Moz'],
 };
@@ -13,16 +15,16 @@ const colHrefs: Record<string, string> = {
   // Product
   Features: '/features', 'Product Tour': '/product-tour', Integrations: '/integrations',
   'Rank Tracker': '/features', 'GEO Monitoring': '/features',
-  'Technical Audit': '/features', 'White-Label': '/features',
+  'Technical Audit': '/audit', 'White-Label': '/features',
   Changelog: '/changelog',
   // Company
   'About Us': '/about', Contact: '/contact',
   'Privacy Policy': '/privacy', 'Terms of Service': '/terms',
-  'Cookie Policy': '/cookie-policy', 'Refund & Cancellation Policy': '#', 'Security Policy': '#',
+  'Cookie Policy': '/cookie-policy', 'Security Policy': '/privacy',
   // Resources
   FAQ: '/faq', 'SEO Blog': '/blog',
-  'GEO Guide': '#', 'API Docs': '#', 'Help Center': '#',
-  Feedback: '#', 'Technical Docs': '#', 'Serpely Brand Kit': '#',
+  'GEO Guide': '/how-it-works', 'API Docs': '/integrations', 'Help Center': '/faq',
+  Feedback: '/contact', 'Technical Docs': '/integrations', 'Serpely Brand Kit': '/about',
   // Compare
   'Serpely vs Semrush': '/compare/semrush',
   'Serpely vs Ahrefs': '/compare/ahrefs',
@@ -35,19 +37,9 @@ const colHrefs: Record<string, string> = {
 };
 
 export function Footer() {
-  const [isDark, setIsDark] = useState(false);
+  const isDark = useIsDarkTheme();
   const [socialHrefs, setSocialHrefs] = useState<Record<string, string>>({});
   const [productHuntUrl, setProductHuntUrl] = useState('https://www.producthunt.com');
-
-  useEffect(() => {
-    // Sync after all sibling effects (e.g. Navbar localStorage restore) have run
-    setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     getFooter().then(r => {
@@ -70,12 +62,12 @@ export function Footer() {
   ];
 
   return (
-    <footer className="py-16 px-6 border-t relative" style={{ borderColor: 'hsl(var(--border))', background: 'var(--bg)' }}>
+    <footer className="py-16 px-6 border-t relative section-glow-edge" style={{ borderColor: 'hsl(var(--border))', background: 'var(--bg)' }}>
       <div className="max-w-7xl mx-auto">
 
         {/* Ask AI strip */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4 mb-10 pb-10 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
-          <p className="text-[11.5px] font-bold uppercase flex-shrink-0" style={{ color: 'var(--text-faint)', letterSpacing: '0.1em' }}>Ask AI about Serpely</p>
+          <p className="text-[11.5px] font-bold uppercase flex-shrink-0" style={{ color: 'var(--text-soft)', letterSpacing: '0.1em' }}>Ask AI about Serpely</p>
           <div className="flex items-center gap-3 flex-wrap">
             {aiPlatforms.map(p => (
               <a
@@ -95,7 +87,7 @@ export function Footer() {
                 >
                   <img src={p.img} alt={p.label} className="w-5 h-5 object-contain" />
                 </div>
-                <span className="text-[11px] font-bold transition-colors" style={{ color: 'var(--text-faint)' }}>{p.label}</span>
+                <span className="text-[11px] font-bold transition-colors" style={{ color: 'var(--text-soft)' }}>{p.label}</span>
               </a>
             ))}
           </div>
@@ -125,20 +117,14 @@ export function Footer() {
                 { label: 'YouTube', path: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z' },
               ].map(s => (
                 <a key={s.label} href={socialHrefs[s.label] || '#'} target="_blank" rel="noopener noreferrer" aria-label={s.label}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
-                  style={{ border: '1px solid hsl(var(--border))', background: 'var(--card-bg)', color: 'var(--text-soft)' }}
-                  onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#00A868'; el.style.borderColor = '#00C27A'; }}
-                  onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text-soft)'; el.style.borderColor = 'hsl(var(--border))'; }}>
+                  className="w-9 h-9 rounded-lg flex items-center justify-center social-lift-s">
                   <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d={s.path}/></svg>
                 </a>
               ))}
             </div>
 
             {/* Product Hunt */}
-            <a href={productHuntUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors"
-              style={{ border: '1px solid hsl(var(--border))', background: 'var(--card-bg)', color: 'var(--text-soft)' }}
-              onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#00A868'; el.style.borderColor = '#00C27A'; }}
-              onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text-soft)'; el.style.borderColor = 'hsl(var(--border))'; }}>
+            <a href={productHuntUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold social-lift-s">
               <img src="/Other Logos/Product_Hunt_Logo.png" alt="Product Hunt" className="h-6 w-auto object-contain" />
               Find us on Product Hunt
             </a>
@@ -167,7 +153,15 @@ export function Footer() {
               />
             </a>
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <button
+              type="button"
+              onClick={resetConsent}
+              className="text-xs font-semibold cursor-pointer hover:underline"
+              style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-soft)' }}
+            >
+              Cookie settings
+            </button>
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00C27A', boxShadow: '0 0 10px rgba(0,194,122,0.5)' }} />
               <span className="font-bold uppercase" style={{ fontSize: 11.5, color: 'var(--text-soft)', letterSpacing: '0.1em' }}>All Systems Operational</span>

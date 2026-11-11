@@ -69,7 +69,7 @@ export function CookieConsent() {
           <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-soft)' }}>
             We use essential cookies to run Serpely. With your consent we also use Google
             Analytics to understand how the site is used. Read our{' '}
-            <Link to="/cookie-policy" style={{ color: '#00A868', fontWeight: 700 }}>
+            <Link to="/cookie-policy" className="link-accent-s">
               Cookie Policy
             </Link>
             .
@@ -102,9 +102,9 @@ export function CookieConsent() {
               fontSize: 13.5,
               fontWeight: 700,
               cursor: 'pointer',
-              border: '1px solid #00A868',
-              background: '#00A868',
-              color: '#fff',
+              border: '1px solid #00C27A',
+              background: '#00C27A',
+              color: '#0A0A0A',
             }}
           >
             Accept all

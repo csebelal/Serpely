@@ -26,7 +26,7 @@ export function AdminLogin() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Satoshi, system-ui, sans-serif' }}>
+    <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Satoshi, system-ui, sans-serif' }}>
       <div style={{ width: '100%', maxWidth: 400, padding: 40, background: '#ffffff', borderRadius: 20, boxShadow: '0 4px 32px rgba(15,23,42,0.08)' }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, background: '#00C27A', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#fff', margin: '0 auto 16px' }}>S</div>

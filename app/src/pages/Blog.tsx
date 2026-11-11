@@ -501,7 +501,8 @@ const globalStyles = `
     font-family: 'Satoshi', sans-serif;
   }
   .knowledge-search input::placeholder { color: var(--text-ghost); font-size: 0.86em; font-weight: 500; opacity: 0.82; }
-  .knowledge-search input:focus { outline: none; border-color: #00C27A; box-shadow: 0 0 0 4px rgba(0,194,122,0.10), var(--card-shadow); }
+  .knowledge-search input:focus { outline: 2px solid transparent; border-color: #00C27A; box-shadow: 0 0 0 4px rgba(0,194,122,0.10), var(--card-shadow); }
+  .knowledge-search input:focus-visible { outline: 2px solid #00C27A; outline-offset: 2px; }
   .search-kbd {
     position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
     height: 40px; display: inline-flex; align-items: center; gap: 8px;
@@ -546,7 +547,8 @@ const globalStyles = `
     color: var(--text); font-family: 'Satoshi', sans-serif;
   }
   input[type="email"]::placeholder { color: var(--text-ghost); }
-  input[type="email"]:focus { outline: none; border-color: #00C27A; box-shadow: 0 0 0 4px rgba(0,194,122,0.10); }
+  input[type="email"]:focus { outline: 2px solid transparent; border-color: #00C27A; box-shadow: 0 0 0 4px rgba(0,194,122,0.10); }
+  input[type="email"]:focus-visible { outline: 2px solid #00C27A; outline-offset: 2px; }
 
   /* ── Footer ── */
   .footer-link {
@@ -1058,7 +1060,7 @@ export function Blog() {
       </nav>
 
       {/* ═══ MAIN ═══ */}
-      <main>
+      <div className="blog-main-wrap">
         {/* ─── BLOG HERO ─── */}
         <section className="pt-28 lg:pt-32 pb-8 px-6">
           <div className="max-w-7xl mx-auto">
@@ -1256,12 +1258,12 @@ export function Blog() {
               </button>
             </form>
             {newsletterState === "success"
-              ? <p className="text-[12px] mt-3 font-semibold" style={{ color: "#00C27A" }}>Subscribed! Check your inbox for confirmation.</p>
+              ? <p className="text-[12px] mt-3 font-semibold" style={{ color: "var(--accent-text)" }}>Subscribed! Check your inbox for confirmation.</p>
               : <p className="text-[12px] mt-3 font-semibold" style={{ color: "var(--text-faint)" }}>No spam. Unsubscribe anytime.</p>}
             {newsletterState === "error" && <p className="text-[12px] mt-1 font-semibold" style={{ color: "#E5484D" }}>Something went wrong. Please try again.</p>}
           </div>
         </section>
-      </main>
+      </div>
     </>
   );
 }

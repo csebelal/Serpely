@@ -28,7 +28,8 @@ export function GscInsights({ origin }: { origin: string }) {
   };
 
   useEffect(() => {
-    if (!localStorage.getItem('serpely_client_token')) { setState('login'); return; }
+    // The httpOnly cookie carries the session — if /status 401s the user is
+    // not signed in, so show the login state.
     googleStatus()
       .then(r => {
         if (!r.data.connected) { setState('connect'); return; }

@@ -1,3 +1,4 @@
+import { Check, X } from 'lucide-react';
 import { V2 } from './v2Theme';
 
 export interface EngineState { name: string; readable: boolean; detail: string }
@@ -21,7 +22,8 @@ export function EngineOrbit({ engines, siteLabel }: { engines: EngineState[]; si
           <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: '#12241C', border: '1px solid rgba(255,255,255,0.12)' }}>
             <span style={{ flex: 1, fontWeight: 600, color: '#FFFFFF' }}>{e.name}</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: e.readable ? V2.greenSoft : V2.redSoft, fontSize: 13 }}>
-              {e.readable ? '✓' : '✗'} {e.readable ? 'Can read' : 'Blocked'}
+              {e.readable ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <X className="w-3.5 h-3.5" aria-hidden="true" />}
+              {e.readable ? 'Can read' : 'Blocked'}
             </span>
           </div>
         ))}

@@ -12,6 +12,7 @@ import dns from 'dns';
 import { sanitizeBlogHtml } from './lib/sanitize';
 import { ensureAdminRoles } from './lib/roles';
 import { ADMIN_COOKIE } from './middleware/auth';
+import { CLIENT_COOKIE } from './lib/clientSession';
 
 dotenv.config();
 
@@ -153,7 +154,8 @@ app.use(cors({
 // (it also covers older browsers and any future SameSite relaxation).
 app.use((req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
-  if (!req.headers.cookie?.includes(`${ADMIN_COOKIE}=`)) return next();
+  const cookie = req.headers.cookie || '';
+  if (!cookie.includes(`${ADMIN_COOKIE}=`) && !cookie.includes(`${CLIENT_COOKIE}=`)) return next();
   let origin = req.headers.origin || '';
   if (!origin && req.headers.referer) {
     try { origin = new URL(req.headers.referer).origin; } catch { origin = ''; }
