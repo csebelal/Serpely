@@ -213,6 +213,9 @@ export async function runSitemapCheck(input: string): Promise<{
     }
   }
 
+  // Release raw XML strings now that entries are parsed so multi-MB XML doesn't stay pinned in heap.
+  xmlByUrl.clear();
+
   // Dedupe by normalized loc, keep first lastmod — but record exact duplicates first.
   const rawCounts = new Map<string, number>();
   for (const e of entries) {
@@ -239,9 +242,12 @@ export async function runSitemapCheck(input: string): Promise<{
     ? Math.round((workList.filter(e => !!e.lastmod).length / workList.length) * 100)
     : 0;
 
-  // Sitemap loc list for the shared in-sitemap gate
-  const smLocs = entries.map(e => normUrl(e.loc, origin));
+  // Sitemap loc set for O(1) in-sitemap lookup across up to 55k entries
+  const smLocSet = new Set(seenLoc.keys());
   const sitemapHasUrls = entries.length > 0;
+  const originHost = (() => {
+    try { return new URL(origin).hostname.replace(/^www\./, ''); } catch { return ''; }
+  })();
 
   // ── 4. Live per-URL checks (bounded concurrency) ──
   const urls: CheckedUrl[] = new Array(workList.length);
@@ -296,9 +302,8 @@ export async function runSitemapCheck(input: string): Promise<{
           const k = pageKey(abs, origin);
           if (!k || k === selfKey || seenL.has(k)) continue;
           try {
-            const oh = new URL(origin).hostname.replace(/^www\./, '');
             const lh = new URL(abs).hostname.replace(/^www\./, '');
-            if (oh !== lh) continue;
+            if (originHost && lh !== originHost) continue;
           } catch { continue; }
           seenL.add(k);
           links.push(k);
@@ -317,7 +322,7 @@ export async function runSitemapCheck(input: string): Promise<{
       if (page) {
         const g = computeIndexGates({
           page, normalizedUrl: entry.loc, origin, robotsBody,
-          sitemapLocs: smLocs, sitemapHasUrls, title, desc, canonical, robots: robotsMeta,
+          sitemapLocs: smLocSet, sitemapHasUrls, title, desc, canonical, robots: robotsMeta,
         });
         gates = g.gates;
         score = g.score;

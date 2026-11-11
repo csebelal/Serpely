@@ -41,7 +41,7 @@ const changePasswordLimiter = rateLimit({
 // POST /api/auth/login
 router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body as { email: string; password: string };
+    const { email, password } = (req.body || {}) as { email?: string; password?: string };
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password required' });
       return;

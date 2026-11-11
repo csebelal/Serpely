@@ -306,7 +306,7 @@ export function countWords(html: string): number {
 // Informational only (no score impact). Shared with the sitemap checker.
 export function computeIndexGates(args: {
   page: FetchedPage; normalizedUrl: string; origin: string; robotsBody: string;
-  sitemapLocs: string[]; sitemapHasUrls: boolean;
+  sitemapLocs: string[] | Set<string>; sitemapHasUrls: boolean;
   title: string; desc: string; canonical: string; robots: string;
 }): { gates: IndexGate[]; score: number } {
   const { page, normalizedUrl, origin, robotsBody, sitemapLocs, sitemapHasUrls, title, desc, canonical, robots } = args;
@@ -318,7 +318,7 @@ export function computeIndexGates(args: {
   const noNoindex = !/noindex|none/i.test(robots) && !/noindex|none/i.test(xRobots);
   const finalNorm = normUrl(finalUrl, origin);
   const selfCanonical = !!canonical && normUrl(canonical, origin) === finalNorm;
-  const inSitemap = sitemapHasUrls && sitemapLocs.includes(finalNorm);
+  const inSitemap = sitemapHasUrls && (sitemapLocs instanceof Set ? sitemapLocs.has(finalNorm) : sitemapLocs.includes(finalNorm));
   const gates: IndexGate[] = [
     { code: 'http-200', label: 'Page opens correctly', passed: page.status === 200, detail: page.status === 200 ? (finalUrl !== normalizedUrl ? `Opens correctly (redirects to ${finalUrl})` : 'Opens correctly with no errors') : `Returned status ${page.status} — fix errors or redirect loops` },
     { code: 'robots-allow', label: 'Search engines allowed to visit', passed: robotsAllowed, detail: robotsAllowed ? 'Nothing in robots.txt blocks this page' : `robots.txt blocks ${urlPath} — remove the Disallow rule` },
