@@ -31,6 +31,7 @@ interface StoredConsent {
 declare global {
   interface Window {
     dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
     __SERPELY_GTM_ID?: string;
   }
 }
@@ -118,13 +119,15 @@ function reportConsent(choice: ConsentChoice): void {
 export function applyConsent(choice: ConsentChoice): void {
   const w = window;
   w.dataLayer = w.dataLayer || [];
-  // Same shape as Google's own gtag snippet — GTM's dataLayer accepts an
-  // arguments-like array for `consent` commands.
-  const gtag = (...args: unknown[]): void => {
-    w.dataLayer!.push(args);
+  // Must call global gtag (or push an Arguments object, NOT a plain Array) so
+  // both gtag.js and gtm.js honor Consent Mode updates.
+  const pushConsentArgs: (...args: unknown[]) => void = function () {
+    // eslint-disable-next-line prefer-rest-params
+    w.dataLayer!.push(arguments);
   };
+  const gtagFn = typeof w.gtag === 'function' ? w.gtag : pushConsentArgs;
   const granted = choice === 'granted';
-  gtag('consent', 'update', {
+  gtagFn('consent', 'update', {
     ad_storage: granted ? 'granted' : 'denied',
     ad_user_data: granted ? 'granted' : 'denied',
     ad_personalization: granted ? 'granted' : 'denied',
@@ -140,6 +143,8 @@ function loadGtm(): void {
   window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
   const first = document.getElementsByTagName('script')[0];
   const script = document.createElement('script');
+  const pageNonce = document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce;
+  if (pageNonce) script.nonce = pageNonce;
   script.id = GTM_SCRIPT_ID;
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(id)}`;

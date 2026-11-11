@@ -66,11 +66,11 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       // Baseline for non-HTML responses. HTML requests get a per-request nonce
-      // instead (see the CSP middleware + buildCsp below), which is what lets us
-      // drop 'unsafe-inline' for scripts.
+      // + 'strict-dynamic' instead (see buildCsp below). Never put 'strict-dynamic'
+      // without a nonce, because CSP3 disables 'self' and host allowlists when
+      // 'strict-dynamic' is present without a nonce.
       'script-src': [
         "'self'",
-        "'strict-dynamic'",
         'https://www.googletagmanager.com',
         'https://www.google-analytics.com',
         'https://www.googleadservices.com',
@@ -85,9 +85,13 @@ app.use(helmet({
         "'self'",
         'https://serpely.com',
         'https://www.googletagmanager.com',
+        'https://*.googletagmanager.com',
         'https://www.google-analytics.com',
-        'https://stats.g.doubleclick.net',
         'https://*.google-analytics.com',
+        'https://analytics.google.com',
+        'https://*.analytics.google.com',
+        'https://stats.g.doubleclick.net',
+        'https://*.g.doubleclick.net',
         'https://challenges.cloudflare.com',
       ],
       'img-src': ["'self'", 'data:', 'https:'],
@@ -112,7 +116,7 @@ function buildCsp(nonce: string): string {
     'style-src \'self\' \'unsafe-inline\' https: data:',
     "img-src 'self' data: https:",
     "font-src 'self' https: data:",
-    "connect-src 'self' https://serpely.com https://www.googletagmanager.com https://www.google-analytics.com https://stats.g.doubleclick.net https://*.google-analytics.com https://challenges.cloudflare.com",
+    "connect-src 'self' https://serpely.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://*.analytics.google.com https://stats.g.doubleclick.net https://*.g.doubleclick.net https://challenges.cloudflare.com",
     "frame-src 'self' https://www.googletagmanager.com https://www.youtube.com https://challenges.cloudflare.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -222,7 +226,7 @@ app.get('/:key.txt', (req, res) => {
 
 interface SettingsCache { customHeadCode: string; updatedAt: number }
 let settingsCache: SettingsCache | null = null;
-const SETTINGS_CACHE_TTL = 60_000;
+const SETTINGS_CACHE_TTL = 10_000;
 
 async function getCustomHeadCode(): Promise<string> {
   const now = Date.now();
@@ -230,8 +234,19 @@ async function getCustomHeadCode(): Promise<string> {
     return settingsCache.customHeadCode;
   }
   try {
-    const s = await SiteSettings.findOne().lean();
-    const code = (s as any)?.customHeadCode || '';
+    const s = (await SiteSettings.findOne().lean()) as { customHeadCode?: string; googleAnalyticsId?: string } | null;
+    const rawCustom = String(s?.customHeadCode || '').trim();
+    const gaId = String(s?.googleAnalyticsId || '').trim();
+    const parts: string[] = [];
+    if (rawCustom) parts.push(rawCustom);
+    // Support Settings -> Google Analytics ID directly (unless already present in customHeadCode)
+    if (/^(G|GT|AW|DC)-[A-Z0-9-]+$/i.test(gaId) && !rawCustom.includes(gaId)) {
+      parts.push(
+        `<script async src="https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}"></script>\n` +
+        `<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag('js', new Date());\n  gtag('config', '${gaId}');\n</script>`,
+      );
+    }
+    const code = parts.join('\n');
     settingsCache = { customHeadCode: code, updatedAt: now };
     return code;
   } catch {
@@ -824,6 +839,15 @@ app.use(async (req, res, next) => {
   const isCrawler = CRAWLER_RE.test(req.headers['user-agent'] || '');
   const AUTH_PAGES = new Set(['/login', '/register', '/profile', '/dashboard']);
 
+  // Ensure every HTML response carries a matching per-request nonce + nonce-CSP,
+  // even when a tag scanner or bot sends Accept: */* instead of Accept: text/html.
+  let nonce = String(res.locals.cspNonce || '');
+  if (!nonce) {
+    nonce = crypto.randomBytes(16).toString('base64');
+    res.locals.cspNonce = nonce;
+    res.setHeader('Content-Security-Policy', buildCsp(nonce));
+  }
+
   try {
     let html = fs.readFileSync(indexHtmlPath, 'utf-8');
     let serverSsr = '';
@@ -919,17 +943,16 @@ app.use(async (req, res, next) => {
     if (code) {
       html = html.replace('</head>', code + '\n</head>');
     }
-    html = applyScriptNonce(html, String(res.locals.cspNonce || ''));
+    html = applyScriptNonce(html, nonce);
     res.setHeader('Link', '<https://serpely.com/llms.txt>; rel="alternate"; type="text/plain"; title="LLM docs"');
-    // Fresh HTML on every visit (no-cache + Express auto-ETag → 304 revalidation),
-    // while hashed /assets stay immutable for a year (see express.static above).
-    res.set('Cache-Control', 'public, no-cache').type('html').send(html);
+    // Never cache nonce-injected HTML responses (stale cached nonce + fresh header nonce blocks scripts).
+    res.set('Cache-Control', 'no-store').type('html').send(html);
   } catch {
     try {
-      const fallback = applyScriptNonce(fs.readFileSync(indexHtmlPath, 'utf-8'), String(res.locals.cspNonce || ''));
-      res.set('Cache-Control', 'public, no-cache').type('html').send(fallback);
+      const fallback = applyScriptNonce(fs.readFileSync(indexHtmlPath, 'utf-8'), nonce);
+      res.set('Cache-Control', 'no-store').type('html').send(fallback);
     } catch {
-      res.set('Cache-Control', 'public, no-cache').sendFile(indexHtmlPath);
+      res.set('Cache-Control', 'no-store').sendFile(indexHtmlPath);
     }
   }
 });
