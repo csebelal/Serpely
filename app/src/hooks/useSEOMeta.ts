@@ -4,6 +4,8 @@ import { getSEOByKey } from '@/lib/api';
 interface Fallback {
   title?: string;
   description?: string;
+  noIndex?: boolean;
+  canonicalPath?: string;
 }
 
 function setMeta(nameOrProp: string, content: string) {
@@ -47,8 +49,32 @@ function overrideIconLinks(rel: string, href: string) {
 
 export function useSEOMeta(pageKey: string, fallback?: Fallback) {
   useEffect(() => {
+    let cancelled = false;
+    const applyFallback = () => {
+      const title = fallback?.title || 'Serpely — Agentic SEO for the AI-First Web';
+      const desc = fallback?.description || '';
+      const canonical = fallback?.canonicalPath
+        ? (window.location.origin + fallback.canonicalPath)
+        : (window.location.origin + window.location.pathname);
+
+      document.title = title;
+      setMeta('description', desc);
+      setMeta('og:title', title);
+      setMeta('og:description', desc);
+      setMeta('og:type', 'website');
+      setMeta('og:url', canonical);
+      setMeta('twitter:card', 'summary_large_image');
+      setMeta('twitter:title', title);
+      setMeta('twitter:description', desc);
+      setLink('canonical', canonical);
+      setMeta('robots', fallback?.noIndex ? 'noindex,nofollow' : 'index,follow');
+    };
+
+    applyFallback();
+
     getSEOByKey(pageKey)
       .then(r => {
+        if (cancelled) return;
         const d = r.data;
         const title = d?.metaTitle || fallback?.title || 'Serpely — Agentic SEO for the AI-First Web';
         const desc = d?.metaDescription || fallback?.description || '';
@@ -75,15 +101,14 @@ export function useSEOMeta(pageKey: string, fallback?: Fallback) {
           overrideIconLinks('apple-touch-icon', d.faviconUrl);
         }
 
-        const canonical = d?.canonicalUrl || (window.location.origin + window.location.pathname);
+        const canonical = d?.canonicalUrl || (fallback?.canonicalPath ? window.location.origin + fallback.canonicalPath : window.location.origin + window.location.pathname);
         setLink('canonical', canonical);
         setMeta('og:url', canonical);
 
-        if (d?.noIndex) {
+        if (d?.noIndex || fallback?.noIndex) {
           setMeta('robots', 'noindex,nofollow');
         } else {
-          const existing = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
-          if (existing) existing.content = 'index,follow';
+          setMeta('robots', 'index,follow');
         }
 
         // Inject custom JSON-LD from admin if provided
@@ -101,8 +126,11 @@ export function useSEOMeta(pageKey: string, fallback?: Fallback) {
         }
       })
       .catch(() => {
-        if (fallback?.title) document.title = fallback.title;
-        else document.title = 'Serpely — Agentic SEO for the AI-First Web';
+        if (!cancelled) applyFallback();
       });
-  }, [pageKey]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pageKey, fallback?.title, fallback?.description, fallback?.noIndex, fallback?.canonicalPath]);
 }

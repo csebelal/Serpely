@@ -10,7 +10,7 @@ import { HowItWorksSection } from '@/sections/HowItWorksSection';
 import { CoreFeaturesSection } from '@/sections/CoreFeaturesSection';
 import { TargetAudienceSection } from '@/sections/TargetAudienceSection';
 import { TestimonialsSection } from '@/sections/TestimonialsSection';
-import { FAQSection } from '@/sections/FAQSection';
+import { FAQSection, defaultHomeFaqs } from '@/sections/FAQSection';
 import { CTASection } from '@/sections/CTASection';
 import { NewsletterSection } from '@/sections/NewsletterSection';
 
@@ -24,7 +24,8 @@ export function Home() {
       name: 'Serpely',
       url: 'https://serpely.com',
       logo: 'https://serpely.com/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png',
-      sameAs: ['https://twitter.com/serpely', 'https://linkedin.com/company/serpely'],
+      parentOrganization: { '@type': 'Organization', name: 'CieloOps Inc.' },
+      sameAs: ['https://twitter.com/serpely', 'https://www.linkedin.com/company/serpely'],
       contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', url: 'https://serpely.com/contact' },
     });
     injectSchema('schema-software', {
@@ -37,7 +38,16 @@ export function Home() {
       description: 'Agentic SEO platform for the AI-first web. Track visibility across ChatGPT, Perplexity, and Google AI Overviews.',
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', description: 'Free trial available' },
     });
-    return () => { removeSchema('schema-org'); removeSchema('schema-software'); };
+    injectSchema('schema-home-faq', {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: defaultHomeFaqs.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+    return () => { removeSchema('schema-org'); removeSchema('schema-software'); removeSchema('schema-home-faq'); };
   }, []);
 
   return (

@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getSection } from '@/lib/api';
 import { useSEOMeta } from '@/hooks/useSEOMeta';
+import { injectSchema, removeSchema } from '@/lib/schema';
 import { PageBackground } from '@/components/backgrounds/PageBackground';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -109,6 +110,29 @@ function TimelineCard({ m, dir }: { m: Milestone; dir: 'left' | 'right' }) {
 
 export function About() {
   useSEOMeta('about', { title: 'About Serpely — Our Mission & Team', description: 'Learn about the Serpely team and our mission to build the AI-first SEO platform.' });
+
+  useEffect(() => {
+    injectSchema('schema-about', {
+      '@context': 'https://schema.org',
+      '@type': 'AboutPage',
+      name: 'About Serpely',
+      url: 'https://serpely.com/about',
+      description: 'Serpely by CieloOps Inc. builds agentic SEO for the AI-first web — helping brands get cited by ChatGPT, Perplexity, Gemini, and Google AI Overviews.',
+      mainEntity: {
+        '@type': 'Organization',
+        name: 'Serpely',
+        url: 'https://serpely.com',
+        parentOrganization: { '@type': 'Organization', name: 'CieloOps Inc.' },
+        member: defaultTeam.map(m => ({
+          '@type': 'Person',
+          name: m.name,
+          jobTitle: m.role,
+          worksFor: { '@type': 'Organization', name: 'Serpely' },
+        })),
+      },
+    });
+    return () => removeSchema('schema-about');
+  }, []);
   const [stats, setStats]             = useState(defaultStats);
   const [team, setTeam]               = useState(defaultTeam);
   const [milestones, setMilestones]   = useState(defaultMilestones);
@@ -472,41 +496,35 @@ export function About() {
                   <p className="font-black text-base leading-tight mb-0.5" style={{ letterSpacing: '-0.02em' }}>{m.name}</p>
                   <p className="text-xs font-bold uppercase mb-4" style={{ color: m.bg, letterSpacing: '0.08em' }}>{m.role}</p>
 
-                  {/* Social links */}
-                  <div className="flex items-center gap-2">
-                    {/* LinkedIn */}
-                    <a href={m.socials.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))', color: 'var(--text-faint)', transition: 'color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#0077B5'; el.style.background = '#0077B514'; el.style.borderColor = '#0077B530'; el.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.transform = ''; }}>
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
-                    </a>
-                    {/* X / Twitter */}
-                    <a href={m.socials.twitter} target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))', color: 'var(--text-faint)', transition: 'color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text)'; el.style.background = 'hsl(var(--border))'; el.style.borderColor = 'var(--text-faint)'; el.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.transform = ''; }}>
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.73-8.835L1.254 2.25H8.08l4.213 5.567L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
-                    </a>
-                    {/* Facebook */}
-                    <a href={m.socials.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook"
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))', color: 'var(--text-faint)', transition: 'color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#1877F2'; el.style.background = '#1877F214'; el.style.borderColor = '#1877F230'; el.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.transform = ''; }}>
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-                    </a>
-
-                    {/* View profile link */}
-                    <a href="#" aria-label="View full profile"
-                      className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: m.bg + '12', border: `1px solid ${m.bg}30`, color: m.bg, transition: 'background 0.2s, transform 0.2s' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = m.bg + '25'; el.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = m.bg + '12'; el.style.transform = ''; }}>
-                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M17 7H7M17 7v10"/></svg>
-                    </a>
+                  {/* Social links — only render real URLs, never dead '#' anchors */}
+                  <div className="flex items-center gap-2 min-h-[32px]">
+                    {m.socials?.linkedin && m.socials.linkedin !== '#' && (
+                      <a href={m.socials.linkedin} target="_blank" rel="noopener noreferrer" aria-label={`${m.name} on LinkedIn`}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))', color: 'var(--text-faint)', transition: 'color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s' }}
+                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#0077B5'; el.style.background = '#0077B514'; el.style.borderColor = '#0077B530'; el.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.transform = ''; }}>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                      </a>
+                    )}
+                    {m.socials?.twitter && m.socials.twitter !== '#' && (
+                      <a href={m.socials.twitter} target="_blank" rel="noopener noreferrer" aria-label={`${m.name} on X`}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))', color: 'var(--text-faint)', transition: 'color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s' }}
+                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = 'var(--text)'; el.style.background = 'hsl(var(--border))'; el.style.borderColor = 'var(--text-faint)'; el.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.transform = ''; }}>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.73-8.835L1.254 2.25H8.08l4.213 5.567L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+                      </a>
+                    )}
+                    {m.socials?.facebook && m.socials.facebook !== '#' && (
+                      <a href={m.socials.facebook} target="_blank" rel="noopener noreferrer" aria-label={`${m.name} on Facebook`}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: 'var(--bg-subtle)', border: '1px solid hsl(var(--border))', color: 'var(--text-faint)', transition: 'color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s' }}
+                        onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = '#1877F2'; el.style.background = '#1877F214'; el.style.borderColor = '#1877F230'; el.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.transform = ''; }}>
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>

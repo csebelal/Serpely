@@ -706,7 +706,24 @@ const ArrowSvg = () => (
 /* ─── Main Component ─── */
 export function Blog() {
   const { category: categoryParam, author: authorParam } = useParams<{ category?: string; author?: string }>();
-  useSEOMeta('blog', { title: 'Serpely Blog — AI SEO Insights', description: 'Expert insights on agentic SEO, GEO, LLM visibility, and AI-first search.' });
+  const blogSeoKey = categoryParam ? `blog-category-${categoryParam}` : authorParam ? `blog-author-${authorParam}` : 'blog';
+  const blogSeoFallback = categoryParam
+    ? {
+        title: `Serpely Blog: ${categoryParam} guides — GEO & AI Search`,
+        description: `Latest ${categoryParam} articles on GEO scoring, AI citation tracking and agentic SEO workflows.`,
+        canonicalPath: `/blog/category/${categoryParam}`,
+      }
+    : authorParam
+      ? {
+          title: `Articles by ${authorParam.replace(/-/g, ' ')} | Serpely Blog`,
+          description: `Read SEO and GEO articles by ${authorParam.replace(/-/g, ' ')} on Serpely blog: AI visibility, citations and agentic SEO.`,
+          canonicalPath: `/author/${authorParam}`,
+        }
+      : {
+          title: 'Serpely Blog — AI SEO Insights',
+          description: 'Expert insights on agentic SEO, GEO, LLM visibility, and AI-first search.',
+        };
+  useSEOMeta(blogSeoKey, blogSeoFallback);
   const [articles, setArticles] = useState<Article[]>(blogPosts);
   const [featuredPosts, setFeaturedPosts] = useState<Article[]>([]);
   const [isDark, setIsDark] = useState(false);

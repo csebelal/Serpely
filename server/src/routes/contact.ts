@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import ContactSubmission from '../models/ContactSubmission';
-import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { verifyJWT, requireRole, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 import { guardTurnstile } from '../lib/turnstile';
 
@@ -47,8 +47,8 @@ router.post('/', submitLimiter, async (req: Request, res: Response) => {
 
 const VALID_STATUSES = new Set(['new', 'replied', 'archived']);
 
-// GET /api/contact (auth)
-router.get('/', verifyJWT, async (req: AuthRequest, res: Response) => {
+// GET /api/contact (auth: owner | admin)
+router.get('/', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
     const { status, starred } = req.query as Record<string, unknown>;
     const filter: Record<string, unknown> = {};
@@ -62,8 +62,8 @@ router.get('/', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /api/contact/:id (auth)
-router.patch('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
+// PATCH /api/contact/:id (auth: owner | admin)
+router.patch('/:id', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
     const { read, starred, status } = req.body as Record<string, unknown>;
     const update: Record<string, unknown> = {};
@@ -80,8 +80,8 @@ router.patch('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/contact/:id (auth)
-router.delete('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
+// DELETE /api/contact/:id (auth: owner | admin)
+router.delete('/:id', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
     await ContactSubmission.findByIdAndDelete(req.params.id);
     await logAction(req, 'delete', 'contact', `id:${req.params.id}`);

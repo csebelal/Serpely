@@ -75,9 +75,8 @@ router.post('/', verifyJWT, uploadSingle, async (req: AuthRequest, res: Response
     // Responsive WebP variants for the frontend srcSet (never fails the upload).
     const variants = await generateVariants(path.join(UPLOADS_DIR, filename));
     res.json({ url, publicId, _id: media._id, variants: variants.map(v => `${origin}/uploads/${path.basename(v)}`) });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Upload failed';
-    res.status(500).json({ error: msg });
+  } catch {
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

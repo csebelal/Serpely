@@ -1,13 +1,13 @@
 import { Router, Response } from 'express';
 import AuditLog from '../models/AuditLog';
-import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { verifyJWT, requireRole, AuthRequest } from '../middleware/auth';
 import { parseDateRange } from '../lib/dateRange';
 
 const router = Router();
 const VALID_ACTIONS = new Set(['create', 'update', 'delete']);
 
-// GET /api/audit (auth)
-router.get('/', verifyJWT, async (req: AuthRequest, res: Response) => {
+// GET /api/audit (auth: owner | admin)
+router.get('/', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
     const { action, from, to } = req.query as Record<string, unknown>;
     const filter: Record<string, unknown> = {};

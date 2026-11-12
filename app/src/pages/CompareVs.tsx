@@ -51,11 +51,13 @@ function FAQItem({ q, a, open, onClick }: { q: string; a: string; open: boolean;
           <path d="M3 6l5 5 5-5"/>
         </svg>
       </button>
-      {open && (
-        <div className="px-6 pb-5" style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.7 }}>
-          {a}
-        </div>
-      )}
+      <div
+        className="px-6 pb-5"
+        hidden={!open}
+        style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.7, display: open ? 'block' : 'none' }}
+      >
+        {a}
+      </div>
     </div>
   );
 }

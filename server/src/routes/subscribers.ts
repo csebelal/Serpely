@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
+import mongoose from 'mongoose';
 import Subscriber from '../models/Subscriber';
-import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { verifyJWT, requireRole, AuthRequest } from '../middleware/auth';
 import { logAction } from '../lib/audit';
 
 const router = Router();
@@ -31,8 +32,8 @@ router.post('/', signupLimiter, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/subscribers (auth)
-router.get('/', verifyJWT, async (_req: AuthRequest, res: Response) => {
+// GET /api/subscribers (auth: owner | admin)
+router.get('/', verifyJWT, requireRole('owner', 'admin'), async (_req: AuthRequest, res: Response) => {
   try {
     const subscribers = await Subscriber.find().sort({ createdAt: -1 });
     const total = subscribers.length;
@@ -45,10 +46,18 @@ router.get('/', verifyJWT, async (_req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /api/subscribers/:id (auth) — toggle active
-router.patch('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
+// PATCH /api/subscribers/:id (auth: owner | admin) — toggle active
+router.patch('/:id', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
-    const { active } = req.body as { active: boolean };
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid subscriber id' });
+      return;
+    }
+    const active = (req.body as { active?: unknown })?.active;
+    if (typeof active !== 'boolean') {
+      res.status(400).json({ error: 'active boolean required' });
+      return;
+    }
     const subscriber = await Subscriber.findByIdAndUpdate(req.params.id, { active }, { new: true });
     if (!subscriber) { res.status(404).json({ error: 'Not found' }); return; }
     await logAction(req, 'update', 'subscriber', `id:${req.params.id} active:${active}`);
@@ -58,11 +67,14 @@ router.patch('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/subscribers/bulk (auth) — registered before /:id so 'bulk' isn't matched as an id
-router.delete('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
+// DELETE /api/subscribers/bulk (auth: owner | admin) — registered before /:id so 'bulk' isn't matched as an id
+router.delete('/bulk', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
-    const { ids } = req.body as { ids: string[] };
-    if (!ids?.length) { res.status(400).json({ error: 'ids required' }); return; }
+    const rawIds = (req.body as { ids?: unknown })?.ids;
+    const ids = Array.isArray(rawIds)
+      ? rawIds.filter((id): id is string => typeof id === 'string' && mongoose.isValidObjectId(id))
+      : [];
+    if (!ids.length) { res.status(400).json({ error: 'Valid ids required' }); return; }
     await Subscriber.deleteMany({ _id: { $in: ids } });
     await logAction(req, 'delete', 'subscriber', `bulk:${ids.length}`);
     res.json({ success: true });
@@ -71,9 +83,13 @@ router.delete('/bulk', verifyJWT, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// DELETE /api/subscribers/:id (auth)
-router.delete('/:id', verifyJWT, async (req: AuthRequest, res: Response) => {
+// DELETE /api/subscribers/:id (auth: owner | admin)
+router.delete('/:id', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid subscriber id' });
+      return;
+    }
     await Subscriber.findByIdAndDelete(req.params.id);
     await logAction(req, 'delete', 'subscriber', `id:${req.params.id}`);
     res.json({ success: true });
@@ -91,8 +107,8 @@ function csvEscape(value: string): string {
   return safe;
 }
 
-// GET /api/subscribers/export (auth)
-router.get('/export', verifyJWT, async (_req: AuthRequest, res: Response) => {
+// GET /api/subscribers/export (auth: owner | admin)
+router.get('/export', verifyJWT, requireRole('owner', 'admin'), async (_req: AuthRequest, res: Response) => {
   try {
     const subscribers = await Subscriber.find({ active: true }).sort({ createdAt: -1 });
     const rows = [

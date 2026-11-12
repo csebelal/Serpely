@@ -4,9 +4,11 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { clientLogin } from '../../lib/api';
 import { useAuth } from '../../context/useAuth';
 import { useIsDarkTheme } from '@/hooks/useIsDarkTheme';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 import { PageBackground } from '@/components/backgrounds/PageBackground';
 
 export function Login() {
+  useSEOMeta('login', { title: 'Sign In — Serpely', description: 'Sign in to your Serpely account.', noIndex: true });
   const { login } = useAuth();
   const isDark = useIsDarkTheme();
   const navigate = useNavigate();

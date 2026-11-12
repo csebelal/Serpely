@@ -1,6 +1,6 @@
 import tls from 'tls';
 import type { FetchedPage } from './publicAudit';
-import { attrVal, allTags } from './publicAudit';
+import { attrVal, allTags, safeFetch } from './publicAudit';
 
 // Phase 2 — small bounded fetches: outbound link status, same-origin asset
 // headers, TLS certificate health. No new npm deps (fetch + node:tls only).
@@ -53,8 +53,8 @@ async function head(url: string): Promise<{ status: number; headers: Record<stri
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), HEAD_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      method: 'HEAD', signal: ctrl.signal, redirect: 'follow',
+    const res = await safeFetch(url, {
+      method: 'HEAD', signal: ctrl.signal,
       headers: { 'User-Agent': UA },
     });
     clearTimeout(t);

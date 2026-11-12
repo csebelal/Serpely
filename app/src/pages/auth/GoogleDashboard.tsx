@@ -29,6 +29,7 @@ export function GoogleDashboard() {
   useSEOMeta('dashboard', {
     title: 'Search Dashboard — Serpely',
     description: 'Google Search Console and Analytics performance: impressions, clicks, rankings and indexed pages.',
+    noIndex: true,
   });
   const [status, setStatus] = useState<GoogleStatus | null>(null);
   const [sites, setSites] = useState<string[]>([]);

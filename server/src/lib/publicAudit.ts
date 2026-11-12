@@ -119,6 +119,36 @@ export function stableHost(u: string | URL): string {
   try { return new URL(u).hostname.toLowerCase().replace(/^www\./, ''); } catch { return ''; }
 }
 
+/**
+ * SSRF-safe fetch: validates every URL (including every 3xx redirect hop) with
+ * assertPublicTarget() instead of relying on `redirect: 'follow'`.
+ */
+export async function safeFetch(url: string, init: RequestInit = {}, maxRedirects = 5): Promise<Response> {
+  let current = url;
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    await assertPublicTarget(current);
+    const res = await fetch(current, { ...init, redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location');
+      if (!loc) return res;
+      if (hop === maxRedirects) {
+        try { await res.body?.cancel(); } catch { /* ignore */ }
+        throw new Error('Too many redirects');
+      }
+      const nextUrl = new URL(loc, current);
+      if (nextUrl.protocol !== 'http:' && nextUrl.protocol !== 'https:') {
+        try { await res.body?.cancel(); } catch { /* ignore */ }
+        throw new Error('Blocked redirect to non-HTTP(S) protocol');
+      }
+      try { await res.body?.cancel(); } catch { /* ignore */ }
+      current = nextUrl.toString();
+      continue;
+    }
+    return res;
+  }
+  throw new Error('Too many redirects');
+}
+
 /** crawl-friendly identity used for every audit request — never spoofs Googlebot. */
 export const CRAWLER_UA = 'SerpelyAuditBot/1.0 (+https://serpely.com/audit)';
 
@@ -126,10 +156,8 @@ async function fetchText(url: string, timeoutMs = 9000): Promise<{ text: string;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    await assertPublicTarget(url);
-    const res = await fetch(url, {
+    const res = await safeFetch(url, {
       signal: ctrl.signal,
-      redirect: 'follow',
       headers: {
         'User-Agent': CRAWLER_UA,
         Accept: 'text/html,application/xhtml+xml',
@@ -657,7 +685,7 @@ export async function runChecks(page: FetchedPage, normalizedUrl: string, psi?: 
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 8000);
       try {
-        const hr = await fetch(abs, { method: 'HEAD', signal: ctrl.signal, redirect: 'follow' });
+        const hr = await safeFetch(abs, { method: 'HEAD', signal: ctrl.signal });
         const ct = hr.headers.get('content-type') || '';
         ogOk = hr.ok && (/image\//i.test(ct) || ct === '');
         ogDetail = hr.ok ? `og:image loads (${ct || 'unknown type'})` : `og:image returns HTTP ${hr.status}`;

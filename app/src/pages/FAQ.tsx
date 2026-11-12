@@ -4,6 +4,44 @@ import { useSEOMeta } from '@/hooks/useSEOMeta';
 import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { injectSchema, removeSchema } from '@/lib/schema';
 
+const faqs = [
+  {
+    category: 'General',
+    questions: [
+      { question: 'What is Agentic SEO?', answer: "Agentic SEO uses AI-driven workflows to continuously monitor rankings, prioritize optimizations, and report performance without manual context switching. It's a proactive approach where the system acts on your behalf to improve search visibility." },
+      { question: 'How does Serpely support Agentic SEO?', answer: 'Serpely combines rank tracking, technical SEO monitoring, content prioritization, GEO visibility, and reporting into one unified AI-powered optimization loop. Our agents work 24/7 to identify opportunities and execute optimizations.' },
+      { question: 'What is Generative Engine Optimization (GEO)?', answer: 'Generative Engine Optimization improves visibility across AI-powered search engines and generative search results beyond traditional rankings. As search evolves with AI, GEO ensures your content is discoverable in LLM-driven results.' },
+    ],
+  },
+  {
+    category: 'Product',
+    questions: [
+      { question: 'Can Serpely track visibility across AI-driven and LLM search?', answer: 'Yes. Serpely monitors keyword performance and provides insights into LLM search visibility and evolving generative search environments. We track how your content appears in AI-powered search results.' },
+      { question: 'How is Serpely different from Ahrefs or Semrush?', answer: 'Unlike traditional SEO tools that focus mainly on data, Serpely connects rank tracking, auditing, content optimization, and reporting into a continuous track-optimize-report workflow powered by AI agents.' },
+      { question: "How accurate is Serpely's keyword rank tracking?", answer: 'Serpely provides real-time keyword tracking across desktop and mobile search, helping teams monitor SERP movements and performance shifts accurately. We update rankings daily with 99.9% accuracy.' },
+      { question: 'Does Serpely include technical SEO monitoring?', answer: 'Yes. Continuous audits cover Core Web Vitals, crawl errors, indexing issues, and on-page SEO optimization factors. Our system alerts you to issues before they impact your rankings.' },
+      { question: 'How does content prioritization work inside Serpely?', answer: "AI-driven scoring analyzes ranking decay, traffic trends, and keyword gaps to recommend which pages to update for maximum SEO impact. You'll always know what to work on next." },
+    ],
+  },
+  {
+    category: 'Account & Billing',
+    questions: [
+      { question: 'Can agencies manage multiple clients in Serpely?', answer: 'Multi-client workspaces allow agencies to isolate domains, generate white-label SEO reports, and track performance across all client accounts.' },
+      { question: 'Does Serpely support white-label SEO reporting?', answer: 'Yes. Agencies can generate branded dashboards and automated SEO performance reports for clients.' },
+      { question: 'Does the platform integrate with Google Analytics and Search Console?', answer: 'Yes. Integration with GA and GSC centralizes traffic data, keyword impressions, click-through rates, and search visibility insights.' },
+      { question: 'Can I monitor backlink performance?', answer: 'Backlink monitoring tracks new and lost links, evaluates authority, and identifies link-building opportunities.' },
+    ],
+  },
+  {
+    category: 'Enterprise',
+    questions: [
+      { question: 'Is Serpely suitable for enterprise SEO teams?', answer: 'Yes. Enterprise plans include granular roles and permissions, SSO integration, audit logs, API access, and scalable SEO data workflows.' },
+      { question: 'How does AI improve SEO optimization?', answer: 'AI enhances SEO by automating rank tracking, detecting technical issues, clustering keywords, and prioritizing content updates based on impact.' },
+      { question: 'Who is Serpely built for?', answer: 'Serpely is built for agencies, startups, in-house marketing teams, and enterprise SEO operations looking to scale keyword tracking, technical optimization, and AI-driven search visibility.' },
+    ],
+  },
+];
+
 export function FAQ() {
   useSEOMeta('faq', { title: 'FAQ — Serpely', description: 'Frequently asked questions about Serpely, AI SEO, and GEO monitoring.' });
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,14 +49,7 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<string | null>(null);
 
   useEffect(() => {
-    const allQAs = [
-      { question: 'What is Agentic SEO?', answer: "Agentic SEO uses AI-driven workflows to continuously monitor rankings, prioritize optimizations, and report performance without manual context switching." },
-      { question: 'What is Generative Engine Optimization (GEO)?', answer: 'Generative Engine Optimization improves visibility across AI-powered search engines and generative search results beyond traditional rankings.' },
-      { question: 'How is Serpely different from Ahrefs or Semrush?', answer: 'Unlike traditional SEO tools that focus mainly on data, Serpely connects rank tracking, auditing, content optimization, and reporting into a continuous workflow powered by AI agents.' },
-      { question: 'Does Serpely include technical SEO monitoring?', answer: 'Yes. Continuous audits cover Core Web Vitals, crawl errors, indexing issues, and on-page SEO optimization factors.' },
-      { question: 'Can agencies manage multiple clients in Serpely?', answer: 'Multi-client workspaces allow agencies to isolate domains, generate white-label SEO reports, and track performance across all client accounts.' },
-      { question: 'Does the platform integrate with Google Analytics and Search Console?', answer: 'Yes. Integration with GA and GSC centralizes traffic data, keyword impressions, click-through rates, and search visibility insights.' },
-    ];
+    const allQAs = faqs.flatMap(cat => cat.questions);
     injectSchema('schema-faq', {
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
@@ -30,44 +61,6 @@ export function FAQ() {
     });
     return () => removeSchema('schema-faq');
   }, []);
-
-  const faqs = [
-    {
-      category: 'General',
-      questions: [
-        { question: 'What is Agentic SEO?', answer: "Agentic SEO uses AI-driven workflows to continuously monitor rankings, prioritize optimizations, and report performance without manual context switching. It's a proactive approach where the system acts on your behalf to improve search visibility." },
-        { question: 'How does Serpely support Agentic SEO?', answer: 'Serpely combines rank tracking, technical SEO monitoring, content prioritization, GEO visibility, and reporting into one unified AI-powered optimization loop. Our agents work 24/7 to identify opportunities and execute optimizations.' },
-        { question: 'What is Generative Engine Optimization (GEO)?', answer: 'Generative Engine Optimization improves visibility across AI-powered search engines and generative search results beyond traditional rankings. As search evolves with AI, GEO ensures your content is discoverable in LLM-driven results.' },
-      ],
-    },
-    {
-      category: 'Product',
-      questions: [
-        { question: 'Can Serpely track visibility across AI-driven and LLM search?', answer: 'Yes. Serpely monitors keyword performance and provides insights into LLM search visibility and evolving generative search environments. We track how your content appears in AI-powered search results.' },
-        { question: 'How is Serpely different from Ahrefs or Semrush?', answer: 'Unlike traditional SEO tools that focus mainly on data, Serpely connects rank tracking, auditing, content optimization, and reporting into a continuous track-optimize-report workflow powered by AI agents.' },
-        { question: "How accurate is Serpely's keyword rank tracking?", answer: 'Serpely provides real-time keyword tracking across desktop and mobile search, helping teams monitor SERP movements and performance shifts accurately. We update rankings daily with 99.9% accuracy.' },
-        { question: 'Does Serpely include technical SEO monitoring?', answer: 'Yes. Continuous audits cover Core Web Vitals, crawl errors, indexing issues, and on-page SEO optimization factors. Our system alerts you to issues before they impact your rankings.' },
-        { question: 'How does content prioritization work inside Serpely?', answer: "AI-driven scoring analyzes ranking decay, traffic trends, and keyword gaps to recommend which pages to update for maximum SEO impact. You'll always know what to work on next." },
-      ],
-    },
-    {
-      category: 'Account & Billing',
-      questions: [
-        { question: 'Can agencies manage multiple clients in Serpely?', answer: 'Multi-client workspaces allow agencies to isolate domains, generate white-label SEO reports, and track performance across all client accounts.' },
-        { question: 'Does Serpely support white-label SEO reporting?', answer: 'Yes. Agencies can generate branded dashboards and automated SEO performance reports for clients.' },
-        { question: 'Does the platform integrate with Google Analytics and Search Console?', answer: 'Yes. Integration with GA and GSC centralizes traffic data, keyword impressions, click-through rates, and search visibility insights.' },
-        { question: 'Can I monitor backlink performance?', answer: 'Backlink monitoring tracks new and lost links, evaluates authority, and identifies link-building opportunities.' },
-      ],
-    },
-    {
-      category: 'Enterprise',
-      questions: [
-        { question: 'Is Serpely suitable for enterprise SEO teams?', answer: 'Yes. Enterprise plans include granular roles and permissions, SSO integration, audit logs, API access, and scalable SEO data workflows.' },
-        { question: 'How does AI improve SEO optimization?', answer: 'AI enhances SEO by automating rank tracking, detecting technical issues, clustering keywords, and prioritizing content updates based on impact.' },
-        { question: 'Who is Serpely built for?', answer: 'Serpely is built for agencies, startups, in-house marketing teams, and enterprise SEO operations looking to scale keyword tracking, technical optimization, and AI-driven search visibility.' },
-      ],
-    },
-  ];
 
   const categories = ['All', ...faqs.map(f => f.category)];
 
@@ -176,9 +169,13 @@ export function FAQ() {
                             <polyline points="6 9 12 15 18 9"/>
                           </svg>
                         </div>
-                        {isOpen && (
-                          <p className="pb-5 text-sm leading-relaxed" style={{ color: 'var(--text-soft)', borderTop: '1px solid hsl(var(--border))', paddingTop: 16 }}>{faq.answer}</p>
-                        )}
+                        <p
+                          className="pb-5 text-sm leading-relaxed"
+                          hidden={!isOpen}
+                          style={{ color: 'var(--text-soft)', borderTop: '1px solid hsl(var(--border))', paddingTop: 16, display: isOpen ? 'block' : 'none' }}
+                        >
+                          {faq.answer}
+                        </p>
                       </div>
                     );
                   })}

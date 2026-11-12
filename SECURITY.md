@@ -184,3 +184,11 @@ These are documented rather than fixed; each has an owner and a planned phase.
 - 🟢 **Passed — SSRF & Process Execution**: `execFile` (argument-array, no shell) is used in `server/src/lib/agenticSeo.ts`; `GET /api/public-audit/:id/css` was hardened with a dedicated `cssLimiter` (15 req/min) and `assertPublicTarget(target)` DNS/SSRF re-validation; `Open URL` in `SiteAuditDrawer.tsx` restricts `href` to `^https?://`.
 - 🟡 **Warning — External Script Directory & GitHub Security Workflow**: `Agentic-SEO-Skill-main/scripts` is not currently present on disk (`resolveScriptsDir()` degrades gracefully to `null`), and `.github/workflows/security.yml` is currently deleted in the working tree (`git status`).
 
+## Audit Log (2026-11-12)
+
+- 🟢 **Passed — Secrets & Supply Chain**: `npm audit --omit=dev --audit-level=high` reports 0 vulnerabilities in both `server` and `app`; `.env*`, `server/uploads/`, and `server/backups/` remain git-ignored with no hardcoded secrets.
+- 🟢 **Fixed — Role-Based Access Control (OWASP A01)**: Added `requireRole('owner', 'admin')` to `server/src/routes/apikeys.ts`, `audit.ts`, `analytics.ts` (`/consent-log`), `subscribers.ts` (admin endpoints), and `contact.ts` (admin endpoints), plus `ObjectId` and `boolean` type validation in `subscribers.ts` and `apikeys.ts`.
+- 🟢 **Fixed — SSRF Redirect Hop Validation (OWASP A10)**: Added `safeFetch()` in `server/src/lib/publicAudit.ts` using `redirect: 'manual'` and re-validating every 3xx `Location` hop with `assertPublicTarget()`, replacing `redirect: 'follow'` across `publicAudit.ts`, `crawler.ts`, `phase2.ts`, `auditJobs.ts`, and `sitemapCheck.ts`.
+- 🟢 **Fixed — Error Sanitization**: Replaced raw `err.message` on 500 responses with generic `'Server error'` / `'Internal error'` in `server/src/routes/upload.ts` and `server/src/routes/mcp.ts`.
+
+

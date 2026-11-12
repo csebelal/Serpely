@@ -40,10 +40,10 @@ export function HeroSection() {
     "A daily AI audit that tracks whether you're cited across ChatGPT, Perplexity, and Google AI Overviews, and tells you exactly what to fix next.",
   );
   const [cta1Text, setCta1Text] = useState('Start Free Trial');
-  const [cta1Href, setCta1Href] = useState('#');
+  const [cta1Href, setCta1Href] = useState('/register');
   const [cta1Sub, setCta1Sub] = useState('No credit card');
   const [cta2Text, setCta2Text] = useState('Book a Demo');
-  const [cta2Href, setCta2Href] = useState('#');
+  const [cta2Href, setCta2Href] = useState('/contact');
   const [cta2Sub, setCta2Sub] = useState('See live insights');
   const [announcementText, setAnnouncementText] = useState(
     'Now in Public Beta — Join The Early Access Team.',
@@ -93,10 +93,10 @@ export function HeroSection() {
         {/* LEFT — single-screen editorial copy stack */}
         <div className="hero-copy-col">
           <div className="hero-beta-wrap">
-            <a href="#" className="announcement-chip-s hero-beta-shimmer">
+            <Link to="/product-tour" className="announcement-chip-s hero-beta-shimmer">
               <span className="w-2 h-2 rounded-full bg-green animate-pulse-dot flex-shrink-0" />
               {announcementText}
-            </a>
+            </Link>
           </div>
 
           <h1 id="hero-heading" className="hero-h1">

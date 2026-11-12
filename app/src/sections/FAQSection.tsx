@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getFaq } from '@/lib/api';
 import { Reveal } from '@/components/motion';
 
-const faqs = [
+export const defaultHomeFaqs = [
   {
     q: 'What makes Serpely different from tools like Semrush or Ahrefs?',
     a: "Semrush and Ahrefs are data libraries. They give you a wall of metrics and leave the prioritization to you. Serpely is a continuous workflow that audits your site daily, scores every page for AI visibility, monitors whether AI engines are citing your content, and tells you exactly what to fix next. It's also the only platform that tracks your presence inside ChatGPT, Perplexity, Gemini, and Google AI Overviews—which are the channels that increasingly decide whether your traffic survives.",
@@ -37,7 +37,7 @@ const faqs = [
   },
 ];
 
-function FAQItem({ faq, index }: { faq: typeof faqs[0]; index: number }) {
+function FAQItem({ faq, index }: { faq: typeof defaultHomeFaqs[0]; index: number }) {
   const [open, setOpen] = useState(false);
   const panelId = `faq-panel-${index}`;
 
@@ -88,7 +88,7 @@ function FAQItem({ faq, index }: { faq: typeof faqs[0]; index: number }) {
 }
 
 export function FAQSection() {
-  const [liveFaqs, setLiveFaqs] = useState(faqs);
+  const [liveFaqs, setLiveFaqs] = useState(defaultHomeFaqs);
 
   useEffect(() => {
     getFaq('home').then(r => {

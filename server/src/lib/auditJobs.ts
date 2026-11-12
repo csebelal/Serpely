@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import AuditReport from '../models/AuditReport';
 import AuditSnapshot from '../models/AuditSnapshot';
-import { normalizeUrl, fetchPage, runChecks, scoreReportV2, buildSiteIssues, assertPublicTarget } from './publicAudit';
+import { normalizeUrl, fetchPage, runChecks, scoreReportV2, buildSiteIssues, assertPublicTarget, safeFetch } from './publicAudit';
 import { fetchPsi, type PsiResult } from './pagespeed';
 import { fetchCrux } from './crux';
 import { discoverUrls, crawlSite, aggregateCrawl } from './crawler';
@@ -112,7 +112,7 @@ async function runJob(job: AuditJob): Promise<void> {
     job.stage = 'Discovering URLs';
     let robotsBody = '';
     try {
-      const r = await fetch(`${job.origin}/robots.txt`, { headers: { 'User-Agent': 'SerpelyAuditBot/1.0 (+https://serpely.com/audit)' }, redirect: 'follow' });
+      const r = await safeFetch(`${job.origin}/robots.txt`, { headers: { 'User-Agent': 'SerpelyAuditBot/1.0 (+https://serpely.com/audit)' } });
       if (r.ok) robotsBody = await r.text().catch(() => '');
     } catch { /* no robots */ }
     const { urls, sitemaps } = await discoverUrls(job.origin, robotsBody);

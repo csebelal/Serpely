@@ -5,7 +5,7 @@ import ConsentLog from '../models/ConsentLog';
 import AuditReport from '../models/AuditReport';
 import SitemapReport from '../models/SitemapReport';
 import ClientUser from '../models/ClientUser';
-import { verifyJWT, AuthRequest } from '../middleware/auth';
+import { verifyJWT, requireRole, AuthRequest } from '../middleware/auth';
 import { parseDateRange } from '../lib/dateRange';
 
 const router = Router();
@@ -178,8 +178,8 @@ router.post('/consent', trackLimiter, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/analytics/consent-log (auth) — admin view of banner decisions
-router.get('/consent-log', verifyJWT, async (req: AuthRequest, res: Response) => {
+// GET /api/analytics/consent-log (auth: owner | admin) — admin view of banner decisions
+router.get('/consent-log', verifyJWT, requireRole('owner', 'admin'), async (req: AuthRequest, res: Response) => {
   try {
     const { choice, from, to } = req.query as Record<string, string>;
     const filter: Record<string, unknown> = {};

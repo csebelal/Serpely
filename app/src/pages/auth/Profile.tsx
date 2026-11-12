@@ -9,6 +9,7 @@ import {
 } from '../../lib/api';
 import { useAuth } from '../../context/useAuth';
 import { VerifyEmailBanner } from '../../components/VerifyEmailBanner';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 
 const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Professional', business: 'Business' };
 const PLAN_COLORS: Record<string, string> = { starter: '#64748b', pro: '#00A868', business: '#7c3aed' };
@@ -72,6 +73,7 @@ function InputField({ label, value, onChange, type = 'text', placeholder = '', r
 }
 
 export function Profile() {
+  useSEOMeta('profile', { title: 'Account Settings — Serpely', description: 'Manage your Serpely account settings.', noIndex: true });
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
 

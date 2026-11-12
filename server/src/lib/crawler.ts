@@ -1,4 +1,4 @@
-import { fetchPage, normalizeUrl, normUrl, countWords, attrVal, allTags, linkHref, assertPublicTarget, isDisallowedByRobots, stableHost, CRAWLER_UA } from './publicAudit';
+import { fetchPage, normalizeUrl, normUrl, countWords, attrVal, allTags, linkHref, assertPublicTarget, safeFetch, isDisallowedByRobots, stableHost, CRAWLER_UA } from './publicAudit';
 
 export const AUDIT_MAX_URLS = Number(process.env.AUDIT_MAX_URLS || 300);
 const DISCOVERY_TIMEOUT_MS = 12000;
@@ -55,11 +55,10 @@ function metaContent(html: string, attr: string, name: string): string {
 
 async function fetchXml(url: string): Promise<string | null> {
   try {
-    await assertPublicTarget(url);
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), DISCOVERY_TIMEOUT_MS);
-    const res = await fetch(url, {
-      signal: ctrl.signal, redirect: 'follow',
+    const res = await safeFetch(url, {
+      signal: ctrl.signal,
       headers: { 'User-Agent': CRAWLER_UA, Accept: 'application/xml,text/xml,*/*' },
     });
     clearTimeout(t);
@@ -287,14 +286,14 @@ export async function crawlSite(
       }
       return { res, chain };
     }
-    // Max hops — fetch final destination normally for status/headers
+    // Max hops — fetch final destination safely
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), PAGE_TIMEOUT_MS);
     try {
-      const res = await fetch(current, {
-        signal: ctrl.signal, redirect: 'follow',
+      const res = await safeFetch(current, {
+        signal: ctrl.signal,
         headers: { 'User-Agent': CRAWLER_UA, Accept: 'text/html,application/xhtml+xml' },
-      });
+      }, 1);
       return { res, chain: [...chain, res.url || current].filter((v, i, a) => a.indexOf(v) === i) };
     } finally { clearTimeout(t); }
   };

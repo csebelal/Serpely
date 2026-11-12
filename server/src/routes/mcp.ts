@@ -100,8 +100,8 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     res.json({ jsonrpc: '2.0', id, error: { code: -32601, message: `Method not found: ${body.method}` } });
-  } catch (e) {
-    res.json({ jsonrpc: '2.0', id, error: { code: -32603, message: (e as Error).message || 'Internal error' } });
+  } catch {
+    res.json({ jsonrpc: '2.0', id, error: { code: -32603, message: 'Internal error' } });
   }
 });
 

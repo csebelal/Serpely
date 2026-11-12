@@ -5,9 +5,11 @@ import { PageBackground } from '@/components/backgrounds/PageBackground';
 import { clientRegister } from '../../lib/api';
 import { useAuth } from '../../context/useAuth';
 import { useIsDarkTheme } from '@/hooks/useIsDarkTheme';
+import { useSEOMeta } from '@/hooks/useSEOMeta';
 import { TurnstileWidget } from '../../components/TurnstileWidget';
 
 export function Register() {
+  useSEOMeta('register', { title: 'Create Account — Serpely', description: 'Create a free Serpely account.', noIndex: true });
   const { login } = useAuth();
   const isDark = useIsDarkTheme();
   const navigate = useNavigate();

@@ -319,10 +319,14 @@ function replaceMeta(html: string, og: BlogPageData): string {
   html = html.replace(/<meta property="og:type" content="[^"]*"/, `<meta property="og:type" content="article"`);
   html = html.replace(/<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${url}"`);
   html = html.replace(/<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${image}"`);
-  if (!/og:image:alt/.test(html)) {
+  if (/og:image:alt/.test(html)) {
+    html = html.replace(/<meta property="og:image:alt" content="[^"]*"/, `<meta property="og:image:alt" content="${og.title.replace(/"/g, '&quot;')}"`);
+  } else {
     html = html.replace(/<meta property="og:image"[^>]*>/, `$&\n    <meta property="og:image:alt" content="${og.title.replace(/"/g, '&quot;')}" />`);
   }
-  if (!/twitter:image:alt/.test(html)) {
+  if (/twitter:image:alt/.test(html)) {
+    html = html.replace(/<meta name="twitter:image:alt" content="[^"]*"/, `<meta name="twitter:image:alt" content="${og.title.replace(/"/g, '&quot;')}"`);
+  } else {
     html = html.replace(/<meta name="twitter:image"[^>]*>/, `$&\n    <meta name="twitter:image:alt" content="${og.title.replace(/"/g, '&quot;')}" />`);
   }
 
@@ -353,8 +357,13 @@ function replaceStaticMeta(html: string, path: string, content: { title: string;
   if (!/og:locale/.test(html)) {
     html = html.replace(/<meta property="og:url"[^>]*>/, `$&\n    <meta property="og:locale" content="en_US" />`);
   }
-  if (!/og:image:alt/.test(html)) {
+  if (/og:image:alt/.test(html)) {
+    html = html.replace(/<meta property="og:image:alt" content="[^"]*"/, `<meta property="og:image:alt" content="${title}"`);
+  } else {
     html = html.replace(/<meta property="og:image"[^>]*>/, `$&\n    <meta property="og:image:alt" content="${title}" />`);
+  }
+  if (/twitter:image:alt/.test(html)) {
+    html = html.replace(/<meta name="twitter:image:alt" content="[^"]*"/, `<meta name="twitter:image:alt" content="${title}"`);
   }
   html = html.replace(/<meta name="twitter:title" content="[^"]*"/, `<meta name="twitter:title" content="${title}"`);
   html = html.replace(/<meta name="twitter:description" content="[^"]*"/, `<meta name="twitter:description" content="${safeDesc}"`);
@@ -431,8 +440,21 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
     title: 'FAQ: GEO, AI Citations, Pricing & Semrush Alternatives | Serpely',
     desc: 'FAQ about Serpely: GEO scoring, AI citation tracking for ChatGPT & Perplexity, daily audits, pricing, free trial and differences vs Semrush/Ahrefs.',
     blocks: [
-      { h: 'Frequently asked questions', p: 'Answers about AI search visibility, daily audits, citation tracking across ChatGPT, Perplexity, and Google AI Overviews, and how Serpely compares to traditional SEO tools.' },
-      { h: 'How is Serpely different from Semrush or Ahrefs?', p: 'Semrush and Ahrefs are data libraries. Serpely is a continuous workflow that audits daily, scores every page for AI visibility, monitors citations, and tells you exactly what to fix next.' },
+      { h: 'What is Agentic SEO?', p: "Agentic SEO uses AI-driven workflows to continuously monitor rankings, prioritize optimizations, and report performance without manual context switching. It's a proactive approach where the system acts on your behalf to improve search visibility." },
+      { h: 'How does Serpely support Agentic SEO?', p: 'Serpely combines rank tracking, technical SEO monitoring, content prioritization, GEO visibility, and reporting into one unified AI-powered optimization loop. Our agents work 24/7 to identify opportunities and execute optimizations.' },
+      { h: 'What is Generative Engine Optimization (GEO)?', p: 'Generative Engine Optimization improves visibility across AI-powered search engines and generative search results beyond traditional rankings. As search evolves with AI, GEO ensures your content is discoverable in LLM-driven results.' },
+      { h: 'Can Serpely track visibility across AI-driven and LLM search?', p: 'Yes. Serpely monitors keyword performance and provides insights into LLM search visibility and evolving generative search environments. We track how your content appears in AI-powered search results.' },
+      { h: 'How is Serpely different from Ahrefs or Semrush?', p: 'Unlike traditional SEO tools that focus mainly on data, Serpely connects rank tracking, auditing, content optimization, and reporting into a continuous track-optimize-report workflow powered by AI agents.' },
+      { h: "How accurate is Serpely's keyword rank tracking?", p: 'Serpely provides real-time keyword tracking across desktop and mobile search, helping teams monitor SERP movements and performance shifts accurately. We update rankings daily with 99.9% accuracy.' },
+      { h: 'Does Serpely include technical SEO monitoring?', p: 'Yes. Continuous audits cover Core Web Vitals, crawl errors, indexing issues, and on-page SEO optimization factors. Our system alerts you to issues before they impact your rankings.' },
+      { h: 'How does content prioritization work inside Serpely?', p: "AI-driven scoring analyzes ranking decay, traffic trends, and keyword gaps to recommend which pages to update for maximum SEO impact. You'll always know what to work on next." },
+      { h: 'Can agencies manage multiple clients in Serpely?', p: 'Multi-client workspaces allow agencies to isolate domains, generate white-label SEO reports, and track performance across all client accounts.' },
+      { h: 'Does Serpely support white-label SEO reporting?', p: 'Yes. Agencies can generate branded dashboards and automated SEO performance reports for clients.' },
+      { h: 'Does the platform integrate with Google Analytics and Search Console?', p: 'Yes. Integration with GA and GSC centralizes traffic data, keyword impressions, click-through rates, and search visibility insights.' },
+      { h: 'Can I monitor backlink performance?', p: 'Backlink monitoring tracks new and lost links, evaluates authority, and identifies link-building opportunities.' },
+      { h: 'Is Serpely suitable for enterprise SEO teams?', p: 'Yes. Enterprise plans include granular roles and permissions, SSO integration, audit logs, API access, and scalable SEO data workflows.' },
+      { h: 'How does AI improve SEO optimization?', p: 'AI enhances SEO by automating rank tracking, detecting technical issues, clustering keywords, and prioritizing content updates based on impact.' },
+      { h: 'Who is Serpely built for?', p: 'Serpely is built for agencies, startups, in-house marketing teams, and enterprise SEO operations looking to scale keyword tracking, technical optimization, and AI-driven search visibility.' },
     ],
   },
   '/contact': {
@@ -499,6 +521,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/semrush': {
     title: 'Serpely vs Semrush — AI-First SEO vs Traditional SEO',
+    desc: 'Compare Serpely vs Semrush. Semrush tracks traditional Google SEO; Serpely adds GEO scoring, ChatGPT & Perplexity citation monitoring, and starts free.',
     blocks: [
       { h: 'Serpely vs Semrush', p: 'Semrush is the industry standard for traditional SEO. Serpely is built for what comes next — AI-driven search where ChatGPT and Perplexity decide who gets cited.' },
       { h: 'Semrush was built for Google\'s 10 blue links', p: 'AI Overviews now appear in 45% of searches. ChatGPT and Perplexity answer millions of queries daily. Semrush has no tools to track or improve your visibility in these new AI-powered answer engines.' },
@@ -508,6 +531,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/ahrefs': {
     title: 'Serpely vs Ahrefs — AI-Powered SEO vs Backlink Intelligence',
+    desc: 'Compare Serpely vs Ahrefs. Ahrefs focuses on backlinks; Serpely adds GEO scoring, AI citation monitoring in ChatGPT & Perplexity, and agentic fixes.',
     blocks: [
       { h: 'Serpely vs Ahrefs', p: 'Ahrefs is the gold standard for backlink intelligence and content research. But backlinks don\'t get you cited by ChatGPT — content structure, authority signals, and GEO optimization do.' },
       { h: 'Ahrefs optimizes for link graphs. AI search works differently', p: 'AI systems like Perplexity and ChatGPT select sources based on content structure, E-E-A-T signals, and entity clarity — not just backlinks. Ahrefs has no tools for the signals that actually drive AI citations.' },
@@ -517,6 +541,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/moz': {
     title: 'Serpely vs Moz — AI-First SEO vs Traditional SEO Platform',
+    desc: 'Compare Serpely vs Moz. Go beyond Domain Authority with GEO scoring, ChatGPT & Perplexity citation tracking, daily audits, and white-label reports.',
     blocks: [
       { h: 'Serpely vs Moz', p: 'Moz invented Domain Authority and has shaped SEO thinking for over a decade. But Domain Authority doesn\'t predict whether ChatGPT will cite you — and that\'s what Serpely was built to measure.' },
       { h: 'Domain Authority measures link graphs. AI search measures content quality', p: 'AI search systems evaluate content structure, expertise signals, and factual accuracy. Serpely\'s GEO Score measures the actual signals that drive AI citations — something DA was never designed to do.' },
@@ -526,6 +551,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/se-ranking': {
     title: 'Serpely vs SE Ranking — AI-First SEO vs All-in-One SEO Platform',
+    desc: 'Compare Serpely vs SE Ranking. Get full rank tracking and technical audits plus GEO scoring, AI citation monitoring, and agentic SEO workflows.',
     blocks: [
       { h: 'Serpely vs SE Ranking', p: 'SE Ranking covers the traditional SEO bases at a competitive price. Serpely covers the same ground plus the AI search layer that\'s reshaping how brands get discovered.' },
       { h: 'SE Ranking covers Google. Serpely covers Google + AI search', p: 'SE Ranking has no tools for the fastest-growing search channel: AI engines. Serpely\'s GEO Score and AI Citation Monitor give you visibility SE Ranking cannot provide.' },
@@ -535,6 +561,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/surfer-seo': {
     title: 'Serpely vs Surfer SEO — Agentic SEO vs Content Optimizer',
+    desc: 'Compare Serpely vs Surfer SEO. Surfer optimizes for Google NLP; Serpely adds rank tracking, site audits, GEO scoring, and AI citation tracking.',
     blocks: [
       { h: 'Serpely vs Surfer SEO', p: 'Surfer SEO is one of the most popular content optimization tools for Google. But optimizing for Google\'s NLP algorithm is different from getting cited by ChatGPT and Perplexity — and only Serpely does the latter.' },
       { h: 'Surfer optimizes for Google\'s algorithm. AI search has different rules', p: 'Getting cited by ChatGPT and Perplexity depends on content structure, authority signals, and E-E-A-T — factors Serpely\'s GEO Score measures directly.' },
@@ -544,6 +571,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/serpstat': {
     title: 'Serpely vs SERPStat — AI-First SEO vs Traditional SEO Platform',
+    desc: 'Compare Serpely vs SERPStat. Get traditional rank tracking and keyword research plus GEO scoring, AI citation monitoring, and a free starter plan.',
     blocks: [
       { h: 'Serpely vs SERPStat', p: 'SERPStat is a full-featured SEO platform with strong keyword and competitor intelligence. Serpely covers the same traditional SEO bases while adding the AI search visibility layer SERPStat doesn\'t have.' },
       { h: 'Same traditional SEO features, plus AI visibility', p: 'Serpely adds GEO Scoring and AI Citation Monitoring — the layer SERPStat has no equivalent for.' },
@@ -553,6 +581,7 @@ const STATIC_SEO_CONTENT: Record<string, { title: string; desc?: string; blocks:
   },
   '/compare/nightwatch': {
     title: 'Serpely vs Nightwatch — Full Agentic SEO vs Rank Tracker',
+    desc: 'Compare Serpely vs Nightwatch. Combine accurate rank tracking with technical site audits, GEO scoring, hallucination alerts, and AI citation tracking.',
     blocks: [
       { h: 'Serpely vs Nightwatch', p: 'Nightwatch does rank tracking well. But in 2026, knowing where you rank in Google is only half the picture — you also need to know whether AI engines are citing you at all.' },
       { h: 'Rank tracking is necessary but not sufficient', p: 'Serpely shows your Google rankings AND your AI search visibility — GEO Score, citations across ChatGPT/Perplexity/Gemini, and hallucination alerts.' },
@@ -654,6 +683,8 @@ function buildBlogPostHeadSchema(post: BlogPageData): string {
     ? (post.coverImage.startsWith('http') ? post.coverImage : `${origin}${post.coverImage}`)
     : `${origin}/og-image.png`;
 
+  const logoUrl = `${origin}/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png`;
+
   const schemas: Record<string, unknown>[] = [
     {
       '@context': 'https://schema.org',
@@ -661,15 +692,20 @@ function buildBlogPostHeadSchema(post: BlogPageData): string {
       headline: post.title,
       description: post.excerpt,
       image: post.coverImage ? image : undefined,
-      author: { '@type': 'Person', name: post.author || 'Serpely Team' },
+      author: {
+        '@type': 'Person',
+        name: post.author || 'Serpely Team',
+        ...(post.author ? { url: `${origin}/author/${post.author.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` } : {}),
+      },
       publisher: {
         '@type': 'Organization',
         name: 'Serpely',
-        logo: { '@type': 'ImageObject', url: `${origin}/og-image.png` },
+        logo: { '@type': 'ImageObject', url: logoUrl },
       },
       datePublished: post.publishedAt || undefined,
       dateModified: post.publishedAt || undefined,
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', 'h2'] },
     },
     {
       '@context': 'https://schema.org',
@@ -703,7 +739,7 @@ function buildStaticHeadSchema(path: string): string {
   if (!content) return '';
   const url = `${origin}${path === '/' ? '' : path}`;
   const desc = content.desc || content.blocks[0]?.p || '';
-  const logo = `${origin}/og-image.png`;
+  const logo = `${origin}/Serpely%20Logo%20PNG/Serpely%20-%20Logo_Logo%20-%20Main.png`;
   const schemas: Record<string, unknown>[] = [
     {
       '@context': 'https://schema.org',
@@ -711,7 +747,8 @@ function buildStaticHeadSchema(path: string): string {
       name: 'Serpely',
       url: origin,
       logo,
-      sameAs: ['https://twitter.com/serpely', 'https://linkedin.com/company/serpely'],
+      parentOrganization: { '@type': 'Organization', name: 'CieloOps Inc.' },
+      sameAs: ['https://twitter.com/serpely', 'https://www.linkedin.com/company/serpely'],
       contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', url: `${origin}/contact` },
     },
     {
@@ -751,29 +788,59 @@ function buildStaticHeadSchema(path: string): string {
         description: desc,
         speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', 'h2'] },
       },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+          { '@type': 'Question', name: 'What makes Serpely different from tools like Semrush or Ahrefs?', acceptedAnswer: { '@type': 'Answer', text: 'Serpely is a continuous workflow that audits your site daily, scores every page for AI visibility, monitors whether AI engines are citing your content, and tells you exactly what to fix next across ChatGPT, Perplexity, Gemini, and Google AI Overviews.' } },
+          { '@type': 'Question', name: 'What is a GEO Score and why does it matter?', acceptedAnswer: { '@type': 'Answer', text: 'GEO stands for Generative Engine Optimization. The GEO Score is a 0 to 100 number calculated for every page on your site, measuring how likely it is to appear or be cited inside an AI-generated answer.' } },
+          { '@type': 'Question', name: 'How does Serpely monitor AI citations across ChatGPT, Perplexity, and Google AI?', acceptedAnswer: { '@type': 'Answer', text: 'Serpely runs scheduled queries against ChatGPT, Perplexity, Gemini, and Google AI Overviews using your tracked keywords and logs which brands and domains get cited.' } },
+          { '@type': 'Question', name: 'What is Agentic SEO and how is it different from regular SEO software?', acceptedAnswer: { '@type': 'Answer', text: 'Agentic SEO runs in the background, audits continuously, identifies issues, scores priorities, and surfaces a ranked list of actions every day.' } },
+        ],
+      },
     );
   }
 
   if (path === '/faq') {
-    schemas.push({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: content.blocks.map(b => ({
-        '@type': 'Question',
-        name: b.h,
-        acceptedAnswer: { '@type': 'Answer', text: b.p },
-      })),
-    });
+    schemas.push(
+      {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: content.blocks.map(b => ({
+          '@type': 'Question',
+          name: b.h,
+          acceptedAnswer: { '@type': 'Answer', text: b.p },
+        })),
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: content.title,
+        url,
+        description: desc,
+        speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', 'h2'] },
+      },
+    );
   }
 
   if (path === '/how-it-works') {
-    schemas.push({
-      '@context': 'https://schema.org',
-      '@type': 'HowTo',
-      name: content.title,
-      description: desc,
-      step: content.blocks.map(b => ({ '@type': 'HowToStep', name: b.h, text: b.p })),
-    });
+    schemas.push(
+      {
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: content.title,
+        description: desc,
+        step: content.blocks.map(b => ({ '@type': 'HowToStep', name: b.h, text: b.p })),
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: content.title,
+        url,
+        description: desc,
+        speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', 'h2'] },
+      },
+    );
   }
 
   if (path.startsWith('/compare/')) {
@@ -784,6 +851,7 @@ function buildStaticHeadSchema(path: string): string {
       description: desc,
       author: { '@type': 'Organization', name: 'Serpely' },
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', 'h2'] },
     });
   }
 

@@ -4,7 +4,7 @@ import BlogPost from '../models/BlogPost';
 const router = Router();
 
 const BASE_URL = 'https://serpely.com';
-const today = () => new Date().toISOString().split('T')[0];
+const STATIC_LASTMOD = process.env.SITE_LASTMOD || '2026-11-12';
 
 const STATIC_PAGES = [
   { loc: '/', priority: '1.0', changefreq: 'weekly', image: '/og-image.png' },
@@ -40,6 +40,10 @@ const STATIC_PAGES = [
   { loc: '/blog/category/technical-seo', priority: '0.6', changefreq: 'weekly' },
   { loc: '/blog/category/ai-seo-tools', priority: '0.6', changefreq: 'weekly' },
   { loc: '/blog/category/geo-aeo', priority: '0.6', changefreq: 'weekly' },
+  { loc: '/blog/category/keyword-strategy', priority: '0.6', changefreq: 'weekly' },
+  { loc: '/blog/category/reporting', priority: '0.6', changefreq: 'weekly' },
+  { loc: '/blog/category/case-studies', priority: '0.6', changefreq: 'weekly' },
+  { loc: '/blog/category/product-updates', priority: '0.6', changefreq: 'weekly' },
 ];
 
 // GET /api/sitemap.xml — full dynamic sitemap
@@ -54,7 +58,7 @@ router.get('/sitemap.xml', async (_req: Request, res: Response) => {
       return `
   <url>
     <loc>${BASE_URL}${p.loc}</loc>
-    <lastmod>${today()}</lastmod>
+    <lastmod>${STATIC_LASTMOD}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>${imageTag}
   </url>`;

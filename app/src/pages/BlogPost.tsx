@@ -98,7 +98,11 @@ export function BlogPost() {
           headline: post.title,
           description: excerpt,
           image: post.coverImage || undefined,
-          author: { '@type': 'Person', name: post.author || 'Serpely Team' },
+          author: {
+            '@type': 'Person',
+            name: post.author || 'Serpely Team',
+            ...(post.author ? { url: `${window.location.origin}/author/${post.author.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}` } : {}),
+          },
           publisher: {
             '@type': 'Organization',
             name: 'Serpely',
@@ -107,6 +111,7 @@ export function BlogPost() {
           datePublished: post.publishedAt,
           dateModified: post.updatedAt || post.publishedAt,
           mainEntityOfPage: { '@type': 'WebPage', '@id': `${window.location.origin}/blog/${post.slug}` },
+          speakable: { '@type': 'SpeakableSpecification', cssSelector: ['h1', '.hero-sub', 'h2'] },
         });
 
         // BreadcrumbList JSON-LD

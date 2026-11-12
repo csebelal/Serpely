@@ -1,5 +1,5 @@
 import { FetchedPage, fetchPage, normalizeUrl, normUrl, isDisallowedByRobots, countWords,
-  computeIndexGates, attrVal, allTags, linkHref, type IndexGate } from './publicAudit';
+  computeIndexGates, attrVal, allTags, linkHref, safeFetch, type IndexGate } from './publicAudit';
 import { detectProtection, type ProtectionHit } from './protection';
 
 export const MAX_URLS_PER_RUN = 1000;
@@ -53,8 +53,8 @@ async function fetchXml(url: string): Promise<{ text: string; protection: Protec
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 12000);
-    const res = await fetch(url, {
-      signal: ctrl.signal, redirect: 'follow',
+    const res = await safeFetch(url, {
+      signal: ctrl.signal,
       headers: { 'User-Agent': 'SerpelyAuditBot/1.0 (+https://serpely.com/sitemap-checker)', Accept: 'application/xml,text/xml,*/*' },
     });
     clearTimeout(t);
